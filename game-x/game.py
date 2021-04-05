@@ -271,8 +271,23 @@ for file in os.listdir(LEVEL_PATH):
 
 
 # Gameplay objects
+class GameObject():
+    def collide(self, pos=None, colpoints=None):
+        """Check to see if any of the colpoints instersect with STCOL."""
+        # Match unspecified arguments
+        if pos is None:
+            pos = self.pos
+        if colpoints is None:
+            colpoints = self.colpoints
+
+        # Check for collisions
+        for point in colpoints:
+            if STCOL.get_col(f_tupadd(pos, point)):
+                return 1
+        return 0
+
 # pylint: disable=too-many-instance-attributes
-class Player():
+class Player(GameObject):
     """Player game object."""
     def __init__(self, pos, size):
         # Size
@@ -421,14 +436,6 @@ class Player():
         self.pos = pos
         self.hspd = hspd
         self.vspd = vspd
-
-    def collide(self, pos):
-        """Check to see if a given player position collides with objects."""
-        col = 0
-        for point in self.colpoints:
-            if STCOL.get_col(f_tupadd(pos, point)):
-                return 1
-        return 0
 
 class Button():
     """Button game object."""
