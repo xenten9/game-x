@@ -306,30 +306,18 @@ class Cursor():
 
         # Mouse
         # Place object
-        if MOUSE.get_button_pressed(1):
-            pos = MOUSE.get_button_presssed_pos(1)
-            self.pos = f_tupgrid(pos, TILESIZE)
-            self.place_object()
-
-        # Continue placing objects
         elif MOUSE.get_button_held(1):
             pos = MOUSE.get_pos()
             pos = f_tupgrid(pos, TILESIZE)
-            if self.pos != pos:
+            if self.pos != pos or MOUSE.get_button_pressed(1):
                 self.pos = pos
                 self.place_object()
 
         # Remove object
-        elif MOUSE.get_button_pressed(3):
-            pos = MOUSE.get_button_presssed_pos(3)
-            self.pos = f_tupgrid(pos, TILESIZE)
-            self.remove_object()
-
-        # Continue removing objects
         elif MOUSE.get_button_held(3):
             pos = MOUSE.get_pos()
             pos = f_tupgrid(pos, TILESIZE)
-            if self.pos != pos:
+            if self.pos != pos or MOUSE.get_button_pressed(3):
                 self.pos = pos
                 self.remove_object()
 
@@ -372,7 +360,7 @@ class Cursor():
                 # Create tile
                 TILE.add_tile(layer, pos, tile)
 
-            if KEYBOARD.get_key_pressed(83):
+            elif KEYBOARD.get_key_pressed(83):
                 layer = list(TILE.layers.keys())[self.layer]
                 pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
                 # Remove tile
@@ -380,25 +368,11 @@ class Cursor():
 
         # Mouse
         # Place tile
-        if MOUSE.get_button_pressed(1):
-            # Update position
-            pos = MOUSE.get_button_presssed_pos(1)
-            self.pos = f_tupgrid(pos, TILESIZE)
-
-            # Get arguments
-            layer = list(TILE.layers.keys())[self.layer]
-            pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
-            tile = TILE.tile_maps[self.tile_map][1][self.select]
-
-            # Create tile
-            TILE.add_tile(layer, pos, tile)
-
-        # Continue placing objects
-        elif MOUSE.get_button_held(1):
+        if MOUSE.get_button_held(1):
             # Update position
             pos = MOUSE.get_pos()
             pos = f_tupgrid(pos, TILESIZE)
-            if self.pos != pos:
+            if self.pos != pos or MOUSE.get_button_pressed(1):
                 self.pos = pos
 
                 # Get arguments
@@ -410,24 +384,11 @@ class Cursor():
                 TILE.add_tile(layer, pos, tile)
 
         # Remove object
-        elif MOUSE.get_button_pressed(3):
-            # Update position
-            pos = MOUSE.get_button_presssed_pos(3)
-            self.pos = f_tupgrid(pos, TILESIZE)
-
-            # Get arguments
-            layer = list(TILE.layers.keys())[self.layer]
-            pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
-
-            # Remove tile
-            TILE.remove_tile(layer, pos)
-
-        # Continue removing objects
-        elif not MOUSE.get_button_pressed(3) and MOUSE.get_button_held(3):
+        elif MOUSE.get_button_held(3):
             # Update position
             pos = MOUSE.get_pos()
             pos = f_tupgrid(pos, TILESIZE)
-            if self.pos != pos:
+            if self.pos != pos or MOUSE.get_button_pressed(3):
                 self.pos = pos
 
                 # Get arguments
