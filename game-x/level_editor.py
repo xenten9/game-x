@@ -25,8 +25,9 @@ FPS = 60
 
 # File paths
 DEFAULT_PATH = os.getcwd()
-LEVEL_PATH = os.path.join(DEFAULT_PATH, 'Levels')
-ASSET_PATH = os.path.join(DEFAULT_PATH, 'Assets')
+GAME_PATH = os.path.join(DEFAULT_PATH, 'game-x')
+LEVEL_PATH = os.path.join(GAME_PATH, 'Levels')
+ASSET_PATH = os.path.join(GAME_PATH, 'Assets')
 TILEMAP_PATH = os.path.join(ASSET_PATH, 'Tilemaps')
 
 
@@ -365,11 +366,14 @@ class Cursor():
 
             # Place and remove tiles with cursor
             if KEYBOARD.get_key_pressed(57):
-                TILE.add_tile(list(TILE.layers.keys())[self.layer],
-                              f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1),
-                              TILE.tile_maps[self.tile_map][1][self.select])
+                layer = list(TILE.layers.keys())[self.layer]
+                pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+                tile = TILE.tile_maps[self.tile_map][1][self.select]
+                TILE.add_tile(layer, pos, tile)
             if KEYBOARD.get_key_pressed(83):
-                #self.remove_object()
+                layer = list(TILE.layers.keys())[self.layer]
+                pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+                TILE.remove_tile(layer, pos)
                 pass
 
         # Mouse

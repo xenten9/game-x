@@ -24,8 +24,9 @@ FPS = 60
 
 # File paths
 DEFAULT_PATH = os.getcwd()
-LEVEL_PATH = os.path.join(DEFAULT_PATH, 'Levels')
-ASSET_PATH = os.path.join(DEFAULT_PATH, 'Assets')
+GAME_PATH = os.path.join(DEFAULT_PATH, 'game-x')
+LEVEL_PATH = os.path.join(GAME_PATH, 'Levels')
+ASSET_PATH = os.path.join(GAME_PATH, 'Assets')
 TILEMAP_PATH = os.path.join(ASSET_PATH, 'Tilemaps')
 
 
