@@ -8,6 +8,7 @@ import os
 import ast
 import pygame
 #import numpy as np
+import tkinter as tk
 
 from inputs import ObjKeyboard, ObjMouse
 from tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
@@ -510,7 +511,7 @@ class TileMap():
 
     def add_layer(self, layer: str, size):
         """Creates a layer."""
-        self.layers[layer] = [[None]*size[1] for n in range(size[0])]
+        self.layers[layer] = TileLayer(layer, size)
 
     def remove_layer(self, layer: str):
         """Removes an existing layer."""
@@ -521,17 +522,35 @@ class TileMap():
 
     def add_tile(self, layer: str, pos: tuple, tile):
         """Places a tile."""
-        self.layers[layer][pos[0]][pos[1]] = tile
+        self.layers[layer].add_tile(pos, tile)
 
     def remove_tile(self, layer: str, pos: tuple):
         """Removes a tile."""
-        self.layers[layer][pos[0]][pos[1]] = None
+        self.layers[layer].remove_tile(pos)
 
     def render(self, layer: str):
         """Render tiles at a specific layer."""
-        for column in enumerate(self.layers[layer]):
-            for row in enumerate(self.layers[layer][column[0]]):
-                tile = self.layers[layer][column[0]][row[0]]
+        for layer in self.layers:
+            self.layers[layer].render()
+
+class TileLayer():
+    def __init__(self, name, size):
+        self.name = name
+        w, h = size[0], size[1]
+        self.grid = [None] * w
+        for column in range(size[0]):
+            self.grid[column] = [None] * h
+
+    def add_tile(self, pos, tile):
+        self.grid[pos[0]][pos[1]] = tile
+
+    def remove_tile(self, pos):
+        self.grid[pos[0]][pos[1]] = None
+
+    def render(self):
+        for column in enumerate(self.grid):
+            for row in enumerate(self.grid[column[0]]):
+                tile = self.grid[column[0]][row[0]]
                 if tile is not None:
                     pos = f_tupmult((column[0], row[0]), TILESIZE)
                     WIN.draw_image(tile, pos)
