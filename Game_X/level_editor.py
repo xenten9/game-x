@@ -9,9 +9,9 @@ import ast
 import pygame
 #import numpy as np
 
-from inputs import ObjKeyboard, ObjMouse
-from tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
-from file_system import ObjFile
+from Helper_Functions.inputs import ObjKeyboard, ObjMouse
+from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
+from Helper_Functions.file_system import ObjFile
 #from easygui import multenterbox
 #from random import choice
 
@@ -25,9 +25,10 @@ FPS = 60
 
 # File paths
 DEFAULT_PATH = os.getcwd()
-GAME_PATH = os.path.join(DEFAULT_PATH, 'game-x')
-LEVEL_PATH = os.path.join(GAME_PATH, 'Levels')
+GAME_PATH = os.path.join(DEFAULT_PATH, 'Game_X')
 ASSET_PATH = os.path.join(GAME_PATH, 'Assets')
+SPRITE_PATH = os.path.join(ASSET_PATH, 'Sprites')
+LEVEL_PATH = os.path.join(ASSET_PATH, 'Levels')
 TILEMAP_PATH = os.path.join(ASSET_PATH, 'Tilemaps')
 
 

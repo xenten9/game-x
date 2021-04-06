@@ -25,9 +25,10 @@ FPS = 60
 
 # File paths
 DEFAULT_PATH = os.getcwd()
-GAME_PATH = os.path.join(DEFAULT_PATH, 'game-x')
-LEVEL_PATH = os.path.join(GAME_PATH, 'Levels')
+GAME_PATH = os.path.join(DEFAULT_PATH, 'Game_X')
 ASSET_PATH = os.path.join(GAME_PATH, 'Assets')
+SPRITE_PATH = os.path.join(ASSET_PATH, 'Sprites')
+LEVEL_PATH = os.path.join(ASSET_PATH, 'Levels')
 TILEMAP_PATH = os.path.join(ASSET_PATH, 'Tilemaps')
 
 
@@ -230,7 +231,7 @@ class StaticCollider():
     """Handles static collisions aligned to a grid."""
     def __init__(self):
         self.grid = [[0]*32 for n in range(32)]
-        self.image = pygame.image.load(os.path.join(ASSET_PATH, 'wall.png'))
+        self.image = pygame.image.load(os.path.join(SPRITE_PATH, 'wall.png'))
 
     def add_wall(self, pos: tuple):
         """Add a wall at a given position."""
@@ -333,7 +334,7 @@ class GameObject():
         if overwrite:
             self._frames = []
         for file in fnames:
-            file_path = os.path.join(ASSET_PATH, file)
+            file_path = os.path.join(SPRITE_PATH, file)
             self._frames.append(pygame.image.load(file_path))
     frames = property(get_frames)
 
