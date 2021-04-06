@@ -184,7 +184,7 @@ class Objects():
         """Returns the (name, color) of a given objectid."""
         return (self.object_names[objid], self.object_colors[objid])
 
-    def save_to_file(self, filename=''):
+    def save_level(self, filename=''):
         """Save level to disk."""
         # Get file name
         if filename in (None, ''):
@@ -208,7 +208,7 @@ class Objects():
         print('successful level save!')
         return None
 
-    def load_from_file(self, filename=''):
+    def load_level(self, filename=''):
         """Load level from disk."""
         # Get file name
         if filename in (None, ''):
@@ -264,20 +264,19 @@ class Cursor():
     def update(self):
         """Update cursor pos and level changes."""
         # Change modes
-        if KEYBOARD.get_key_pressed(50):
+        if KEYBOARD.get_key_pressed(50): # M
             self.mode += 1
             self.select = 0
-        if KEYBOARD.get_key_pressed(49):
+        if KEYBOARD.get_key_pressed(49): # N
             self.mode -= 1
             self.select = 0
         self.mode = f_loop(self.mode, 0, 1)
 
         # Saving and loading
-        if KEYBOARD.get_key_held(29):
-            if KEYBOARD.get_key_pressed(31):
-                OBJ.save_to_file()
-            elif KEYBOARD.get_key_pressed(38):
-                OBJ.load_from_file()
+        if KEYBOARD.get_key_combo(31, 29): # Ctrl + S
+            OBJ.save_level()
+        if KEYBOARD.get_key_combo(38, 29): # Ctrl + L
+            OBJ.load_level()
 
         # State machine
         if self.mode == 0: # Object mode
@@ -299,7 +298,7 @@ class Cursor():
         # Place and remove objects with cursor
         if KEYBOARD.get_key_pressed(57):
             self.place_object()
-        elif KEYBOARD.get_key_pressed(83):
+        if KEYBOARD.get_key_pressed(83):
             self.remove_object()
 
         # Edit data
@@ -308,7 +307,7 @@ class Cursor():
 
         # Mouse
         # Place object
-        elif MOUSE.get_button_held(1):
+        if MOUSE.get_button_held(1):
             pos = MOUSE.get_pos()
             pos = f_tupgrid(pos, TILESIZE)
             if self.pos != pos or MOUSE.get_button_pressed(1):
@@ -316,7 +315,7 @@ class Cursor():
                 self.place_object()
 
         # Remove object
-        elif MOUSE.get_button_held(3):
+        if MOUSE.get_button_held(3):
             pos = MOUSE.get_pos()
             pos = f_tupgrid(pos, TILESIZE)
             if self.pos != pos or MOUSE.get_button_pressed(3):
@@ -328,15 +327,14 @@ class Cursor():
         # Keyboard
         # Layer selection
         self.layer += (KEYBOARD.get_key_pressed(45) -
-                        KEYBOARD.get_key_pressed(44))
+                       KEYBOARD.get_key_pressed(44))
         self.layer = f_loop(self.layer, 0, len(TILE.layers) - 1)
 
         # Tilemap selection
+        if KEYBOARD.get_key_combo(15, 42):
+            self.tile_map -= 1
         if KEYBOARD.get_key_pressed(15):
-            if KEYBOARD.get_key_held(42):
-                self.tile_map -= 1
-            else:
-                self.tile_map += 1
+            self.tile_map += 1
         self.tile_map = f_loop(self.tile_map, 0, len(TILE.tile_maps)-1)
 
         # Changing selection
@@ -347,17 +345,20 @@ class Cursor():
         # Movement
         self.movement()
 
-        # Place and remove tiles with cursor
+        # Place tiles with cursor
         if KEYBOARD.get_key_pressed(57):
             layer = list(TILE.layers.keys())[self.layer]
             pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
             tile = TILE.tile_maps[self.tile_map][1][self.select]
+
             # Create tile
             TILE.add_tile(layer, pos, tile)
 
-        elif KEYBOARD.get_key_pressed(83):
+        # Remove tiles with cursor
+        if KEYBOARD.get_key_pressed(83):
             layer = list(TILE.layers.keys())[self.layer]
             pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+
             # Remove tile
             TILE.remove_tile(layer, pos)
 
@@ -379,7 +380,7 @@ class Cursor():
                 TILE.add_tile(layer, pos, tile)
 
         # Remove object
-        elif MOUSE.get_button_held(3):
+        if MOUSE.get_button_held(3):
             # Update position
             pos = MOUSE.get_pos()
             pos = f_tupgrid(pos, TILESIZE)
@@ -549,6 +550,14 @@ class TileLayer():
                 if tile is not None:
                     pos = f_tupmult((column[0], row[0]), TILESIZE)
                     WIN.draw_image(tile, pos)
+
+# Level class
+class Level():
+    def __init__(self):
+        pass
+
+    def load_level(self):
+        pass
 
 
 # Constant objects

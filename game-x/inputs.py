@@ -11,10 +11,9 @@ class ObjKeyboard():
         """Returns bool for a series of keys if any are being held."""
         for k in keys:
             try:
-                if self.key_held[k] == 1:
+                if self.key_held[k]:
                     return 1
             except KeyError:
-                #print(str(k) + " key has not been pressed yet")
                 pass
         return 0
 
@@ -22,11 +21,20 @@ class ObjKeyboard():
         """Returns bool for if a key just got pressed."""
         for k in keys:
             try:
-                if self.key_pressed[k] == 1:
+                if self.key_pressed[k]:
                     return 1
             except KeyError:
-                #print(str(k) + " key has not been pressed yet")
                 pass
+        return 0
+
+    def get_key_combo(self, kpress, *kheld) -> bool:
+        """Returns bool for a series of keys if any are being held."""
+        if self.get_key_pressed(kpress):
+            held = []
+            for k in kheld:
+                held.append(self.get_key_held(k))
+            if min(held) == 1:
+                return 1
         return 0
 
     def set_key(self, key, value):
@@ -57,12 +65,15 @@ class ObjMouse():
         """Returns the mouse position relative to last cycle."""
         return self.rel
 
-    def get_button_pressed(self, button):
+    def get_button_pressed(self, *button):
         """Returns whether or not a mouse button was just pressed."""
-        try:
-            return self.button_pressed[button]
-        except KeyError:
-            return 0
+        for b in button:
+            try:
+                if self.button_pressed[b]:
+                    return 1
+            except KeyError:
+                pass
+        return 0
 
     def get_button_presssed_pos(self, button) -> tuple:
         """Returns the position of where a mouse clicked with a button."""
@@ -71,12 +82,15 @@ class ObjMouse():
         except KeyError:
             return 0
 
-    def get_button_held(self, button):
+    def get_button_held(self, *button):
         """Returns whether or not a mouse button is currently being held."""
-        try:
-            return self.button_held[button]
-        except KeyError:
-            return 0
+        for b in button:
+            try:
+                if self.button_held[b]:
+                    return 1
+            except KeyError:
+                pass
+        return 0
 
     def reset(self):
         """Resets the button_pressed and button_pressed_pos dictionary

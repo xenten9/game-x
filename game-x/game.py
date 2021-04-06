@@ -433,9 +433,9 @@ class Player(GameObject):
         # Jumping
         if self.jump_key > 0 and self.grounded:
             if self.collide(f_tupadd(self.pos, (0, 1))):
-                self.vspd = -self.jump_speed
+                self.vspd = -(self.jump_speed + (self.hspd/8)**2)
             elif self.collide(f_tupadd(self.pos, (0, -1))):
-                self.vspd = self.jump_speed
+                self.vspd = (self.jump_speed + (self.hspd/8)**2)
 
         # Jump gravity
         if np.sign(self.vspd) == np.sign(self.grav):
