@@ -10,10 +10,10 @@ import ast
 import pygame
 import numpy as np
 
-from inputs import ObjKeyboard, ObjMouse
-from tuple_functions import f_tupadd, f_tupmult
-from file_system import ObjFile
-from collisions import f_col_rects
+from Helper_Functions.inputs import ObjKeyboard, ObjMouse
+from Helper_Functions.tuple_functions import f_tupadd, f_tupmult
+from Helper_Functions.file_system import ObjFile
+from Helper_Functions.collisions import f_col_rects
 
 pygame.init()
 
