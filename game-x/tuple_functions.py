@@ -53,7 +53,7 @@ def f_tupadd(tup: tuple, add):
     """
     tlist = list(tup)
     length = len(tlist)
-    if isinstance(add, int):
+    if isinstance(add, (float, int)):
         for count in range(0, length):
             tlist[count] += add
         return tuple(tlist)
@@ -69,7 +69,6 @@ def f_tupgrid(tup: tuple, cellsize):
     tup = f_tupround(tup, 'floor')
     return f_tupmult(tup, cellsize)
 
-#
 # takes all values in a tuple and roudns them up or down
 def f_tupround(tup: tuple, func):
     """floor is -1 or 'floor'; ceil is 1 or 'ceil';

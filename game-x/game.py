@@ -1,5 +1,6 @@
 """game.py dev project."""
 # pylint: disable=no-member
+# pylint: disable=too-many-instance-attributes
 
 # Imports
 import os
@@ -180,7 +181,7 @@ class Objects():
             self.pool[item] = 1
         self.obj = {}
 
-    def instantiate(self, obj, key=None):
+    def instantiate_key(self, key=None):
         """Add a ref. to a game object in the OBJ.obj dictionary."""
         if key is None:
             key = self.pool.popitem()[0]
@@ -191,8 +192,11 @@ class Objects():
                 print(self.pool)
                 print('key ' + str(key) + ' is not in pool')
                 key = self.pool.popitem()[0]
-        self.obj[key] = obj
         return key
+
+    def instantiate_object(self, key, obj):
+        """Add a ref. to a game object in the OBJ.obj dictionary."""
+        self.obj[key] = obj
 
     def delete(self, key):
         """Removes a ref. of a game object from the OBJ.obj dictionary."""
@@ -203,29 +207,30 @@ class Objects():
         """Loads a level into the OBJ.obj dictioanry."""
         # Object creation
         if name == 'player':
-            obj = Player(pos, (TILESIZE, TILESIZE))
-            self.instantiate(obj, key)
+            key = self.instantiate_key(key)
+            obj = Player(key, pos, (TILESIZE, TILESIZE), name, data)
+            self.instantiate_object(key, obj)
 
         elif name == 'wall':
             STCOL.add_wall((int(pos[0] / TILESIZE),
                             int(pos[1] / TILESIZE)))
 
         elif name == 'button':
-            obj = Button(pos)
-            self.instantiate(obj, key)
-            obj.data = data
+            key = self.instantiate_key(key)
+            obj = Button(key, pos, (TILESIZE, TILESIZE), name, data)
+            self.instantiate_object(key, obj)
 
         elif name == 'door':
-            obj = Door(pos)
-            self.instantiate(obj, key)
-            obj.data = data
+            key = self.instantiate_key(key)
+            obj = Door(key, pos, (TILESIZE, TILESIZE), name, data)
+            self.instantiate_object(key, obj)
 
 # Handles static collision
 class StaticCollider():
     """Handles static collisions aligned to a grid."""
     def __init__(self):
         self.grid = [[0]*32 for n in range(32)]
-        self.color = f_swatch((1, 1, 1))
+        self.image = pygame.image.load(os.path.join(ASSET_PATH, 'wall.png'))
 
     def add_wall(self, pos: tuple):
         """Add a wall at a given position."""
@@ -251,8 +256,37 @@ class StaticCollider():
         for column in range(len(self.grid)):
             for row in range(len(self.grid[column])):
                 if self.grid[column][row]:
-                    WIN.draw_rect(f_tupmult((column, row), TILESIZE),
-                                  color=self.color)
+                    pos = f_tupmult((column, row), TILESIZE)
+                    WIN.draw_image(self.image, pos)
+
+# Handles Dynamic collisions
+class DynamicCollider():
+    def __init__(self):
+        self.colliders = {}
+
+    def add_collider(self, key, obj):
+        self.colliders[key] = obj
+
+    def remove_collider(self, key):
+        try:
+            del self.colliders[key]
+        except KeyError:
+            pass
+
+    def get_collision(self, pos, rect, key=-1) -> list:
+        collide = []
+        dom = f_tupadd(rect[0], pos[0])
+        ran = f_tupadd(rect[1], pos[1])
+        for col in self.colliders:
+            if col != key:
+                cobj = self.colliders[col]
+                crect = cobj.crect
+                cpos = cobj.pos
+                cdom = f_tupadd(crect[0], cpos[0])
+                cran = f_tupadd(crect[1], cpos[1])
+                if f_col_rects(dom, ran, cdom, cran):
+                    collide.append(cobj)
+        return collide
 
 
 # Constant objects
@@ -260,7 +294,7 @@ WIN = Window(WIDTH, HEIGHT)
 OBJ = Objects()
 LEVEL = Level()
 STCOL = StaticCollider()
-#DYCOL = DynamicCollider()
+DYCOL = DynamicCollider()
 KEYBOARD = ObjKeyboard()
 MOUSE = ObjMouse()
 pygame.display.set_caption("Game X")
@@ -273,65 +307,82 @@ for file in os.listdir(LEVEL_PATH):
 # Gameplay objects
 class GameObject():
     """Class which all game objects inherit from."""
-    def __init__(self, pos, size):
+    def __init__(self, key, pos, size):
+        self.key = key
         self.pos = pos
         self.size = size
         w, h = f_tupadd(size, -1)
-        self.colpoints = [(0, 0),
-                          (w, 0),
-                          (w, h),
-                          (0, h)]
+        self.cpoints = ((0, 0), (w, 0), (w, h), (0, h))
+        self.crect = ((0, w), (0, -h))
         self._frame = 0
         self._frames = []
 
     def get_frame(self):
         return self._frame
-
     def set_frame(self, frame):
         if type(frame) != int:
             raise ValueError('frame ' + str(frame) + ' is not an int')
         if frame > len(self.frames):
             frame = f_loop(frame, 0, len(self.frames))
         self._frame = frame
-
     frame = property(get_frame, set_frame)
 
     def get_frames(self):
         return self._frames
-
-    frames = property(get_frames)
-
     def set_frames(self, overwrite: bool, *fnames):
         if overwrite:
             self._frames = []
         for file in fnames:
             file_path = os.path.join(ASSET_PATH, file)
             self._frames.append(pygame.image.load(file_path))
+    frames = property(get_frames)
 
-    def collide(self, pos=None, colpoints=None):
+    def scollide(self, pos=None, cpoints=None):
         """Check to see if any of the colpoints instersect with STCOL."""
         # Match unspecified arguments
         if pos is None:
             pos = self.pos
-        if colpoints is None:
-            colpoints = self.colpoints
+        if cpoints is None:
+            cpoints = self.cpoints
 
         # Check for collisions
-        for point in colpoints:
+        for point in cpoints:
             if STCOL.get_col(f_tupadd(pos, point)):
                 return 1
         return 0
+
+    def dcollide(self, key=None, pos=None, crect=None):
+        """Check to see if crect intersects with any dynamic colliders.
+            Set key to -1 if you want to include self in collision"""
+        # Match unspecified arguments
+        if key is None:
+            key = self.key
+        if pos is None:
+            pos = self.pos
+        if crect is None:
+            crect = self.crect
+
+        # Check for collision
+        return DYCOL.get_collision(pos, crect, key)
 
     def render(self, pos=None):
         if pos is None:
             pos = self.pos
         WIN.draw_image(self.frames[self.frame], pos)
 
-# pylint: disable=too-many-instance-attributes
+    def __del__(self):
+        DYCOL.remove_collider(self.key)
+
 class Player(GameObject):
     """Player game object."""
-    def __init__(self, pos, size):
-        super().__init__(pos, size)
+    def __init__(self, key, pos, size, name, data):
+        # GameObject initialization
+        super().__init__(key, pos, size)
+        self.name = name
+        self.data = data
+
+        # Dynamic collision
+        DYCOL.add_collider(self.key, self)
 
         # Color
         self.color = f_swatch((2, 5, 5))
@@ -381,10 +432,10 @@ class Player(GameObject):
         """Get all of the inputs read before moving."""
         # Grounded
         self.grounded -= 1
-        if self.grav >= 0 and self.collide(f_tupadd(self.pos, (0, 1))):
+        if self.grav >= 0 and self.scollide(f_tupadd(self.pos, (0, 1))):
             self.grounded = self.coyote # Normal Gravity
 
-        if self.grav <= 0 and self.collide(f_tupadd(self.pos, (0, -1))):
+        if self.grav <= 0 and self.scollide(f_tupadd(self.pos, (0, -1))):
             self.grounded = self.coyote # Inverted Gravity
 
         # Coyote timing
@@ -432,9 +483,9 @@ class Player(GameObject):
         # Vertical speed
         # Jumping
         if self.jump_key > 0 and self.grounded:
-            if self.collide(f_tupadd(self.pos, (0, 1))):
+            if self.scollide(f_tupadd(self.pos, (0, 1))):
                 self.vspd = -(self.jump_speed + (self.hspd/8)**2)
-            elif self.collide(f_tupadd(self.pos, (0, -1))):
+            elif self.scollide(f_tupadd(self.pos, (0, -1))):
                 self.vspd = (self.jump_speed + (self.hspd/8)**2)
 
         # Jump gravity
@@ -458,15 +509,15 @@ class Player(GameObject):
         xpos, ypos = pos[0], pos[1]
         svspd, shspd = np.sign(vspd), np.sign(hspd)
         # Horizontal collision
-        if self.collide((xpos + hspd, ypos)) == 1:
-            while self.collide((xpos + hspd, ypos)) == 1:
+        if self.scollide((xpos + hspd, ypos)):
+            while self.scollide((xpos + hspd, ypos)):
                 hspd -= shspd
             pos = (floor(xpos + hspd), ypos)
             hspd = 0
 
         # Vertical collision
-        if self.collide((xpos, ypos + vspd)) == 1:
-            while self.collide((xpos, ypos + vspd)) == 1:
+        if self.scollide((xpos, ypos + vspd)):
+            while self.scollide((xpos, ypos + vspd)):
                 vspd -= svspd
             pos = (xpos, floor(ypos + vspd))
             vspd = 0
@@ -477,23 +528,23 @@ class Player(GameObject):
 
 class Button(GameObject):
     """Button game object."""
-    def __init__(self, pos):
-        # Dimensions
-        super().__init__(pos, (TILESIZE, TILESIZE / 8))
-
-        # Data
-        self.data = []
+    def __init__(self, key, pos, size, name, data):
+        # GameObject initialization
+        super().__init__(key, pos, size)
+        self.name = name
+        self.data = data
 
         # Rendering
         self.set_frames(0, 'button_unpressed.png', 'button_pressed.png')
 
     def update(self):
         """Called every frame for each game object."""
-        ply = OBJ.obj[self.data[1]]
         if self.frame == 0:
-            if self.get_collision_self(ply.pos, ply.size):
-                self.frame = 1
-                OBJ.obj[self.data[0]].frame = 1
+            col = self.dcollide()
+            for obj in col:
+                if obj.name == 'player':
+                    self.frame = 1
+                    OBJ.obj[self.data[0]].frame = 1
 
     def get_collision_self(self, pos, size):
         """See if object is pressing button."""
@@ -505,21 +556,22 @@ class Button(GameObject):
 
 class Door(GameObject):
     """Door game object."""
-    def __init__(self, pos):
-        # Dimensions
-        super().__init__(pos, (TILESIZE, TILESIZE))
-
-        # Data
-        self.data = []
+    def __init__(self, key, pos, size, name, data):
+        # GameObject initialization
+        super().__init__(key, pos, size)
+        self.name = name
+        self.data = data
 
         # Images
         self.set_frames(0, 'door_closed.png', 'door_open.png')
 
     def update(self):
         """Called every frame for each game object."""
-        ply = OBJ.obj[self.data[1]]
-        if self.frame == 1 and self.get_collision_self(ply.pos, ply.size):
-            LEVEL.load_level(self.data[0])
+        if self.frame == 1:
+            col = self.dcollide()
+            for obj in col:
+                if obj.name == 'player':
+                    LEVEL.load_level(self.data[0])
 
     def get_collision_self(self, pos, size):
         """See if object is pressing button."""
@@ -570,6 +622,8 @@ def main():
         for key in OBJ.obj:
             OBJ.obj[key].render()
         STCOL.debug_render()
+
+        WIN.draw_text((TILESIZE, TILESIZE*1.5), str(clock.get_fps()))
 
         # update display
         pygame.display.update()

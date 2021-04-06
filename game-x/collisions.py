@@ -4,7 +4,7 @@
 # pixel in range
 def f_col_pixran(pix, ran):
     """ran[0] < ran[1]"""
-    if ran[0] <= pix <= ran[1]:
+    if ran[0] <= pix <= ran[1] or pix in ran:
         return 1
     return 0
 
