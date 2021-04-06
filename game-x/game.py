@@ -272,6 +272,42 @@ for file in os.listdir(LEVEL_PATH):
 
 # Gameplay objects
 class GameObject():
+    """Class which all game objects inherit from."""
+    def __init__(self, pos, size):
+        self.pos = pos
+        self.size = size
+        w, h = f_tupadd(size, -1)
+        self.colpoints = [(0, 0),
+                          (w, 0),
+                          (w, h),
+                          (0, h)]
+        self._frame = 0
+        self._frames = []
+
+    def get_frame(self):
+        return self._frame
+
+    def set_frame(self, frame):
+        if type(frame) != int:
+            raise ValueError('frame ' + str(frame) + ' is not an int')
+        if frame > len(self.frames):
+            frame = f_loop(frame, 0, len(self.frames))
+        self._frame = frame
+
+    frame = property(get_frame, set_frame)
+
+    def get_frames(self):
+        return self._frames
+
+    frames = property(get_frames)
+
+    def set_frames(self, overwrite: bool, *fnames):
+        if overwrite:
+            self._frames = []
+        for file in fnames:
+            file_path = os.path.join(ASSET_PATH, file)
+            self._frames.append(pygame.image.load(file_path))
+
     def collide(self, pos=None, colpoints=None):
         """Check to see if any of the colpoints instersect with STCOL."""
         # Match unspecified arguments
@@ -286,13 +322,16 @@ class GameObject():
                 return 1
         return 0
 
+    def render(self, pos=None):
+        if pos is None:
+            pos = self.pos
+        WIN.draw_image(self.frames[self.frame], pos)
+
 # pylint: disable=too-many-instance-attributes
 class Player(GameObject):
     """Player game object."""
     def __init__(self, pos, size):
-        # Size
-        self.pos = pos
-        self.size = size
+        super().__init__(pos, size)
 
         # Color
         self.color = f_swatch((2, 5, 5))
@@ -320,12 +359,11 @@ class Player(GameObject):
         self.grounded = 0
         self.coyote = 4
 
-        # Collision
-        w, h = size[0] - 1, size[1] -1
-        self.colpoints = [(0, 0), (w, 0), (0, h), (w, h)]
-
         # State Machine
         self.mode = 0
+
+        # Rendering
+        self.set_frames(0, 'player.png')
 
     def update(self):
         """Called every frame for each game object."""
@@ -335,7 +373,7 @@ class Player(GameObject):
 
     def render(self):
         """Called every frame to render each game object."""
-        WIN.draw_rect(self.pos, self.size, color=self.color)
+        super().render()
         spd = (round(self.hspd, 1), round(self.vspd, 1))
         WIN.draw_text((TILESIZE, TILESIZE), str(spd))
 
@@ -437,42 +475,27 @@ class Player(GameObject):
         self.hspd = hspd
         self.vspd = vspd
 
-class Button():
+class Button(GameObject):
     """Button game object."""
     def __init__(self, pos):
         # Dimensions
-        self.pos = pos
-        self.size = (TILESIZE, TILESIZE / 8)
-        self.pressed = 0
+        super().__init__(pos, (TILESIZE, TILESIZE / 8))
 
         # Data
         self.data = []
 
-        # Images
-        self.img = []
-        self.img.append(pygame.image.load(os.path.join(
-            ASSET_PATH, 'button_unpressed.png')))
-        self.img.append(pygame.image.load(os.path.join(
-            ASSET_PATH, 'button_pressed.png')))
+        # Rendering
+        self.set_frames(0, 'button_unpressed.png', 'button_pressed.png')
 
     def update(self):
         """Called every frame for each game object."""
         ply = OBJ.obj[self.data[1]]
-        if not self.pressed:
-            if self.get_collision(ply.pos, ply.size):
-                print('pressed')
-                self.pressed = 1
-                OBJ.obj[self.data[0]].open = 1
+        if self.frame == 0:
+            if self.get_collision_self(ply.pos, ply.size):
+                self.frame = 1
+                OBJ.obj[self.data[0]].frame = 1
 
-    def render(self):
-        """Called every frame to render each game object."""
-        if self.pressed:
-            img = self.img[1]
-        else:
-            img = self.img[0]
-        WIN.draw_image(image=img, pos=self.pos)
-
-    def get_collision(self, pos, size):
+    def get_collision_self(self, pos, size):
         """See if object is pressing button."""
         bdom = [self.pos[0], self.pos[0] + self.size[0]-1]
         bran = [self.pos[1], self.pos[1] + self.size[1]-1]
@@ -480,39 +503,25 @@ class Button():
         cran = [pos[1], pos[1] + size[1]-1]
         return f_col_rects(bdom, bran, cdom, cran)
 
-class Door():
+class Door(GameObject):
     """Door game object."""
     def __init__(self, pos):
         # Dimensions
-        self.pos = pos
-        self.size = (TILESIZE, TILESIZE)
-        self.open = 0
+        super().__init__(pos, (TILESIZE, TILESIZE))
 
         # Data
         self.data = []
 
         # Images
-        self.img = []
-        self.img.append(pygame.image.load(os.path.join(
-            ASSET_PATH, 'door_closed.png')))
-        self.img.append(pygame.image.load(os.path.join(
-            ASSET_PATH, 'door_open.png')))
+        self.set_frames(0, 'door_closed.png', 'door_open.png')
 
     def update(self):
         """Called every frame for each game object."""
         ply = OBJ.obj[self.data[1]]
-        if self.open and self.get_collision(ply.pos, ply.size):
+        if self.frame == 1 and self.get_collision_self(ply.pos, ply.size):
             LEVEL.load_level(self.data[0])
 
-    def render(self):
-        """Called every frame to render each game object."""
-        if self.open:
-            img = self.img[1]
-        else:
-            img = self.img[0]
-        WIN.draw_image(image=img, pos=self.pos)
-
-    def get_collision(self, pos, size):
+    def get_collision_self(self, pos, size):
         """See if object is pressing button."""
         bdom = [self.pos[0], self.pos[0] + self.size[0]-1]
         bran = [self.pos[1], self.pos[1] + self.size[1]-1]
