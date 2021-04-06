@@ -8,7 +8,6 @@ import os
 import ast
 import pygame
 #import numpy as np
-import tkinter as tk
 
 from inputs import ObjKeyboard, ObjMouse
 from tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
@@ -185,15 +184,16 @@ class Objects():
         """Returns the (name, color) of a given objectid."""
         return (self.object_names[objid], self.object_colors[objid])
 
-    def save_to_file(self):
+    def save_to_file(self, filename=''):
         """Save level to disk."""
         # Get file name
-        name = input('level name: ')
-        if name in (None, ''):
+        if filename in (None, ''):
+            filename = input('level name: ')
+        if filename in (None, ''):
             return None
 
         # Create file object and open it to writing
-        level = ObjFile(LEVEL_PATH, name + '.lvl')
+        level = ObjFile(LEVEL_PATH, filename + '.lvl')
         level.create(1) # Overwrite file if it exists
         level.write()
 
@@ -208,10 +208,11 @@ class Objects():
         print('successful level save!')
         return None
 
-    def load_from_file(self):
+    def load_from_file(self, filename=''):
         """Load level from disk."""
         # Get file name
-        filename = input('level name: ')
+        if filename in (None, ''):
+            filename = input('level name: ')
         if filename in (None, ''):
             return None
 
@@ -271,6 +272,13 @@ class Cursor():
             self.select = 0
         self.mode = f_loop(self.mode, 0, 1)
 
+        # Saving and loading
+        if KEYBOARD.get_key_held(29):
+            if KEYBOARD.get_key_pressed(31):
+                OBJ.save_to_file()
+            elif KEYBOARD.get_key_pressed(38):
+                OBJ.load_from_file()
+
         # State machine
         if self.mode == 0: # Object mode
             self.mode0()
@@ -284,13 +292,6 @@ class Cursor():
         self.select += (KEYBOARD.get_key_pressed(18) -
                         KEYBOARD.get_key_pressed(16))
         self.select = f_loop(self.select, 0, len(OBJ.object_names) - 1)
-
-        # Saving and loading
-        if KEYBOARD.get_key_held(29):
-            if KEYBOARD.get_key_pressed(31):
-                OBJ.save_to_file()
-            elif KEYBOARD.get_key_pressed(38):
-                OBJ.load_from_file()
 
         # Movement
         self.movement()
@@ -343,29 +344,22 @@ class Cursor():
                         KEYBOARD.get_key_pressed(16))
         self.select = f_loop(self.select, 0, len(TILE.tile_maps[self.tile_map][1]) - 1)
 
-        # Saving and loading
-        if KEYBOARD.get_key_held(29):
-            if KEYBOARD.get_key_pressed(31):
-                OBJ.save_to_file()
-            elif KEYBOARD.get_key_pressed(38):
-                OBJ.load_from_file()
-        else:
-            # Movement
-            self.movement()
+        # Movement
+        self.movement()
 
-            # Place and remove tiles with cursor
-            if KEYBOARD.get_key_pressed(57):
-                layer = list(TILE.layers.keys())[self.layer]
-                pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
-                tile = TILE.tile_maps[self.tile_map][1][self.select]
-                # Create tile
-                TILE.add_tile(layer, pos, tile)
+        # Place and remove tiles with cursor
+        if KEYBOARD.get_key_pressed(57):
+            layer = list(TILE.layers.keys())[self.layer]
+            pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+            tile = TILE.tile_maps[self.tile_map][1][self.select]
+            # Create tile
+            TILE.add_tile(layer, pos, tile)
 
-            elif KEYBOARD.get_key_pressed(83):
-                layer = list(TILE.layers.keys())[self.layer]
-                pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
-                # Remove tile
-                TILE.remove_tile(layer, pos)
+        elif KEYBOARD.get_key_pressed(83):
+            layer = list(TILE.layers.keys())[self.layer]
+            pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+            # Remove tile
+            TILE.remove_tile(layer, pos)
 
         # Mouse
         # Place tile
@@ -533,6 +527,7 @@ class TileMap():
         for layer in self.layers:
             self.layers[layer].render()
 
+# Layer with tiles
 class TileLayer():
     def __init__(self, name, size):
         self.name = name
@@ -564,6 +559,7 @@ OBJ = Objects()
 CUR = Cursor((0, 0), (TILESIZE, TILESIZE/2))
 TILE = TileMap()
 
+
 # Setup
 pygame.display.set_caption("Game.py")
 WIN.add_font('arial', 8)
@@ -585,7 +581,8 @@ def main():
         MOUSE.reset()
 
         # Event Handler
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             # Exit game
             if event.type == pygame.QUIT:
                 run = False
@@ -593,7 +590,7 @@ def main():
                 f_event_handler(event)
 
         # Quit by escape
-        if KEYBOARD.get_key_held(1):
+        if KEYBOARD.get_key_pressed(1):
             run = False
 
         # Update
@@ -610,10 +607,12 @@ def main():
         # Render objects
         for key in OBJ.obj:
             OBJ.obj[key].render()
-        CUR.render()
 
         # Render foreground layers
         TILE.render('foreground')
+
+        # Render on top
+        CUR.render()
 
         # Update display
         pygame.display.update()
