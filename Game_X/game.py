@@ -140,6 +140,7 @@ class Window():
 class Level():
     def __init__(self):
         self.levels = {}
+        self.current_level = ''
 
     def add_level(self, name: str):
         if os.path.exists(os.path.join(LEVEL_PATH, name)):
@@ -148,6 +149,7 @@ class Level():
     def load_level(self, level_name: str):
         level = ObjFile(LEVEL_PATH, level_name + '.lvl')
         level.read()
+        self.current_level = level_name
         obj_list = level.file.readlines()
 
         # Convert types
@@ -164,6 +166,7 @@ class Level():
         for obj in objcopy:
             OBJ.delete(obj)
         STCOL.clear()
+        DYCOL.clear()
 
         # Create objects
         for arg in obj_list:
@@ -177,6 +180,9 @@ class Level():
                 layer_name, grid = arg[1:3]
                 size = (len(grid), len(grid[0]))
                 TILE.add_layer(layer_name, size, grid)
+
+    def reset(self):
+        self.load_level(self.current_level)
 
 # Handles object instances
 class Objects():
@@ -228,6 +234,7 @@ class Objects():
 
     def delete(self, key):
         """Removes a ref. of a game object from the OBJ.obj dictionary."""
+        self.obj[key].delete()
         del self.obj[key]
         self.pool[key] = 1
 
@@ -244,7 +251,7 @@ class Objects():
 
         elif name == 'button':
             key = self.instantiate_key(key)
-            obj = Button(key, pos, (TILESIZE, TILESIZE), name, data)
+            obj = Button(key, pos, (TILESIZE, TILESIZE/8), name, data)
             self.instantiate_object(key, obj)
 
         elif name == 'door':
@@ -255,6 +262,11 @@ class Objects():
         elif name == 'grav-orb':
             key = self.instantiate_key(key)
             obj = GravOrb(key, pos, (TILESIZE, TILESIZE), name, data)
+            self.instantiate_object(key, obj)
+
+        elif name == 'spike':
+            key = self.instantiate_key(key)
+            obj = Spike(key, pos, (TILESIZE, TILESIZE/8), name, data)
             self.instantiate_object(key, obj)
 
 # Handles static collision
@@ -298,6 +310,7 @@ class DynamicCollider():
 
     def add_collider(self, key, obj):
         self.colliders[key] = obj
+        print(self.colliders)
 
     def remove_collider(self, key):
         try:
@@ -319,6 +332,9 @@ class DynamicCollider():
                 if f_col_rects(dom, ran, cdom, cran):
                     collide.append(cobj)
         return collide
+
+    def clear(self):
+        self.colliders = {}
 
 # Tile map
 class TileMap():
@@ -440,13 +456,18 @@ for file in os.listdir(LEVEL_PATH):
 # Gameplay objects
 class GameObject():
     """Class which all game objects inherit from."""
-    def __init__(self, key, pos, size):
+    def __init__(self, key, pos, size, relative=(0,0)):
         self.key = key
         self.pos = pos
         self.size = size
-        w, h = f_tupadd(size, -1)
-        self.cpoints = ((0, 0), (w, 0), (w, h), (0, h))
-        self.crect = ((0, w), (0, -h))
+        origin = relative
+        width, height = f_tupadd(size, -1)
+        self.cpoints = ((origin[0]      , origin[1]       ),
+                        (origin[0]+width, origin[1]       ),
+                        (origin[0]+width, origin[1]+height),
+                        (origin[0]      , origin[1]+height))
+        self.crect = ((origin[0], origin[0]+width),
+                      (origin[1], origin[1]+height))
         self._frame = 0
         self._frames = []
 
@@ -512,7 +533,7 @@ class GameObject():
         """Rendering after foreground layer."""
         pass
 
-    def __del__(self):
+    def delete(self):
         DYCOL.remove_collider(self.key)
 
 class Player(GameObject):
@@ -682,7 +703,7 @@ class Button(GameObject):
     """Button game object."""
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size)
+        super().__init__(key, pos, size, relative=(0, TILESIZE-size[1]))
         self.name = name
         self.data = data
 
@@ -762,7 +783,21 @@ class GravOrb(GameObject):
                         obj.grav = obj.default_grav * -grav_mult
                 OBJ.delete(self.key)
 
+class Spike(GameObject):
+    def __init__(self, key, pos, size, name, data):
+        # GameObject initialization
+        super().__init__(key, pos, size)
+        self.name = name
+        self.data = data
 
+        # Images
+        self.set_frames(0, 'spike0.png')
+
+    def update(self):
+        col = self.dcollide()
+        for obj in col:
+            if obj.name == 'player':
+                LEVEL.reset()
 
 # Starting level
 LEVEL.load_level('level0')
@@ -810,7 +845,10 @@ def main():
         OBJ.render_late()
 
         # FPS display
-        WIN.draw_text((TILESIZE, TILESIZE*1.5), str(clock.get_fps()))
+        WIN.draw_text((TILESIZE, TILESIZE*2), str(clock.get_fps()),
+                      color=f_swatch((7, 7, 7)))
+        WIN.draw_text((TILESIZE, TILESIZE*2.5), str(DYCOL.colliders),
+                      color=f_swatch((7, 7, 7)))
 
         # update display
         pygame.display.update()

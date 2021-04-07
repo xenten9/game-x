@@ -152,7 +152,8 @@ class Objects():
             'wall',
             'button',
             'door',
-            'grav-orb'
+            'grav-orb',
+            'spike'
         ]
         self.object_colors = [
             (0, 0, 0),
@@ -160,7 +161,8 @@ class Objects():
             (1, 1, 1),
             (1, 6, 1),
             (2, 2, 2),
-            (2, 7, 2)
+            (2, 7, 2),
+            (7, 7, 7)
         ]
         self.visible = True
 
