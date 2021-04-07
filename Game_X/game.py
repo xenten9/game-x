@@ -169,7 +169,7 @@ class Level():
         for arg in obj_list:
             # Interpret object info
             name = arg[0]
-            if name != 'tile_layer':
+            if name != 'tile-layer':
                 pos, key, data = arg[1:4]
                 OBJ.create_object(name, pos, key, data)
             else:
@@ -214,14 +214,13 @@ class Objects():
     def create_object(self, name, pos, key=None, data=[]):
         """Loads a level into the OBJ.obj dictioanry."""
         # Object creation
-        if name == 'player':
+        if name == 'wall':
+            STCOL.add_wall((int(pos[0] / TILESIZE), int(pos[1] / TILESIZE)))
+
+        elif name == 'player':
             key = self.instantiate_key(key)
             obj = Player(key, pos, (TILESIZE, TILESIZE), name, data)
             self.instantiate_object(key, obj)
-
-        elif name == 'wall':
-            STCOL.add_wall((int(pos[0] / TILESIZE),
-                            int(pos[1] / TILESIZE)))
 
         elif name == 'button':
             key = self.instantiate_key(key)
@@ -231,6 +230,11 @@ class Objects():
         elif name == 'door':
             key = self.instantiate_key(key)
             obj = Door(key, pos, (TILESIZE, TILESIZE), name, data)
+            self.instantiate_object(key, obj)
+
+        elif name == 'grav-orb':
+            key = self.instantiate_key(key)
+            obj = GravOrb(key, pos, (TILESIZE, TILESIZE), name, data)
             self.instantiate_object(key, obj)
 
 # Handles static collision
@@ -305,8 +309,7 @@ class TileMap():
 
     def render(self, layer: str):
         """Render tiles at a specific layer."""
-        for layer in self.layers:
-            self.layers[layer].render()
+        self.layers[layer].render()
 
     def add_tile_map(self, name: str, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
@@ -357,12 +360,27 @@ class TileLayer():
     def __init__(self, name, size, grid=None):
         self.name = name
         w, h = size[0], size[1]
+        self.visible = True
         if grid is None:
             self.grid = [None] * w
             for column in range(size[0]):
                 self.grid[column] = [None] * h
         else:
             self.grid = grid
+
+    def render(self):
+        """Draw tiles."""
+        if self.visible:
+            for column in enumerate(self.grid):
+                for row in enumerate(self.grid[column[0]]):
+                    tile_info = self.grid[column[0]][row[0]]
+                    if tile_info is not None:
+                        tile = TILE.get_tile(*tile_info)
+                        pos = f_tupmult((column[0], row[0]), TILESIZE)
+                        WIN.draw_image(tile, pos)
+
+    def toggle_visibility(self):
+        self.visible = not self.visible
 
     def add_tile(self, pos, tile_info):
         """Add tiles to grid on the layer."""
@@ -371,16 +389,6 @@ class TileLayer():
     def remove_tile(self, pos):
         """Remove tiles from the grid on the grid."""
         self.grid[pos[0]][pos[1]] = None
-
-    def render(self):
-        """Draw tiles."""
-        for column in enumerate(self.grid):
-            for row in enumerate(self.grid[column[0]]):
-                tile_info = self.grid[column[0]][row[0]]
-                if tile_info is not None:
-                    tile = TILE.get_tile(*tile_info)
-                    pos = f_tupmult((column[0], row[0]), TILESIZE)
-                    WIN.draw_image(tile, pos)
 
 
 # Constant objects
@@ -396,9 +404,12 @@ TILE = TileMap()
 
 # Setup program
 pygame.display.set_caption("Game X")
-TILE.add_tile_map('tilemap0', 'Tileset0.png')
 
 
+# Load tilemaps into TILE
+for file in os.listdir(TILEMAP_PATH):
+    if file[-4:] == '.png':
+        TILE.add_tile_map(file[:-4], file)
 
 # Load levels into LEVEL
 for file in os.listdir(LEVEL_PATH):
@@ -506,7 +517,8 @@ class Player(GameObject):
         self.air_fric_pro = 0.98
         self.air_speed = 0.4
         self.jump_speed = 10
-        self.grav = 1.2
+        self.default_grav = 1.2
+        self.grav = self.default_grav
         self.fallgrav = 0.6
         self.jumpgrav = 0.35
         self.grounded = 0
@@ -637,7 +649,7 @@ class Button(GameObject):
         self.data = data
 
         # Rendering
-        self.set_frames(0, 'button_unpressed.png', 'button_pressed.png')
+        self.set_frames(0, 'button0.png', 'button1.png')
 
     def update(self):
         """Called every frame for each game object."""
@@ -665,7 +677,7 @@ class Door(GameObject):
         self.data = data
 
         # Images
-        self.set_frames(0, 'door_closed.png', 'door_open.png')
+        self.set_frames(0, 'door0.png', 'door1.png')
 
     def update(self):
         """Called every frame for each game object."""
@@ -682,6 +694,35 @@ class Door(GameObject):
         cdom = [pos[0], pos[0] + size[0]-1]
         cran = [pos[1], pos[1] + size[1]-1]
         return f_col_rects(bdom, bran, cdom, cran)
+
+class GravOrb(GameObject):
+    def __init__(self, key, pos, size, name, data):
+        # GameObject initialization
+        super().__init__(key, pos, size)
+        self.name = name
+        self.data = data
+
+        # Images
+        self.set_frames(0, 'grav-orb.png')
+
+    def update(self):
+        col = self.dcollide()
+        for obj in col:
+            if obj.name == 'player':
+                grav_mult = self.data[0]
+                if grav_mult == 0:
+                    if obj.grav == 0:
+                        obj.grav = obj.default_grav
+                    else:
+                        obj.grav = 0
+                elif grav_mult > 0:
+                    obj.grav = obj.default_grav * grav_mult
+                else:
+                    if np.sign(obj.grav) in (0, 1):
+                        obj.grav = obj.default_grav * grav_mult
+                    else:
+                        obj.grav = obj.default_grav * -grav_mult
+                OBJ.delete(self.key)
 
 
 

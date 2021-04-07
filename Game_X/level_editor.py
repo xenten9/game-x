@@ -151,15 +151,30 @@ class Objects():
             'player',
             'wall',
             'button',
-            'door'
+            'door',
+            'grav-orb'
         ]
         self.object_colors = [
             (0, 0, 0),
             (2, 5, 5),
             (1, 1, 1),
             (1, 6, 1),
-            (2, 2, 2)
+            (2, 2, 2),
+            (2, 7, 2)
         ]
+        self.visible = True
+
+    def update(self):
+        for key in self.obj:
+                OBJ.obj[key].update()
+
+    def render(self):
+        if self.visible:
+            for obj in self.obj:
+                self.obj[obj].render()
+
+    def toggle_visibility(self):
+        self.visible = not self.visible
 
     def instantiate(self, obj, key=None):
         """Add a ref. to a game object in the OBJ.obj dictionary."""
@@ -206,7 +221,7 @@ class Objects():
 
         # Write layers
         for layer_name in TILE.layers:
-            info = ['tile_layer', layer_name, TILE.layers[layer_name].grid, 0, 0]
+            info = ['tile-layer', layer_name, TILE.layers[layer_name].grid, 0, 0]
             level.file.write(str(info) + '\n')
 
         # Close file
@@ -245,7 +260,7 @@ class Objects():
         # Create objects
         for arg in obj_list:
             name = arg[0]
-            if arg[0] != 'tile_layer':
+            if arg[0] != 'tile-layer':
                 # Interpret object info
                 pos, key, data, entid = arg[1:5]
                 color = f_swatch(self.get_id_info(entid)[1])
@@ -312,6 +327,10 @@ class Cursor():
         # Movement
         self.movement()
 
+        # Toggling objects
+        if KEYBOARD.get_key_pressed(59):
+            OBJ.toggle_visibility()
+
         # Place and remove objects with cursor
         if KEYBOARD.get_key_pressed(57):
             self.place_object()
@@ -350,8 +369,10 @@ class Cursor():
         # Tilemap selection
         if KEYBOARD.get_key_combo(15, 42):
             self.tile_map -= 1
+            self.select = 0
         if KEYBOARD.get_key_pressed(15):
             self.tile_map += 1
+            self.select = 0
         self.tile_map = f_loop(self.tile_map, 0, len(TILE.tile_maps)-1)
 
         # Changing selection
@@ -361,6 +382,11 @@ class Cursor():
 
         # Movement
         self.movement()
+
+        # Toggling tile maps
+        if KEYBOARD.get_key_pressed(59):
+            layer = list(TILE.layers.keys())[self.layer]
+            TILE.layers[layer].toggle_visibility()
 
         # Place tiles with cursor
         if KEYBOARD.get_key_pressed(57):
@@ -504,8 +530,7 @@ class TileMap():
 
     def render(self, layer: str):
         """Render tiles at a specific layer."""
-        for layer in self.layers:
-            self.layers[layer].render()
+        self.layers[layer].render()
 
     def add_tile_map(self, name: str, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
@@ -556,12 +581,27 @@ class TileLayer():
     def __init__(self, name, size, grid=None):
         self.name = name
         w, h = size[0], size[1]
+        self.visible = True
         if grid is None:
             self.grid = [None] * w
             for column in range(size[0]):
                 self.grid[column] = [None] * h
         else:
             self.grid = grid
+
+    def render(self):
+        """Draw tiles."""
+        if self.visible:
+            for column in enumerate(self.grid):
+                for row in enumerate(self.grid[column[0]]):
+                    tile_info = self.grid[column[0]][row[0]]
+                    if tile_info is not None:
+                        tile = TILE.get_tile(*tile_info)
+                        pos = f_tupmult((column[0], row[0]), TILESIZE)
+                        WIN.draw_image(tile, pos)
+
+    def toggle_visibility(self):
+        self.visible = not self.visible
 
     def add_tile(self, pos, tile_info):
         """Add tiles to grid on the layer."""
@@ -570,16 +610,6 @@ class TileLayer():
     def remove_tile(self, pos):
         """Remove tiles from the grid on the grid."""
         self.grid[pos[0]][pos[1]] = None
-
-    def render(self):
-        """Draw tiles."""
-        for column in enumerate(self.grid):
-            for row in enumerate(self.grid[column[0]]):
-                tile_info = self.grid[column[0]][row[0]]
-                if tile_info is not None:
-                    tile = TILE.get_tile(*tile_info)
-                    pos = f_tupmult((column[0], row[0]), TILESIZE)
-                    WIN.draw_image(tile, pos)
 
 
 # Constant objects
@@ -592,9 +622,14 @@ TILE = TileMap()
 
 
 # Setup program
-pygame.display.set_caption("Game.py")
+pygame.display.set_caption("Game X - Level Editor")
 WIN.add_font('arial', 8)
-TILE.add_tile_map('tilemap0', 'Tileset0.png')
+
+
+# Load tilemaps into TILE
+for file in os.listdir(TILEMAP_PATH):
+    if file[-4:] == '.png':
+        TILE.add_tile_map(file[:-4], file)
 TILE.add_layer('background', (32, 32))
 TILE.add_layer('foreground', (32, 32))
 
@@ -626,8 +661,7 @@ def main():
 
         # Update
         CUR.update()
-        for key in OBJ.obj:
-            OBJ.obj[key].update()
+        OBJ.update()
 
         # Clear frame
         WIN.blank()
@@ -636,8 +670,7 @@ def main():
         TILE.render('background')
 
         # Render objects
-        for key in OBJ.obj:
-            OBJ.obj[key].render()
+        OBJ.render()
 
         # Render foreground layers
         TILE.render('foreground')
