@@ -772,18 +772,26 @@ class GravOrb(GameObject):
         for obj in col:
             if obj.name == 'player':
                 grav_mult = self.data[0]
+
+                # Toggle zero grav
                 if grav_mult == 0:
                     if obj.grav == 0:
                         obj.grav = obj.default_grav
                     else:
                         obj.grav = 0
+
+                # Change positive gravity
                 elif grav_mult > 0:
                     obj.grav = obj.default_grav * grav_mult
-                else:
+
+                # Flip gravity and change grav ammount
+                elif grav_mult < 0:
                     if np.sign(obj.grav) in (0, 1):
                         obj.grav = obj.default_grav * grav_mult
                     else:
                         obj.grav = obj.default_grav * -grav_mult
+
+                # Remove self after collision with player
                 OBJ.delete(self.key)
 
 class Spike(GameObject):
