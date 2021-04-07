@@ -189,6 +189,26 @@ class Objects():
             self.pool[item] = 1
         self.obj = {}
 
+    def update(self):
+        objcopy = OBJ.obj.copy()
+        for key in objcopy:
+            try:
+                OBJ.obj[key].update()
+            except KeyError:
+                print('key ' + str(key) + ' does not exist')
+
+    def render_early(self):
+        for key in OBJ.obj:
+            OBJ.obj[key].render_early()
+
+    def render(self):
+        for key in OBJ.obj:
+            OBJ.obj[key].render()
+
+    def render_late(self):
+        for key in OBJ.obj:
+            OBJ.obj[key].render_late()
+
     def instantiate_key(self, key=None):
         """Add a ref. to a game object in the OBJ.obj dictionary."""
         if key is None:
@@ -478,10 +498,19 @@ class GameObject():
         # Check for collision
         return DYCOL.get_collision(pos, crect, key)
 
+    def render_early(self, pos=None):
+        """Rendering before the background layer."""
+        pass
+
     def render(self, pos=None):
+        """Rendering at the same time as other objects."""
         if pos is None:
             pos = self.pos
         WIN.draw_image(self.frames[self.frame], pos)
+
+    def render_late(self, pos=None):
+        """Rendering after foreground layer."""
+        pass
 
     def __del__(self):
         DYCOL.remove_collider(self.key)
@@ -522,7 +551,9 @@ class Player(GameObject):
         self.fallgrav = 0.6
         self.jumpgrav = 0.35
         self.grounded = 0
-        self.coyote = 4
+        self.coyote = 10
+        self.jump_lenience = 5
+        self.jump_delay = 0
 
         # State Machine
         self.mode = 0
@@ -537,10 +568,18 @@ class Player(GameObject):
             self.movement()
 
     def render(self):
+        """Rendering at the same time as other objects."""
+        pass
+
+    def render_late(self):
         """Called every frame to render each game object."""
         super().render()
         spd = (round(self.hspd, 1), round(self.vspd, 1))
-        WIN.draw_text((TILESIZE, TILESIZE), str(spd))
+        WIN.draw_text((TILESIZE, TILESIZE), str(spd),
+                      color=f_swatch((7, 7, 7)))
+        WIN.draw_text((TILESIZE, TILESIZE*1.5),
+                      str(self.grounded) + ' ' + str(self.jump_key),
+                      color=f_swatch((7, 7, 7)))
 
     def get_inputs(self):
         """Get all of the inputs read before moving."""
@@ -548,20 +587,15 @@ class Player(GameObject):
         self.grounded -= 1
         if self.grav >= 0 and self.scollide(f_tupadd(self.pos, (0, 1))):
             self.grounded = self.coyote # Normal Gravity
-
         if self.grav <= 0 and self.scollide(f_tupadd(self.pos, (0, -1))):
-            self.grounded = self.coyote # Inverted Gravity
-
-        # Coyote timing
-        self.grounded = f_limit(self.grounded, 0, self.coyote)
+            self.grounded = -self.coyote # Inverted Gravity
+        self.grounded -= np.sign(self.grounded)
 
         # Jumping
         self.jump_key -= 1
         if KEYBOARD.get_key_pressed(17, 72, 57) and self.jump_key <= 0:
-            self.jump_key = self.coyote
-
-        # Loose input timing
-        self.jump_key = f_limit(self.jump_key, 0, self.coyote)
+            self.jump_key = self.jump_lenience
+        self.jump_key = f_limit(self.jump_key, 0, self.jump_lenience)
 
         # Horizontal controls
         self.left_key = KEYBOARD.get_key_held(30, 75)
@@ -596,11 +630,15 @@ class Player(GameObject):
 
         # Vertical speed
         # Jumping
-        if self.jump_key > 0 and self.grounded:
-            if self.scollide(f_tupadd(self.pos, (0, 1))):
+        if self.grounded != 0 and self.jump_key > 0 and self.jump_delay == 0:
+            if self.grounded > 0:
+                self.jump_delay = self.coyote
                 self.vspd = -(self.jump_speed + (self.hspd/8)**2)
-            elif self.scollide(f_tupadd(self.pos, (0, -1))):
+            elif self.grounded < 0:
+                self.jump_delay = self.coyote
                 self.vspd = (self.jump_speed + (self.hspd/8)**2)
+        else:
+            self.jump_delay -= np.sign(self.jump_delay)
 
         # Jump gravity
         if np.sign(self.vspd) == np.sign(self.grav):
@@ -755,25 +793,21 @@ def main():
             run = False
 
         # Update objects
-        objcopy = OBJ.obj.copy()
-        for key in objcopy:
-            try:
-                OBJ.obj[key].update()
-            except KeyError:
-                print('key ' + str(key) + ' does not exist')
+        OBJ.update()
 
         # clear frame
         WIN.blank()
 
         # Render background layers
+        OBJ.render_early()
         TILE.render('background')
 
         # Render objects
-        for key in OBJ.obj:
-            OBJ.obj[key].render()
+        OBJ.render()
 
         # Render foreground layers
         TILE.render('foreground')
+        OBJ.render_late()
 
         # FPS display
         WIN.draw_text((TILESIZE, TILESIZE*1.5), str(clock.get_fps()))

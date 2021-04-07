@@ -164,14 +164,24 @@ class Objects():
         ]
         self.visible = True
 
-    def update(self):
-        for key in self.obj:
-                OBJ.obj[key].update()
+    def render_early(self):
+        if self.visible:
+            for obj in self.obj:
+                self.obj[obj].render_early()
 
     def render(self):
         if self.visible:
             for obj in self.obj:
                 self.obj[obj].render()
+
+    def render_late(self):
+        if self.visible:
+            for obj in self.obj:
+                self.obj[obj].render_late()
+
+    def update(self):
+        for key in self.obj:
+                OBJ.obj[key].update()
 
     def toggle_visibility(self):
         self.visible = not self.visible
@@ -516,9 +526,16 @@ class Entity():
         """Entity update call."""
         pass
 
+    def render_early(self):
+        """Entity render call."""
+        pass
+
     def render(self):
         """Entity render call."""
         WIN.draw_rect(self.pos, self.size, self.color)
+
+    def render_late(self):
+        """Entity render call."""
         WIN.draw_text(self.pos, self.name, 'arial8', f_cinverse(self.color))
 
 # Tile map
@@ -665,6 +682,7 @@ def main():
 
         # Clear frame
         WIN.blank()
+        OBJ.render_early()
 
         # Render background layers
         TILE.render('background')
@@ -677,6 +695,7 @@ def main():
 
         # Render on top
         CUR.render()
+        OBJ.render_late()
 
         # Update display
         pygame.display.update()
