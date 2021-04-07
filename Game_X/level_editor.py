@@ -13,7 +13,7 @@ from Helper_Functions.inputs import ObjKeyboard, ObjMouse
 from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
 from Helper_Functions.file_system import ObjFile
 #from easygui import multenterbox
-#from random import choice
+#import random as rand
 
 pygame.init()
 
@@ -201,7 +201,12 @@ class Objects():
         # Write each object to file
         for key in self.obj:
             obj = self.obj[key]
-            info = [obj.name, obj.pos, obj.entid, obj.key, obj.data]
+            info = [obj.name, obj.pos, obj.key, obj.data, obj.entid]
+            level.file.write(str(info) + '\n')
+
+        # Write layers
+        for layer_name in TILE.layers:
+            info = ['tile_layer', layer_name, TILE.layers[layer_name].grid, 0, 0]
             level.file.write(str(info) + '\n')
 
         # Close file
@@ -234,20 +239,31 @@ class Objects():
         for obj in objects:
             OBJ.delete(obj)
 
+        # Clear tiles
+        TILE.layers = {}
+
         # Create objects
         for arg in obj_list:
-            print(arg)
-            # Interpret object info
-            name, pos, entid, key, data = arg[0:5]
-            color = f_swatch(self.get_id_info(entid)[1])
+            name = arg[0]
+            if arg[0] != 'tile_layer':
+                # Interpret object info
+                pos, key, data, entid = arg[1:5]
+                color = f_swatch(self.get_id_info(entid)[1])
 
-            # Create object and set variables
-            obj = Entity(pos, name, color=color)
-            obj.entid, obj.data = entid, data
+                # Create object and set variables
+                obj = Entity(pos, name, color=color)
+                obj.entid, obj.data = entid, data
 
-            # Instantiate object
-            obj.key = self.instantiate(obj, key)
-        return None
+                # Instantiate object
+                obj.key = self.instantiate(obj, key)
+            else:
+                # Interpret layer info
+                layer_name, grid = arg[1:3]
+                size = (len(grid), len(grid[0]))
+                TILE.add_layer(layer_name, size, grid)
+
+        # success
+        print('successful level load!')
 
 # Adds objects to level
 class Cursor():
@@ -348,12 +364,12 @@ class Cursor():
 
         # Place tiles with cursor
         if KEYBOARD.get_key_pressed(57):
+            # Get arguments
             layer = list(TILE.layers.keys())[self.layer]
             pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
-            tile = TILE.tile_maps[self.tile_map][1][self.select]
 
             # Create tile
-            TILE.add_tile(layer, pos, tile)
+            TILE.add_tile(layer, pos, self.tile_map, self.select)
 
         # Remove tiles with cursor
         if KEYBOARD.get_key_pressed(83):
@@ -375,10 +391,9 @@ class Cursor():
                 # Get arguments
                 layer = list(TILE.layers.keys())[self.layer]
                 pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
-                tile = TILE.tile_maps[self.tile_map][1][self.select]
 
                 # Create tile
-                TILE.add_tile(layer, pos, tile)
+                TILE.add_tile(layer, pos, self.tile_map, self.select)
 
         # Remove object
         if MOUSE.get_button_held(3):
@@ -456,6 +471,7 @@ class Cursor():
             WIN.draw_text(self.pos, OBJ.object_names[self.select])
         elif self.mode == 1:
             WIN.draw_text((0, TILESIZE/2), TILE.tile_maps[self.tile_map][0])
+            WIN.draw_text((0, TILESIZE), list(TILE.layers.keys())[self.layer])
             WIN.draw_image(TILE.tile_maps[self.tile_map][1][self.select], self.pos)
 
 # Sample of game object (level editor)
@@ -486,12 +502,16 @@ class TileMap():
         self.layers = {}
         self.tile_maps = []
 
+    def render(self, layer: str):
+        """Render tiles at a specific layer."""
+        for layer in self.layers:
+            self.layers[layer].render()
+
     def add_tile_map(self, name: str, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
         tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname))
         new_tile_map = []
         for xpos in range(int((tile_set.get_width() / TILESIZE))):
-            print(xpos*TILESIZE)
             surface = pygame.Surface((TILESIZE, TILESIZE))
             surface.blit(tile_set, (0, 0), area=pygame.Rect(
                 (xpos * (TILESIZE), 0), (TILESIZE, TILESIZE)))
@@ -505,9 +525,12 @@ class TileMap():
         except KeyError:
             print('tilemap ' + str(name) + ' does not exist')
 
-    def add_layer(self, layer: str, size):
+    def add_layer(self, layer: str, size: tuple, grid=None):
         """Creates a layer."""
-        self.layers[layer] = TileLayer(layer, size)
+        if grid is None:
+            self.layers[layer] = TileLayer(layer, size)
+        else:
+            self.layers[layer] = TileLayer(layer, size, grid)
 
     def remove_layer(self, layer: str):
         """Removes an existing layer."""
@@ -516,49 +539,47 @@ class TileMap():
         except KeyError:
             print('layer ' + str(layer) + ' does not exist')
 
-    def add_tile(self, layer: str, pos: tuple, tile):
+    def add_tile(self, layer: str, pos: tuple, tilemap_id: int, tile_id: int):
         """Places a tile."""
-        self.layers[layer].add_tile(pos, tile)
+        self.layers[layer].add_tile(pos, (tilemap_id, tile_id))
 
     def remove_tile(self, layer: str, pos: tuple):
         """Removes a tile."""
         self.layers[layer].remove_tile(pos)
 
-    def render(self, layer: str):
-        """Render tiles at a specific layer."""
-        for layer in self.layers:
-            self.layers[layer].render()
+    def get_tile(self, tile_mapid, tile_id):
+        """Gets tile image."""
+        return TILE.tile_maps[tile_mapid][1][tile_id]
 
 # Layer with tiles
 class TileLayer():
-    def __init__(self, name, size):
+    def __init__(self, name, size, grid=None):
         self.name = name
         w, h = size[0], size[1]
-        self.grid = [None] * w
-        for column in range(size[0]):
-            self.grid[column] = [None] * h
+        if grid is None:
+            self.grid = [None] * w
+            for column in range(size[0]):
+                self.grid[column] = [None] * h
+        else:
+            self.grid = grid
 
-    def add_tile(self, pos, tile):
-        self.grid[pos[0]][pos[1]] = tile
+    def add_tile(self, pos, tile_info):
+        """Add tiles to grid on the layer."""
+        self.grid[pos[0]][pos[1]] = tile_info
 
     def remove_tile(self, pos):
+        """Remove tiles from the grid on the grid."""
         self.grid[pos[0]][pos[1]] = None
 
     def render(self):
+        """Draw tiles."""
         for column in enumerate(self.grid):
             for row in enumerate(self.grid[column[0]]):
-                tile = self.grid[column[0]][row[0]]
-                if tile is not None:
+                tile_info = self.grid[column[0]][row[0]]
+                if tile_info is not None:
+                    tile = TILE.get_tile(*tile_info)
                     pos = f_tupmult((column[0], row[0]), TILESIZE)
                     WIN.draw_image(tile, pos)
-
-# Level class
-class Level():
-    def __init__(self):
-        pass
-
-    def load_level(self):
-        pass
 
 
 # Constant objects
@@ -570,7 +591,7 @@ CUR = Cursor((0, 0), (TILESIZE, TILESIZE/2))
 TILE = TileMap()
 
 
-# Setup
+# Setup program
 pygame.display.set_caption("Game.py")
 WIN.add_font('arial', 8)
 TILE.add_tile_map('tilemap0', 'Tileset0.png')

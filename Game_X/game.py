@@ -168,8 +168,15 @@ class Level():
         # Create objects
         for arg in obj_list:
             # Interpret object info
-            name, pos, key, data = arg[0:2] + arg[3:5]
-            OBJ.create_object(name, pos, key, data)
+            name = arg[0]
+            if name != 'tile_layer':
+                pos, key, data = arg[1:4]
+                OBJ.create_object(name, pos, key, data)
+            else:
+                # Interpret layer info
+                layer_name, grid = arg[1:3]
+                size = (len(grid), len(grid[0]))
+                TILE.add_layer(layer_name, size, grid)
 
 # Handles object instances
 class Objects():
@@ -289,6 +296,92 @@ class DynamicCollider():
                     collide.append(cobj)
         return collide
 
+# Tile map
+class TileMap():
+    """Handles background and foreground graphics."""
+    def __init__(self):
+        self.layers = {}
+        self.tile_maps = []
+
+    def render(self, layer: str):
+        """Render tiles at a specific layer."""
+        for layer in self.layers:
+            self.layers[layer].render()
+
+    def add_tile_map(self, name: str, fname: str):
+        """Adds a new tilemap to the tile_maps dictionary."""
+        tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname))
+        new_tile_map = []
+        for xpos in range(int((tile_set.get_width() / TILESIZE))):
+            surface = pygame.Surface((TILESIZE, TILESIZE))
+            surface.blit(tile_set, (0, 0), area=pygame.Rect(
+                (xpos * (TILESIZE), 0), (TILESIZE, TILESIZE)))
+            new_tile_map.append(surface)
+        self.tile_maps.append((name, new_tile_map))
+
+    def remove_tile_map(self, name: str):
+        """Removes a tilemap from the tile_maps dictionary."""
+        try:
+            del self.tile_maps[name]
+        except KeyError:
+            print('tilemap ' + str(name) + ' does not exist')
+
+    def add_layer(self, layer: str, size: tuple, grid=None):
+        """Creates a layer."""
+        if grid is None:
+            self.layers[layer] = TileLayer(layer, size)
+        else:
+            self.layers[layer] = TileLayer(layer, size, grid)
+
+    def remove_layer(self, layer: str):
+        """Removes an existing layer."""
+        try:
+            del self.layers[layer]
+        except KeyError:
+            print('layer ' + str(layer) + ' does not exist')
+
+    def add_tile(self, layer: str, pos: tuple, tilemap_id: int, tile_id: int):
+        """Places a tile."""
+        self.layers[layer].add_tile(pos, (tilemap_id, tile_id))
+
+    def remove_tile(self, layer: str, pos: tuple):
+        """Removes a tile."""
+        self.layers[layer].remove_tile(pos)
+
+    def get_tile(self, tile_mapid, tile_id):
+        """Gets tile image."""
+        return TILE.tile_maps[tile_mapid][1][tile_id]
+
+# Layer with tiles
+class TileLayer():
+    def __init__(self, name, size, grid=None):
+        self.name = name
+        w, h = size[0], size[1]
+        if grid is None:
+            self.grid = [None] * w
+            for column in range(size[0]):
+                self.grid[column] = [None] * h
+        else:
+            self.grid = grid
+
+    def add_tile(self, pos, tile_info):
+        """Add tiles to grid on the layer."""
+        self.grid[pos[0]][pos[1]] = tile_info
+
+    def remove_tile(self, pos):
+        """Remove tiles from the grid on the grid."""
+        self.grid[pos[0]][pos[1]] = None
+
+    def render(self):
+        """Draw tiles."""
+        for column in enumerate(self.grid):
+            for row in enumerate(self.grid[column[0]]):
+                tile_info = self.grid[column[0]][row[0]]
+                if tile_info is not None:
+                    tile = TILE.get_tile(*tile_info)
+                    pos = f_tupmult((column[0], row[0]), TILESIZE)
+                    WIN.draw_image(tile, pos)
+
 
 # Constant objects
 WIN = Window(WIDTH, HEIGHT)
@@ -298,8 +391,16 @@ STCOL = StaticCollider()
 DYCOL = DynamicCollider()
 KEYBOARD = ObjKeyboard()
 MOUSE = ObjMouse()
-pygame.display.set_caption("Game X")
+TILE = TileMap()
 
+
+# Setup program
+pygame.display.set_caption("Game X")
+TILE.add_tile_map('tilemap0', 'Tileset0.png')
+
+
+
+# Load levels into LEVEL
 for file in os.listdir(LEVEL_PATH):
     if file[-4:] == '.lvl':
         LEVEL.add_level(file)
@@ -583,11 +684,15 @@ class Door(GameObject):
         return f_col_rects(bdom, bran, cdom, cran)
 
 
-# main code section
+
+# Starting level
+LEVEL.load_level('level0')
+
+
+# Main code section
 def main():
     """Main game loop."""
     clock = pygame.time.Clock()
-    LEVEL.load_level('level-1')
     run = True
 
     # Gameplay loop
@@ -619,11 +724,17 @@ def main():
         # clear frame
         WIN.blank()
 
+        # Render background layers
+        TILE.render('background')
+
         # Render objects
         for key in OBJ.obj:
             OBJ.obj[key].render()
-        STCOL.debug_render()
 
+        # Render foreground layers
+        TILE.render('foreground')
+
+        # FPS display
         WIN.draw_text((TILESIZE, TILESIZE*1.5), str(clock.get_fps()))
 
         # update display
