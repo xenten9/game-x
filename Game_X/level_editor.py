@@ -563,7 +563,7 @@ class TileMap():
 
     def add_tile_map(self, name: str, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
-        tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname))
+        tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname)).convert()
         new_tile_map = []
         for xpos in range(int((tile_set.get_width() / HALFTILE))):
             surface = pygame.Surface((HALFTILE, HALFTILE))

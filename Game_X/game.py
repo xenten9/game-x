@@ -7,16 +7,17 @@ import os
 from math import floor, ceil
 import ast
 
-import pygame
+import pygame as pg
 import numpy as np
+from pygame.locals import (
+    QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION)
 
 from Helper_Functions.inputs import ObjKeyboard, ObjMouse
 from Helper_Functions.tuple_functions import f_tupadd, f_tupmult
 from Helper_Functions.file_system import ObjFile
 from Helper_Functions.collisions import f_col_rects
 
-pygame.init()
-
+pg.font.init()
 
 # Constants variables
 FULLTILE = 32
@@ -76,26 +77,26 @@ def f_limit(val, minval, maxval):
 def f_event_handler(event):
     """Handles inputs and events."""
     # Key pressed
-    if event.type == pygame.KEYDOWN:
+    if event.type == KEYDOWN:
         KEYBOARD.set_key(event.scancode, 1)
 
     # Key released
-    elif event.type == pygame.KEYUP:
+    elif event.type == KEYUP:
         KEYBOARD.set_key(event.scancode, 0)
 
     # Mouse movement
-    elif event.type == pygame.MOUSEMOTION:
+    elif event.type == MOUSEMOTION:
         MOUSE.pos = event.pos
         MOUSE.rel = f_tupadd(MOUSE.rel, event.rel)
 
     # Mouse pressed
-    elif event.type == pygame.MOUSEBUTTONDOWN:
+    elif event.type == MOUSEBUTTONDOWN:
         MOUSE.button_pressed[event.button] = 1
         MOUSE.button_held[event.button] = 1
         MOUSE.button_pressed_pos[event.button] = event.pos
 
     # Mouse released
-    elif event.type == pygame.MOUSEBUTTONUP:
+    elif event.type == MOUSEBUTTONUP:
         MOUSE.button_pressed[event.button] = 0
         MOUSE.button_held[event.button] = 0
 
@@ -108,16 +109,16 @@ def f_event_handler(event):
 class Window():
     """Handles graphics."""
     def __init__(self, width: int, height: int):
-        self.display = pygame.display.set_mode((width, height))
+        self.display = pg.display.set_mode((width, height))
         self.height, self.height = width, height
-        self.fonts = {'arial12': pygame.font.SysFont('arial', 12)}
+        self.fonts = {'arial12': pg.font.SysFont('arial', 12)}
 
     def add_font(self, name: str, size):
         """Adds a font to WIN.fonts."""
         try:
             self.fonts[name + str(size)]
         except KeyError:
-            self.fonts[name + str(size)] = pygame.font.SysFont(name, size)
+            self.fonts[name + str(size)] = pg.font.SysFont(name, size)
             return None
         return None
 
@@ -127,7 +128,7 @@ class Window():
 
     def draw_rect(self, pos: tuple, size=(FULLTILE, FULLTILE), color=(0, 0, 0)):
         """Draws a rectangle at a position in a given color."""
-        pygame.draw.rect(self.display, color, pygame.Rect(pos, size))
+        pg.draw.rect(self.display, color, pg.Rect(pos, size))
 
     def draw_image(self, image, pos=(0, 0)):
         """Draws an image at a position."""
@@ -202,7 +203,7 @@ class Objects():
             try:
                 OBJ.obj[key].update()
             except KeyError:
-                print('key ' + str(key) + ' does not exist')
+                print('key {key} does not exist'.format(key=key))
 
     def render_early(self):
         for key in OBJ.obj:
@@ -225,7 +226,7 @@ class Objects():
                 self.pool[key]
             except IndexError:
                 print(self.pool)
-                print('key ' + str(key) + ' is not in pool')
+                print('key {key} is not in pool'.format(key=key))
                 key = self.pool.popitem()[0]
         return key
 
@@ -275,7 +276,7 @@ class StaticCollider():
     """Handles static collisions aligned to a grid."""
     def __init__(self):
         self.grid = [[0]*32 for n in range(32)]
-        self.image = pygame.image.load(os.path.join(SPRITE_PATH, 'wall.png'))
+        self.image = pg.image.load(os.path.join(SPRITE_PATH, 'wall.png'))
 
     def add_wall(self, pos: tuple):
         """Add a wall at a given position."""
@@ -350,11 +351,11 @@ class TileMap():
 
     def add_tile_map(self, name: str, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
-        tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname))
+        tile_set = pg.image.load(os.path.join(TILEMAP_PATH, fname)).convert()
         new_tile_map = []
         for xpos in range(int((tile_set.get_width() / HALFTILE))):
-            surface = pygame.Surface((HALFTILE, HALFTILE))
-            surface.blit(tile_set, (0, 0), area=pygame.Rect(
+            surface = pg.Surface((HALFTILE, HALFTILE))
+            surface.blit(tile_set, (0, 0), area=pg.Rect(
                 (xpos * (HALFTILE), 0), (HALFTILE, HALFTILE)))
             new_tile_map.append(surface)
         self.tile_maps.append((name, new_tile_map))
@@ -364,7 +365,7 @@ class TileMap():
         try:
             del self.tile_maps[name]
         except KeyError:
-            print('tilemap ' + str(name) + ' does not exist')
+            print('tilemap {} does not exist'.format(name))
 
     def add_layer(self, layer: str, size: tuple, grid=None):
         """Creates a layer."""
@@ -378,7 +379,7 @@ class TileMap():
         try:
             del self.layers[layer]
         except KeyError:
-            print('layer ' + str(layer) + ' does not exist')
+            print('layer {} does not exist'.format(layer))
 
     def add_tile(self, layer: str, pos: tuple, tilemap_id: int, tile_id: int):
         """Places a tile."""
@@ -440,7 +441,9 @@ TILE = TileMap()
 
 
 # Setup program
-pygame.display.set_caption("Game X")
+pg.display.set_caption("Game X")
+pg.event.set_allowed([QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
+                          MOUSEBUTTONUP, MOUSEMOTION])
 
 
 # Load tilemaps into TILE
@@ -476,7 +479,7 @@ class GameObject():
         return self._frame
     def set_frame(self, frame):
         if type(frame) != int:
-            raise ValueError('frame ' + str(frame) + ' is not an int')
+            raise ValueError('frame {} is not an int'.format(frame))
         if frame > len(self.frames):
             frame = f_loop(frame, 0, len(self.frames))
         self._frame = frame
@@ -489,7 +492,7 @@ class GameObject():
             self._frames = []
         for file in fnames:
             file_path = os.path.join(SPRITE_PATH, file)
-            self._frames.append(pygame.image.load(file_path))
+            self._frames.append(pg.image.load(file_path).convert_alpha())
     frames = property(get_frames)
 
     def scollide(self, pos=None, cpoints=None):
@@ -596,22 +599,25 @@ class Player(GameObject):
     def render_late(self):
         """Called every frame to render each game object."""
         super().render()
-        spd = (round(self.hspd, 1), round(self.vspd, 1))
-        WIN.draw_text((FULLTILE, FULLTILE), str(spd),
-                      color=f_swatch((7, 7, 7)))
-        WIN.draw_text((FULLTILE, FULLTILE*1.5),
-                      str(self.grounded) + ' ' + str(self.jump_key),
-                      color=f_swatch((7, 7, 7)))
+        text = 'Grounded: {}'.format(self.grounded)
+        WIN.draw_text((FULLTILE, 1.5*FULLTILE), text, color=f_swatch((7, 7, 7)))
+        text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
+        WIN.draw_text((FULLTILE, 2*FULLTILE), text, color=f_swatch((7, 7, 7)))
 
     def get_inputs(self):
         """Get all of the inputs read before moving."""
         # Grounded
-        self.grounded -= 1
-        if self.grav >= 0 and self.scollide(f_tupadd(self.pos, (0, 1))):
-            self.grounded = self.coyote # Normal Gravity
-        if self.grav <= 0 and self.scollide(f_tupadd(self.pos, (0, -1))):
-            self.grounded = -self.coyote # Inverted Gravity
         self.grounded -= np.sign(self.grounded)
+        if self.grav >= 0 and self.scollide(f_tupadd(self.pos, (0, 1))):
+            if self.grav != 0:
+                self.grounded = self.coyote # Normal Gravity
+            else:
+                self.grounded = 1
+        if self.grav <= 0 and self.scollide(f_tupadd(self.pos, (0, -1))):
+            if self.grav != 0:
+                self.grounded = -self.coyote # Normal Gravity
+            else:
+                self.grounded = -1
 
         # Jumping
         self.jump_key -= 1
@@ -817,7 +823,7 @@ LEVEL.load_level('level0')
 # Main code section
 def main():
     """Main game loop."""
-    clock = pygame.time.Clock()
+    clock = pg.time.Clock()
     run = True
 
     # Gameplay loop
@@ -827,9 +833,9 @@ def main():
         MOUSE.reset()
 
         # Event Handler
-        for event in pygame.event.get():
+        for event in pg.event.get():
             # Exit game
-            if event.type == pygame.QUIT:
+            if event.type == QUIT:
                 run = False
             else:
                 f_event_handler(event)
@@ -847,7 +853,6 @@ def main():
         # Render background layers
         OBJ.render_early()
         TILE.render('background')
-        STCOL.debug_render()
 
         # Render objects
         OBJ.render()
@@ -857,15 +862,13 @@ def main():
         OBJ.render_late()
 
         # FPS display
-        WIN.draw_text((FULLTILE, FULLTILE*2), str(clock.get_fps()),
-                      color=f_swatch((7, 7, 7)))
-        WIN.draw_text((FULLTILE, FULLTILE*2.5), str(DYCOL.colliders),
-                      color=f_swatch((7, 7, 7)))
+        fps = 'fps: {:3f}'.format(clock.get_fps())
+        WIN.draw_text((FULLTILE, FULLTILE), fps, color=f_swatch((7, 7, 7)))
 
         # update display
-        pygame.display.update()
+        pg.display.update()
 
-    pygame.quit()
+    pg.quit()
 
 if __name__ == "__main__":
     main()
