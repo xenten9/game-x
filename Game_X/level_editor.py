@@ -19,8 +19,9 @@ pygame.init()
 
 
 # Constants variables
-TILESIZE = 32
-WIDTH, HEIGHT = 32 * TILESIZE, 24 * TILESIZE
+FULLTILE = 32
+HALFTILE = int(FULLTILE/2)
+WIDTH, HEIGHT = 32 * FULLTILE, 24 * FULLTILE
 FPS = 60
 
 # File paths
@@ -124,7 +125,7 @@ class Window():
         """Draws text at a position in a given font and color."""
         self.display.blit(self.fonts[font].render(text, 0, color), pos)
 
-    def draw_rect(self, pos: tuple, size=(TILESIZE, TILESIZE), color=(0, 0, 0)):
+    def draw_rect(self, pos: tuple, size=(FULLTILE, FULLTILE), color=(0, 0, 0)):
         """Draws a rectangle at a position in a given color."""
         pygame.draw.rect(self.display, color, pygame.Rect(pos, size))
 
@@ -299,7 +300,7 @@ class Cursor():
         self.pos = pos
         self.size = size
         self.color = f_swatch((6, 6, 6))
-        self.speed = TILESIZE
+        self.speed = FULLTILE
         self.select = 0
         self.tile_map = 0
         self.layer = 0
@@ -311,9 +312,11 @@ class Cursor():
         if KEYBOARD.get_key_pressed(50): # M
             self.mode += 1
             self.select = 0
+            self.pos = (0, 0)
         if KEYBOARD.get_key_pressed(49): # N
             self.mode -= 1
             self.select = 0
+            self.pos = (0, 0)
         self.mode = f_loop(self.mode, 0, 1)
 
         # Saving and loading
@@ -324,8 +327,10 @@ class Cursor():
 
         # State machine
         if self.mode == 0: # Object mode
+            self.speed = FULLTILE
             self.mode0()
         elif self.mode == 1: # Tile mode
+            self.speed = HALFTILE
             self.mode1()
 
     def mode0(self):
@@ -357,7 +362,7 @@ class Cursor():
         # Place object
         if MOUSE.get_button_held(1):
             pos = MOUSE.get_pos()
-            pos = f_tupgrid(pos, TILESIZE)
+            pos = f_tupgrid(pos, FULLTILE)
             if self.pos != pos or MOUSE.get_button_pressed(1):
                 self.pos = pos
                 self.place_object()
@@ -365,7 +370,7 @@ class Cursor():
         # Remove object
         if MOUSE.get_button_held(3):
             pos = MOUSE.get_pos()
-            pos = f_tupgrid(pos, TILESIZE)
+            pos = f_tupgrid(pos, FULLTILE)
             if self.pos != pos or MOUSE.get_button_pressed(3):
                 self.pos = pos
                 self.remove_object()
@@ -404,7 +409,7 @@ class Cursor():
         if KEYBOARD.get_key_pressed(57):
             # Get arguments
             layer = list(TILE.layers.keys())[self.layer]
-            pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+            pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
 
             # Create tile
             TILE.add_tile(layer, pos, self.tile_map, self.select)
@@ -412,7 +417,7 @@ class Cursor():
         # Remove tiles with cursor
         if KEYBOARD.get_key_pressed(83):
             layer = list(TILE.layers.keys())[self.layer]
-            pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+            pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
 
             # Remove tile
             TILE.remove_tile(layer, pos)
@@ -422,28 +427,28 @@ class Cursor():
         if MOUSE.get_button_held(1):
             # Update position
             pos = MOUSE.get_pos()
-            pos = f_tupgrid(pos, TILESIZE)
+            pos = f_tupgrid(pos, HALFTILE)
             if self.pos != pos or MOUSE.get_button_pressed(1):
                 self.pos = pos
 
                 # Get arguments
                 layer = list(TILE.layers.keys())[self.layer]
-                pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+                pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
 
                 # Create tile
                 TILE.add_tile(layer, pos, self.tile_map, self.select)
 
-        # Remove object
+        # Remove tile
         if MOUSE.get_button_held(3):
             # Update position
             pos = MOUSE.get_pos()
-            pos = f_tupgrid(pos, TILESIZE)
+            pos = f_tupgrid(pos, HALFTILE)
             if self.pos != pos or MOUSE.get_button_pressed(3):
                 self.pos = pos
 
                 # Get arguments
                 layer = list(TILE.layers.keys())[self.layer]
-                pos = f_tupround(f_tupmult(self.pos, 1/TILESIZE), -1)
+                pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
 
                 # Remove tile
                 TILE.remove_tile(layer, pos)
@@ -500,22 +505,27 @@ class Cursor():
                     print(element)
                     print(obj.data)
 
-    def render(self):
+    def render_late(self):
         """Render cursor and debug text."""
-        WIN.draw_text((0, 0), str(self.pos), 'arial12',
-                      f_cinverse(self.color))
         if self.mode == 0:
             WIN.draw_rect(self.pos, self.size, self.color)
             WIN.draw_text(self.pos, OBJ.object_names[self.select])
         elif self.mode == 1:
-            WIN.draw_text((0, TILESIZE/2), TILE.tile_maps[self.tile_map][0])
-            WIN.draw_text((0, TILESIZE), list(TILE.layers.keys())[self.layer])
-            WIN.draw_image(TILE.tile_maps[self.tile_map][1][self.select], self.pos)
+            # Tile
+            WIN.draw_image(TILE.tile_maps[self.tile_map][1][self.select],
+                           self.pos)
+            # Tilemap name
+            WIN.draw_text((0, HALFTILE), TILE.tile_maps[self.tile_map][0],
+                          color=f_swatch((7, 0, 7)))
+            # Layer name
+            WIN.draw_text((0, FULLTILE), list(TILE.layers.keys())[self.layer],
+                          color=f_swatch((7, 0, 7)))
+        WIN.draw_text((0, 0), str(self.pos), 'arial12', f_swatch((7, 0, 7)))
 
 # Sample of game object (level editor)
 class Entity():
     """Sample game object (level editor)."""
-    def __init__(self, pos, name, size=(TILESIZE, TILESIZE), color=(0, 0, 0)):
+    def __init__(self, pos, name, size=(FULLTILE, FULLTILE), color=(0, 0, 0)):
         self.pos = pos
         self.name = name
         self.size = size
@@ -555,10 +565,10 @@ class TileMap():
         """Adds a new tilemap to the tile_maps dictionary."""
         tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname))
         new_tile_map = []
-        for xpos in range(int((tile_set.get_width() / TILESIZE))):
-            surface = pygame.Surface((TILESIZE, TILESIZE))
+        for xpos in range(int((tile_set.get_width() / HALFTILE))):
+            surface = pygame.Surface((HALFTILE, HALFTILE))
             surface.blit(tile_set, (0, 0), area=pygame.Rect(
-                (xpos * (TILESIZE), 0), (TILESIZE, TILESIZE)))
+                (xpos * (HALFTILE), 0), (HALFTILE, HALFTILE)))
             new_tile_map.append(surface)
         self.tile_maps.append((name, new_tile_map))
 
@@ -616,7 +626,7 @@ class TileLayer():
                     tile_info = self.grid[column[0]][row[0]]
                     if tile_info is not None:
                         tile = TILE.get_tile(*tile_info)
-                        pos = f_tupmult((column[0], row[0]), TILESIZE)
+                        pos = f_tupmult((column[0], row[0]), HALFTILE)
                         WIN.draw_image(tile, pos)
 
     def toggle_visibility(self):
@@ -636,7 +646,7 @@ WIN = Window(WIDTH, HEIGHT)
 KEYBOARD = ObjKeyboard()
 MOUSE = ObjMouse()
 OBJ = Objects()
-CUR = Cursor((0, 0), (TILESIZE, TILESIZE/2))
+CUR = Cursor((0, 0), (FULLTILE, HALFTILE))
 TILE = TileMap()
 
 
@@ -649,8 +659,10 @@ WIN.add_font('arial', 8)
 for file in os.listdir(TILEMAP_PATH):
     if file[-4:] == '.png':
         TILE.add_tile_map(file[:-4], file)
-TILE.add_layer('background', (32, 32))
-TILE.add_layer('foreground', (32, 32))
+TILE.add_layer('background', (int(2*(WIDTH/FULLTILE)),
+                              int(2*(HEIGHT/FULLTILE))))
+TILE.add_layer('foreground', (int(2*(WIDTH/FULLTILE)),
+                              int(2*(HEIGHT/FULLTILE))))
 
 
 # main code section
@@ -696,8 +708,8 @@ def main():
         TILE.render('foreground')
 
         # Render on top
-        CUR.render()
         OBJ.render_late()
+        CUR.render_late()
 
         # Update display
         pygame.display.update()

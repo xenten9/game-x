@@ -19,8 +19,9 @@ pygame.init()
 
 
 # Constants variables
-TILESIZE = 32
-WIDTH, HEIGHT = 32 * TILESIZE, 24 * TILESIZE
+FULLTILE = 32
+HALFTILE = int(FULLTILE/2)
+WIDTH, HEIGHT = 32 * FULLTILE, 24 * FULLTILE
 FPS = 60
 
 # File paths
@@ -124,7 +125,7 @@ class Window():
         """Draws text at a position in a given font and color."""
         self.display.blit(self.fonts[font].render(text, 0, color), pos)
 
-    def draw_rect(self, pos: tuple, size=(TILESIZE, TILESIZE), color=(0, 0, 0)):
+    def draw_rect(self, pos: tuple, size=(FULLTILE, FULLTILE), color=(0, 0, 0)):
         """Draws a rectangle at a position in a given color."""
         pygame.draw.rect(self.display, color, pygame.Rect(pos, size))
 
@@ -242,31 +243,31 @@ class Objects():
         """Loads a level into the OBJ.obj dictioanry."""
         # Object creation
         if name == 'wall':
-            STCOL.add_wall((int(pos[0] / TILESIZE), int(pos[1] / TILESIZE)))
+            STCOL.add_wall((int(pos[0] / FULLTILE), int(pos[1] / FULLTILE)))
 
         elif name == 'player':
             key = self.instantiate_key(key)
-            obj = Player(key, pos, (TILESIZE, TILESIZE), name, data)
+            obj = Player(key, pos, (FULLTILE, FULLTILE), name, data)
             self.instantiate_object(key, obj)
 
         elif name == 'button':
             key = self.instantiate_key(key)
-            obj = Button(key, pos, (TILESIZE, TILESIZE/8), name, data)
+            obj = Button(key, pos, (FULLTILE, FULLTILE/8), name, data)
             self.instantiate_object(key, obj)
 
         elif name == 'door':
             key = self.instantiate_key(key)
-            obj = Door(key, pos, (TILESIZE, TILESIZE), name, data)
+            obj = Door(key, pos, (FULLTILE, FULLTILE), name, data)
             self.instantiate_object(key, obj)
 
         elif name == 'grav-orb':
             key = self.instantiate_key(key)
-            obj = GravOrb(key, pos, (TILESIZE, TILESIZE), name, data)
+            obj = GravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
             self.instantiate_object(key, obj)
 
         elif name == 'spike':
             key = self.instantiate_key(key)
-            obj = Spike(key, pos, (TILESIZE, TILESIZE/8), name, data)
+            obj = Spike(key, pos, (FULLTILE, FULLTILE/8), name, data)
             self.instantiate_object(key, obj)
 
 # Handles static collision
@@ -286,7 +287,7 @@ class StaticCollider():
 
     def get_col(self, pos) -> bool:
         """Check for a wall at a given position."""
-        pos = (floor(pos[0]/TILESIZE), floor(pos[1]/TILESIZE))
+        pos = (floor(pos[0]/FULLTILE), floor(pos[1]/FULLTILE))
         try:
             return self.grid[pos[0]][pos[1]]
         except IndexError:
@@ -300,7 +301,7 @@ class StaticCollider():
         for column in range(len(self.grid)):
             for row in range(len(self.grid[column])):
                 if self.grid[column][row]:
-                    pos = f_tupmult((column, row), TILESIZE)
+                    pos = f_tupmult((column, row), FULLTILE)
                     WIN.draw_image(self.image, pos)
 
 # Handles Dynamic collisions
@@ -351,10 +352,10 @@ class TileMap():
         """Adds a new tilemap to the tile_maps dictionary."""
         tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname))
         new_tile_map = []
-        for xpos in range(int((tile_set.get_width() / TILESIZE))):
-            surface = pygame.Surface((TILESIZE, TILESIZE))
+        for xpos in range(int((tile_set.get_width() / HALFTILE))):
+            surface = pygame.Surface((HALFTILE, HALFTILE))
             surface.blit(tile_set, (0, 0), area=pygame.Rect(
-                (xpos * (TILESIZE), 0), (TILESIZE, TILESIZE)))
+                (xpos * (HALFTILE), 0), (HALFTILE, HALFTILE)))
             new_tile_map.append(surface)
         self.tile_maps.append((name, new_tile_map))
 
@@ -412,7 +413,7 @@ class TileLayer():
                     tile_info = self.grid[column[0]][row[0]]
                     if tile_info is not None:
                         tile = TILE.get_tile(*tile_info)
-                        pos = f_tupmult((column[0], row[0]), TILESIZE)
+                        pos = f_tupmult((column[0], row[0]), HALFTILE)
                         WIN.draw_image(tile, pos)
 
     def toggle_visibility(self):
@@ -596,9 +597,9 @@ class Player(GameObject):
         """Called every frame to render each game object."""
         super().render()
         spd = (round(self.hspd, 1), round(self.vspd, 1))
-        WIN.draw_text((TILESIZE, TILESIZE), str(spd),
+        WIN.draw_text((FULLTILE, FULLTILE), str(spd),
                       color=f_swatch((7, 7, 7)))
-        WIN.draw_text((TILESIZE, TILESIZE*1.5),
+        WIN.draw_text((FULLTILE, FULLTILE*1.5),
                       str(self.grounded) + ' ' + str(self.jump_key),
                       color=f_swatch((7, 7, 7)))
 
@@ -703,9 +704,10 @@ class Button(GameObject):
     """Button game object."""
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size, relative=(0, TILESIZE-size[1]))
+        super().__init__(key, pos, size, relative=(0, FULLTILE-size[1]))
         self.name = name
         self.data = data
+        self.door = data[0]
 
         # Rendering
         self.set_frames(0, 'button0.png', 'button1.png')
@@ -717,7 +719,7 @@ class Button(GameObject):
             for obj in col:
                 if obj.name == 'player':
                     self.frame = 1
-                    OBJ.obj[self.data[0]].frame = 1
+                    OBJ.obj[self.door].frame = 1
 
     def get_collision_self(self, pos, size):
         """See if object is pressing button."""
@@ -734,6 +736,7 @@ class Door(GameObject):
         super().__init__(key, pos, size)
         self.name = name
         self.data = data
+        self.next_level = data[0]
 
         # Images
         self.set_frames(0, 'door0.png', 'door1.png')
@@ -744,7 +747,7 @@ class Door(GameObject):
             col = self.dcollide()
             for obj in col:
                 if obj.name == 'player':
-                    LEVEL.load_level(self.data[0])
+                    LEVEL.load_level(self.next_level)
 
     def get_collision_self(self, pos, size):
         """See if object is pressing button."""
@@ -786,7 +789,7 @@ class GravOrb(GameObject):
 class Spike(GameObject):
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size)
+        super().__init__(key, pos, size, relative=(0, FULLTILE-size[1]))
         self.name = name
         self.data = data
 
@@ -836,6 +839,7 @@ def main():
         # Render background layers
         OBJ.render_early()
         TILE.render('background')
+        STCOL.debug_render()
 
         # Render objects
         OBJ.render()
@@ -845,9 +849,9 @@ def main():
         OBJ.render_late()
 
         # FPS display
-        WIN.draw_text((TILESIZE, TILESIZE*2), str(clock.get_fps()),
+        WIN.draw_text((FULLTILE, FULLTILE*2), str(clock.get_fps()),
                       color=f_swatch((7, 7, 7)))
-        WIN.draw_text((TILESIZE, TILESIZE*2.5), str(DYCOL.colliders),
+        WIN.draw_text((FULLTILE, FULLTILE*2.5), str(DYCOL.colliders),
                       color=f_swatch((7, 7, 7)))
 
         # update display
