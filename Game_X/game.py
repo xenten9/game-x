@@ -213,12 +213,12 @@ class Objects():
             self.pool[item] = 1
         self.obj = {}
 
-    def update(self):
+    def update(self, dt):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
             try:
-                self.obj[key].update()
+                self.obj[key].update(dt)
             except KeyError:
                 print('key {key} does not exist'.format(key=key))
 
@@ -617,7 +617,7 @@ class Player(GameObject):
         # Rendering
         self.set_frames(0, 'player.png')
 
-    def update(self):
+    def update(self, dt):
         """Called every frame for each game object."""
         self.get_inputs()
         if self.mode == 0:
@@ -749,7 +749,7 @@ class Button(GameObject):
         # Rendering
         self.set_frames(0, 'button0.png', 'button1.png')
 
-    def update(self):
+    def update(self, dt):
         """Called every frame for each game object."""
         if self.frame == 0:
             col = self.dcollide()
@@ -778,7 +778,7 @@ class Door(GameObject):
         # Images
         self.set_frames(0, 'door0.png', 'door1.png')
 
-    def update(self):
+    def update(self, dt):
         """Called every frame for each game object."""
         if self.frame == 1:
             col = self.dcollide()
@@ -805,7 +805,7 @@ class GravOrb(GameObject):
         # Images
         self.set_frames(0, 'grav-orb.png')
 
-    def update(self):
+    def update(self, dt):
         """Called every frame for each game object."""
         col = self.dcollide()
         for obj in col:
@@ -844,7 +844,7 @@ class Spike(GameObject):
         # Images
         self.set_frames(0, 'spike0.png')
 
-    def update(self):
+    def update(self, dt):
         """Called every frame for each game object."""
         col = self.dcollide()
         for obj in col:
@@ -864,7 +864,9 @@ def main():
 
     # Gameplay loop
     while run:
-        clock.tick(FPS)
+        dt = clock.tick(FPS)
+        dt *= (FPS / 1000)
+        print(dt)
         KEYBOARD.reset()
         MOUSE.reset()
 
@@ -881,7 +883,7 @@ def main():
             run = False
 
         # Update objects
-        OBJ.update()
+        OBJ.update(dt)
 
         # clear frame
         WIN.blank()
