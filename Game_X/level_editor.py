@@ -2,6 +2,8 @@
 # pylint: disable=no-member
 # pylint: disable=too-many-function-args
 # pylint: disable=unnecessary-pass
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-instance-attributes
 
 # Imports
 import os
@@ -43,6 +45,14 @@ def f_swatch(rgb=(0, 0, 0)) -> tuple:
 def f_cinverse(rgb=(0, 0, 0)) -> tuple:
     """Converts 16 bit tuple to its 16 bit inverse(RGB)."""
     return f_tupmult(f_tupadd((-255, -255, -255), rgb), -1)
+
+# Creates a grid
+def f_make_grid(width, height, default_value):
+    """Makes a grid populated with some default value."""
+    grid = []
+    for _ in range(width):
+        grid.append([default_value] * height)
+    return grid
 
 # Return a value following packman logic
 def f_loop(val, minval, maxval):
@@ -98,10 +108,6 @@ def f_event_handler(event):
     elif event.type == pygame.MOUSEBUTTONUP:
         MOUSE.button_pressed[event.button] = 0
         MOUSE.button_held[event.button] = 0
-
-    # Unknown event
-    else:
-        pass
 
 
 # Handles graphics
@@ -167,26 +173,31 @@ class Objects():
         ]
         self.visible = True
 
+    def update(self):
+        """Update all Entities."""
+        for key in self.obj:
+            self.obj[key].update()
+
     def render_early(self):
+        """Render that occurs before the background."""
         if self.visible:
             for obj in self.obj:
                 self.obj[obj].render_early()
 
     def render(self):
+        """Render that occurs between background and foreground."""
         if self.visible:
             for obj in self.obj:
                 self.obj[obj].render()
 
     def render_late(self):
+        """Render that occurs after the foreground."""
         if self.visible:
             for obj in self.obj:
                 self.obj[obj].render_late()
 
-    def update(self):
-        for key in self.obj:
-                OBJ.obj[key].update()
-
     def toggle_visibility(self):
+        """Toggle Entity visibility."""
         self.visible = not self.visible
 
     def instantiate(self, obj, key=None):
@@ -195,7 +206,6 @@ class Objects():
             key = self.pool.popitem()[0]
         else:
             try:
-                self.pool[key]
                 del self.pool[key]
             except IndexError:
                 print(self.pool)
@@ -263,12 +273,12 @@ class Objects():
         level.close()
 
         # Clear entities
-        objects = OBJ.obj.copy()
+        objects = self.obj.copy()
         for obj in objects:
-            OBJ.delete(obj)
+            self.delete(obj)
 
         # Clear tiles
-        TILE.layers = {}
+        TILE.clear()
 
         # Create objects
         for arg in obj_list:
@@ -292,6 +302,7 @@ class Objects():
 
         # success
         print('successful level load!')
+        return None
 
 # Adds objects to level
 class Cursor():
@@ -312,11 +323,11 @@ class Cursor():
         if KEYBOARD.get_key_pressed(50): # M
             self.mode += 1
             self.select = 0
-            self.pos = (0, 0)
+            self.pos = f_tupgrid(self.pos, FULLTILE)
         if KEYBOARD.get_key_pressed(49): # N
             self.mode -= 1
             self.select = 0
-            self.pos = (0, 0)
+            self.pos = f_tupgrid(self.pos, FULLTILE)
         self.mode = f_loop(self.mode, 0, 1)
 
         # Saving and loading
@@ -603,20 +614,22 @@ class TileMap():
 
     def get_tile(self, tile_mapid, tile_id):
         """Gets tile image."""
-        return TILE.tile_maps[tile_mapid][1][tile_id]
+        return self.tile_maps[tile_mapid][1][tile_id]
+
+    def clear(self):
+        """Clears out all tile layers."""
+        self.layers = {}
 
 # Layer with tiles
 class TileLayer():
+    """Layer containing all of the tiles in a lookup form."""
     def __init__(self, name, size, grid=None):
         self.name = name
-        w, h = size[0], size[1]
         self.visible = True
+        width, height = size[0], size[1]
         if grid is None:
-            self.grid = [None] * w
-            for column in range(size[0]):
-                self.grid[column] = [None] * h
-        else:
-            self.grid = grid
+            grid = f_make_grid(width, height, None)
+        self.grid = grid
 
     def render(self):
         """Draw tiles."""
@@ -630,6 +643,7 @@ class TileLayer():
                         WIN.draw_image(tile, pos)
 
     def toggle_visibility(self):
+        """Make layer invisible."""
         self.visible = not self.visible
 
     def add_tile(self, pos, tile_info):
