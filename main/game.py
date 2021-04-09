@@ -11,7 +11,7 @@ import os
 from math import floor
 import ast
 
-import pygame as pg
+import pygame
 import numpy as np
 from pygame.locals import (QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
                            MOUSEBUTTONUP, MOUSEMOTION)
@@ -21,7 +21,7 @@ from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupround
 from Helper_Functions.file_system import ObjFile
 from Helper_Functions.collisions import f_col_rects
 
-pg.font.init()
+pygame.font.init()
 
 # Constants variables
 FULLTILE = 32
@@ -30,9 +30,8 @@ WIDTH, HEIGHT = 32 * FULLTILE, 24 * FULLTILE
 FPS = 60
 
 # File paths
-DEFAULT_PATH = os.getcwd()
-GAME_PATH = os.path.join(DEFAULT_PATH, 'Game_X')
-ASSET_PATH = os.path.join(GAME_PATH, 'Assets')
+DEFAULT_PATH = __file__[:-8]
+ASSET_PATH = os.path.join(DEFAULT_PATH, 'Assets')
 SPRITE_PATH = os.path.join(ASSET_PATH, 'Sprites')
 LEVEL_PATH = os.path.join(ASSET_PATH, 'Levels')
 TILEMAP_PATH = os.path.join(ASSET_PATH, 'Tilemaps')
@@ -117,16 +116,16 @@ def f_event_handler(event):
 class Window():
     """Handles graphics."""
     def __init__(self, width: int, height: int):
-        self.display = pg.display.set_mode((width, height))
+        self.display = pygame.display.set_mode((width, height))
         self.height, self.height = width, height
-        self.fonts = {'arial12': pg.font.SysFont('arial', 12)}
+        self.fonts = {'arial12': pygame.font.SysFont('arial', 12)}
 
     def add_font(self, name: str, size):
         """Adds a font to WIN.fonts."""
         try:
             self.fonts[name + str(size)]
         except KeyError:
-            self.fonts[name + str(size)] = pg.font.SysFont(name, size)
+            self.fonts[name + str(size)] = pygame.font.SysFont(name, size)
             return None
         return None
 
@@ -136,7 +135,7 @@ class Window():
 
     def draw_rect(self, pos: tuple, size=(FULLTILE, FULLTILE), color=(0, 0, 0)):
         """Draws a rectangle at a position in a given color."""
-        pg.draw.rect(self.display, color, pg.Rect(pos, size))
+        pygame.draw.rect(self.display, color, pygame.Rect(pos, size))
 
     def draw_image(self, image, pos=(0, 0)):
         """Draws an image at a position."""
@@ -303,7 +302,7 @@ class StaticCollider():
     def __init__(self, size: tuple):
         self.size = size
         self.grid = f_make_grid(*self.size, 0)
-        self.image = pg.image.load(os.path.join(SPRITE_PATH, 'wall.png'))
+        #self.image = pygame.image.load(os.path.join(SPRITE_PATH, 'wall.png'))
 
     def add_wall(self, pos: tuple):
         """Add a wall at a given position."""
@@ -325,14 +324,6 @@ class StaticCollider():
         """Clear all Static collision points off of grid"""
         self.grid = f_make_grid(*self.size, 0)
 
-    def debug_render(self):
-        """Draw walls for debug purposes"""
-        for column in range(len(self.grid)):
-            for row in range(len(self.grid[column])):
-                if self.grid[column][row]:
-                    pos = f_tupmult((column, row), FULLTILE)
-                    WIN.draw_image(self.image, pos)
-
 # Handles Dynamic collisions
 class DynamicCollider():
     """Handles collisions with moving objects."""
@@ -342,7 +333,6 @@ class DynamicCollider():
     def add_collider(self, key, obj):
         """Adds a collider to self.colliders."""
         self.colliders[key] = obj
-        print(self.colliders)
 
     def remove_collider(self, key):
         """Removes a collider to self.colliders."""
@@ -390,11 +380,11 @@ class TileMap():
 
     def add_tile_map(self, name: str, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
-        tile_set = pg.image.load(os.path.join(TILEMAP_PATH, fname)).convert()
+        tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname)).convert()
         new_tile_map = []
         for xpos in range(int((tile_set.get_width() / HALFTILE))):
-            surface = pg.Surface((HALFTILE, HALFTILE)) # pylint: disable=too-many-function-args
-            surface.blit(tile_set, (0, 0), area=pg.Rect(
+            surface = pygame.Surface((HALFTILE, HALFTILE)) # pylint: disable=too-many-function-args
+            surface.blit(tile_set, (0, 0), area=pygame.Rect(
                 (xpos * (HALFTILE), 0), (HALFTILE, HALFTILE)))
             new_tile_map.append(surface)
         self.tile_maps.append((name, new_tile_map))
@@ -481,9 +471,9 @@ TILE = TileMap()
 
 
 # Setup program
-pg.event.set_allowed([QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
+pygame.event.set_allowed([QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
                       MOUSEBUTTONUP, MOUSEMOTION])
-pg.display.set_caption("Game X")
+pygame.display.set_caption("Game X")
 TILE.load()
 LEVEL.load()
 
@@ -525,7 +515,7 @@ class GameObject():
             self._frames = []
         for file in fnames:
             file_path = os.path.join(SPRITE_PATH, file)
-            self._frames.append(pg.image.load(file_path).convert_alpha())
+            self._frames.append(pygame.image.load(file_path).convert_alpha())
     frames = property(get_frames)
 
     def scollide(self, pos=None, cpoints=None):
@@ -586,8 +576,11 @@ class Player(GameObject):
         self.color = f_swatch((2, 5, 5))
 
         # Keys
+        self.jump_keys = (44, 26, 82)
         self.jump_key = 0
+        self.left_keys = (4, 80)
         self.left_key = 0
+        self.right_keys = (7, 79)
         self.right_key = 0
 
         # Ground
@@ -652,13 +645,13 @@ class Player(GameObject):
 
         # Jumping
         self.jump_key -= 1
-        if KEYBOARD.get_key_pressed(17, 72, 57) and self.jump_key <= 0:
+        if KEYBOARD.get_key_pressed(*self.jump_keys) and self.jump_key <= 0:
             self.jump_key = self.jump_lenience
         self.jump_key = f_limit(self.jump_key, 0, self.jump_lenience)
 
         # Horizontal controls
-        self.left_key = KEYBOARD.get_key_held(30, 75)
-        self.right_key = KEYBOARD.get_key_held(32, 77)
+        self.left_key = KEYBOARD.get_key_held(*self.left_keys)
+        self.right_key = KEYBOARD.get_key_held(*self.right_keys)
 
     def movement(self):
         """Handle player movement."""
@@ -670,7 +663,7 @@ class Player(GameObject):
                 self.hspd *= self.ground_fric_dynamic
 
                 # Running
-                if KEYBOARD.get_key_held(42):
+                if KEYBOARD.get_key_held(225):
                     self.hspd += move * self.run_speed
                 else:
                     self.hspd += move * self.walk_speed
@@ -702,7 +695,7 @@ class Player(GameObject):
         # Jump gravity
         if np.sign(self.vspd) == np.sign(self.grav):
             self.vspd += self.grav * self.fallgrav
-        elif KEYBOARD.get_key_held(17, 72, 57):
+        elif KEYBOARD.get_key_held(*self.jump_keys):
             self.vspd += self.grav * self.jumpgrav
         else:
             self.vspd += self.grav
@@ -859,19 +852,18 @@ LEVEL.load_level('level0')
 # Main code section
 def main():
     """Main game loop."""
-    clock = pg.time.Clock()
+    clock = pygame.time.Clock()
     run = True
 
     # Gameplay loop
     while run:
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
-        print(dt)
         KEYBOARD.reset()
         MOUSE.reset()
 
         # Event Handler
-        for event in pg.event.get():
+        for event in pygame.event.get():
             # Exit game
             if event.type == QUIT:
                 run = False
@@ -879,7 +871,7 @@ def main():
                 f_event_handler(event)
 
         # Quit by escape
-        if KEYBOARD.get_key_pressed(1):
+        if KEYBOARD.get_key_pressed(41):
             run = False
 
         # Update objects
@@ -904,9 +896,9 @@ def main():
         WIN.draw_text((FULLTILE, FULLTILE), fps, color=f_swatch((7, 7, 7)))
 
         # update display
-        pg.display.update()
+        pygame.display.update()
 
-    pg.quit()
+    pygame.quit()
 
 if __name__ == "__main__":
     main()
