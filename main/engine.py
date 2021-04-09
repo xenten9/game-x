@@ -6,6 +6,7 @@ import ast
 from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupround
 from Helper_Functions.file_system import ObjFile
 from Helper_Functions.collisions import f_col_rects
+from Helper_Functions.inputs import ObjKeyboard, ObjMouse
 
 import pygame
 from pygame.locals import (QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
@@ -14,31 +15,6 @@ from pygame.locals import (QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
 
 # Methods
 # Handle events
-def f_event_handler(event, keyboard, mouse):
-    """Handles inputs and events."""
-    # Key pressed
-    if event.type == KEYDOWN:
-        keyboard.set_key(event.scancode, 1)
-
-    # Key released
-    elif event.type == KEYUP:
-        keyboard.set_key(event.scancode, 0)
-
-    # Mouse movement
-    elif event.type == MOUSEMOTION:
-        mouse.pos = event.pos
-        mouse.rel = f_tupadd(mouse.rel, event.rel)
-
-    # Mouse pressed
-    elif event.type == MOUSEBUTTONDOWN:
-        mouse.button_pressed[event.button] = 1
-        mouse.button_held[event.button] = 1
-        mouse.button_pressed_pos[event.button] = event.pos
-
-    # Mouse released
-    elif event.type == MOUSEBUTTONUP:
-        mouse.button_pressed[event.button] = 0
-        mouse.button_held[event.button] = 0
 
 # Convert (4 bit tuples to 8 bit tuples)
 def f_swatch(rgb=(0, 0, 0)) -> tuple:
@@ -88,6 +64,89 @@ def f_limit(val, minval, maxval):
 
 
 # Classes
+class Game():
+    def __init__(self, screen_size: tuple, level_size: tuple,
+                 full_tile: int, paths: list, object_function):
+        # File paths
+        self.DEFAULT_PATH = paths['DEFAULT']
+        self.ASSET_PATH = paths['ASSETS']
+        self.SPRITE_PATH = paths['SPRITES']
+        self.LEVEL_PATH = paths['LEVELS']
+        self.TILEMAP_PATH = paths['TILEMAPS']
+
+        # Constants
+        self.FULLTILE = full_tile
+
+        # Constant Objects
+        self.WIN = Window(*screen_size)
+        self.OBJ = ObjectHandler(object_function)
+        self.STCOL = StaticCollider(level_size, self.FULLTILE)
+        self.DYCOL = DynamicCollider()
+        self.LEVEL = Level(self.LEVEL_PATH, self)
+        self.TILE = TileMap(self.TILEMAP_PATH, self.FULLTILE, self)
+        self.KEYBOARD = ObjKeyboard()
+        self.MOUSE = ObjMouse()
+
+        # Game loop
+        self.run = 1
+
+    def update(self, dt):
+        self.OBJ.update(dt)
+
+    def render(self):
+        # Render background layers
+        self.OBJ.render_early(self.WIN)
+        self.TILE.render('background')
+
+        # Render objects
+        self.OBJ.render(self.WIN)
+
+        # Render foreground layers
+        self.TILE.render('foreground')
+        self.OBJ.render_late(self.WIN)
+
+    def handle_events(self, event):
+        """Handles inputs and events."""
+        # Key pressed
+        if event.type == KEYDOWN:
+            self.KEYBOARD.set_key(event.scancode, 1)
+
+        # Key released
+        elif event.type == KEYUP:
+            self.KEYBOARD.set_key(event.scancode, 0)
+
+        # Mouse movement
+        elif event.type == MOUSEMOTION:
+            self.MOUSE.pos = event.pos
+            self.MOUSE.rel = f_tupadd(self.MOUSE.rel, event.rel)
+
+        # Mouse pressed
+        elif event.type == MOUSEBUTTONDOWN:
+            self.MOUSE.button_pressed[event.button] = 1
+            self.MOUSE.button_held[event.button] = 1
+            self.MOUSE.button_pressed_pos[event.button] = event.pos
+
+        # Mouse released
+        elif event.type == MOUSEBUTTONUP:
+            self.MOUSE.button_pressed[event.button] = 0
+            self.MOUSE.button_held[event.button] = 0
+
+    def input_reset(self):
+        self.KEYBOARD.reset()
+        self.MOUSE.reset()
+
+    def load_level(self, level_name: str):
+        self.LEVEL.load_level(level_name)
+
+    def clear(self):
+        self.OBJ.clear()
+        self.STCOL.clear()
+        self.DYCOL.clear()
+
+    def end(self):
+        self.clear()
+        self.run = 0
+
 # Handles graphics
 class Window():
     """Handles graphics."""
@@ -124,15 +183,11 @@ class Window():
 # Handles level loading
 class Level():
     """Object which contains all levels in the game."""
-    def __init__(self, level_path, object_handler, static_collider,
-                 dynamic_collider, tile_handler):
+    def __init__(self, level_path, game):
         self.levels = {}
         self.current_level = ''
+        self.game = game
         self.level_path = level_path
-        self.obj = object_handler
-        self.static = static_collider
-        self.dynamic = dynamic_collider
-        self.tile = tile_handler
 
     def load_level(self, level_name: str):
         """Load level parts such as GameObjects and Tiles."""
@@ -151,22 +206,20 @@ class Level():
         level.close()
 
         # Clear entities
-        self.obj.clear()
-        self.static.clear()
-        self.dynamic.clear()
+        self.game.clear()
 
         # Create objects
         for arg in obj_list:
             # Interpret object info
             name = arg[0]
-            if name != 'tile-layer':
-                pos, key, data = arg[1:4]
-                self.obj.create_object(name, pos, key, data)
-            else:
+            if name == 'tile-layer':
                 # Interpret layer info
                 layer_name, grid = arg[1:3]
                 size = (len(grid), len(grid[0]))
-                self.tile.add_layer(layer_name, size, grid)
+                self.game.TILE.add_layer(layer_name, size, grid)
+            else:
+                pos, key, data = arg[1:4]
+                self.game.OBJ.create_object(name, pos, key, data)
 
     def reset(self):
         """Restart current level."""
@@ -175,13 +228,14 @@ class Level():
 # Handles object instances
 class ObjectHandler():
     """Handles game objects."""
-    def __init__(self, max_objects=2**16-1):
+    def __init__(self, object_function, max_objects=2**16-1):
         # 65535 tacked objects max
         self.pool_size = max_objects
         self.pool = {}
         for item in range(self.pool_size):
             self.pool[item] = 1
         self.obj = {}
+        self.object_function = object_function
 
     def update(self, dt):
         """Update all GameObjects."""
@@ -192,20 +246,20 @@ class ObjectHandler():
             except KeyError:
                 print('key {} does not exist'.format(key))
 
-    def render_early(self):
+    def render_early(self, window):
         """Render that occurs before the background."""
         for key in self.obj:
-            self.obj[key].render_early()
+            self.obj[key].render_early(window)
 
-    def render(self):
+    def render(self, window):
         """Render that occurs between background and foreground."""
         for key in self.obj:
-            self.obj[key].render()
+            self.obj[key].render(window)
 
-    def render_late(self):
+    def render_late(self, window):
         """Render that occurs after the foreground."""
         for key in self.obj:
-            self.obj[key].render_late()
+            self.obj[key].render_late(window)
 
     def instantiate_key(self, key=None):
         """Add a ref. to a game object in the self.obj dictionary."""
@@ -224,13 +278,12 @@ class ObjectHandler():
         """Add a ref. to a game object in the self.obj dictionary."""
         self.obj[key] = obj
 
-    def create_object(self, name, pos, key, data):
+    def create_object(self, name: str, pos: tuple, key: int, data: list):
         """Creates instances of objects and instantiates them."""
-        pass
+        self.object_function(name, pos, key, data)
 
     def delete(self, key):
         """Removes a ref. of a game object from the self.obj dictionary."""
-        self.obj[key].delete()
         del self.obj[key]
         self.pool[key] = 1
 
@@ -310,13 +363,13 @@ class DynamicCollider():
 # Tile map
 class TileMap():
     """Handles background and foreground graphics."""
-    def __init__(self, tile_path: str, full_tile: int, window):
+    def __init__(self, tile_path: str, full_tile: int, game):
         self.layers = {}
         self.tile_maps = []
         self.tile_path = tile_path
         self.full_tile = full_tile
         self.half_tile = round(full_tile/2)
-        self.window = window
+        self.game = game
 
     def render(self, layer: str):
         """Render tiles at a specific layer."""
@@ -355,10 +408,9 @@ class TileMap():
     def add_layer(self, layer: str, size: tuple, grid=None):
         """Creates a layer."""
         if grid is None:
-            self.layers[layer] = TileLayer(layer, size, self, self.window)
+            self.layers[layer] = TileLayer(layer, size, self, self.game)
         else:
-            self.layers[layer] = TileLayer(layer, size, self,
-                                           self.window, grid)
+            self.layers[layer] = TileLayer(layer, size, self, self.game, grid)
 
     def remove_layer(self, layer: str):
         """Removes an existing layer."""
@@ -382,12 +434,12 @@ class TileMap():
 # Layer with tiles
 class TileLayer():
     """Layer containing all of the tiles in a lookup form."""
-    def __init__(self, name, size, tile_handler, window, grid=None):
+    def __init__(self, name, size, tile_handler, game, grid=None):
         self.name = name
         width, height = size[0], size[1]
         self.visible = True
         self.tile = tile_handler
-        self.window = window
+        self.game = game
         if grid is None:
             grid = f_make_grid(width, height, None)
         self.grid = grid
@@ -402,7 +454,7 @@ class TileLayer():
                         tile = self.tile.get_tile(*tile_info)
                         pos = f_tupmult((column[0], row[0]),
                                         self.tile.half_tile)
-                        self.window.draw_image(tile, pos)
+                        self.game.WIN.draw_image(tile, pos)
 
     def toggle_visibility(self):
         """Turn layer invisible."""
