@@ -1,4 +1,4 @@
 {
-    "python.autoComplete.extraPaths": ["./Game_X"],
+    "python.autoComplete.extraPaths": ["./main"],
     "python.pythonPath": "C:\\Program Files\\Python39\\python.exe"
 }

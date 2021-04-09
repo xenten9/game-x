@@ -9,16 +9,15 @@
 import os
 import ast
 import pygame
-#import numpy as np
 
 from Helper_Functions.inputs import ObjKeyboard, ObjMouse
 from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
 from Helper_Functions.file_system import ObjFile
-#from easygui import multenterbox
-#import random as rand
+from game import (f_swatch, f_cinverse, f_make_grid,
+                  f_loop, f_limit, f_event_handler)
 
-pygame.init()
-
+# initialize pygame modules
+pygame.font.init()
 
 # Constants variables
 FULLTILE = 32
@@ -27,87 +26,11 @@ WIDTH, HEIGHT = 32 * FULLTILE, 24 * FULLTILE
 FPS = 60
 
 # File paths
-DEFAULT_PATH = os.getcwd()
-GAME_PATH = os.path.join(DEFAULT_PATH, 'Game_X')
-ASSET_PATH = os.path.join(GAME_PATH, 'Assets')
+DEFAULT_PATH = __file__[:-len(os.path.basename(__file__))]
+ASSET_PATH = os.path.join(DEFAULT_PATH, 'Assets')
 SPRITE_PATH = os.path.join(ASSET_PATH, 'Sprites')
 LEVEL_PATH = os.path.join(ASSET_PATH, 'Levels')
 TILEMAP_PATH = os.path.join(ASSET_PATH, 'Tilemaps')
-
-
-# Helper functions
-# Convert (4 bit tuples to 8 bit tuples)
-def f_swatch(rgb=(0, 0, 0)) -> tuple:
-    """Convers 8 bit tuple to 16 bit tuple(RGB)."""
-    return f_tupadd(f_tupmult(f_tupadd(rgb, 1), 32), -1)
-
-# Flip color
-def f_cinverse(rgb=(0, 0, 0)) -> tuple:
-    """Converts 16 bit tuple to its 16 bit inverse(RGB)."""
-    return f_tupmult(f_tupadd((-255, -255, -255), rgb), -1)
-
-# Creates a grid
-def f_make_grid(width, height, default_value):
-    """Makes a grid populated with some default value."""
-    grid = []
-    for _ in range(width):
-        grid.append([default_value] * height)
-    return grid
-
-# Return a value following packman logic
-def f_loop(val, minval, maxval):
-    """Returns a number that loops between the min and max
-    Ex. n = 8, minval = 3, maxval = 5;
-        8 is 3 more then 5
-        minval + 3 = 6
-        6 is 1 more then 5
-        minval + 1 = 4
-        minval < 4 < maxval
-        return 4
-    """
-    if minval <= val <= maxval:
-        return val
-    if val <= minval:
-        return maxval - (minval - val) + 1
-    return minval + (val - maxval) - 1
-
-# Return the value closest to the range min to max
-def f_limit(val, minval, maxval):
-    """Reutrns value n
-    limits/clamps the value n between the min and max
-    """
-    if val < minval:
-        return minval
-    if val > maxval:
-        return maxval
-    return val
-
-# Handle events
-def f_event_handler(event):
-    """Handles inputs and events."""
-    # Key pressed
-    if event.type == pygame.KEYDOWN:
-        KEYBOARD.set_key(event.scancode, 1)
-
-    # Key released
-    elif event.type == pygame.KEYUP:
-        KEYBOARD.set_key(event.scancode, 0)
-
-    # Mouse movement
-    elif event.type == pygame.MOUSEMOTION:
-        MOUSE.pos = event.pos
-        MOUSE.rel = f_tupadd(MOUSE.rel, event.rel)
-
-    # Mouse pressed
-    elif event.type == pygame.MOUSEBUTTONDOWN:
-        MOUSE.button_pressed[event.button] = 1
-        MOUSE.button_held[event.button] = 1
-        MOUSE.button_pressed_pos[event.button] = event.pos
-
-    # Mouse released
-    elif event.type == pygame.MOUSEBUTTONUP:
-        MOUSE.button_pressed[event.button] = 0
-        MOUSE.button_held[event.button] = 0
 
 
 # Handles graphics
@@ -320,20 +243,20 @@ class Cursor():
     def update(self):
         """Update cursor pos and level changes."""
         # Change modes
-        if KEYBOARD.get_key_pressed(50): # M
+        if KEYBOARD.get_key_pressed(16): # M
             self.mode += 1
             self.select = 0
             self.pos = f_tupgrid(self.pos, FULLTILE)
-        if KEYBOARD.get_key_pressed(49): # N
+        if KEYBOARD.get_key_pressed(17): # N
             self.mode -= 1
             self.select = 0
             self.pos = f_tupgrid(self.pos, FULLTILE)
         self.mode = f_loop(self.mode, 0, 1)
 
         # Saving and loading
-        if KEYBOARD.get_key_combo(31, 29): # Ctrl + S
+        if KEYBOARD.get_key_combo(22, 224): # Ctrl + S
             OBJ.save_level()
-        if KEYBOARD.get_key_combo(38, 29): # Ctrl + L
+        if KEYBOARD.get_key_combo(15, 224): # Ctrl + L
             OBJ.load_level()
 
         # State machine
@@ -348,25 +271,25 @@ class Cursor():
         """Object mode."""
         # Keyboard
         # Changing selection
-        self.select += (KEYBOARD.get_key_pressed(18) -
-                        KEYBOARD.get_key_pressed(16))
+        self.select += (KEYBOARD.get_key_pressed(8) -
+                        KEYBOARD.get_key_pressed(20))
         self.select = f_loop(self.select, 0, len(OBJ.object_names) - 1)
 
         # Movement
         self.movement()
 
         # Toggling objects
-        if KEYBOARD.get_key_pressed(59):
+        if KEYBOARD.get_key_pressed(58):
             OBJ.toggle_visibility()
 
         # Place and remove objects with cursor
-        if KEYBOARD.get_key_pressed(57):
+        if KEYBOARD.get_key_pressed(44):
             self.place_object()
-        if KEYBOARD.get_key_pressed(83):
+        if KEYBOARD.get_key_pressed(76):
             self.remove_object()
 
         # Edit data
-        if KEYBOARD.get_key_pressed(15):
+        if KEYBOARD.get_key_pressed(43):
             self.edit_object_data()
 
         # Mouse
@@ -390,34 +313,34 @@ class Cursor():
         """Tile mode."""
         # Keyboard
         # Layer selection
-        self.layer += (KEYBOARD.get_key_pressed(45) -
-                       KEYBOARD.get_key_pressed(44))
+        self.layer += (KEYBOARD.get_key_pressed(27) -
+                       KEYBOARD.get_key_pressed(29))
         self.layer = f_loop(self.layer, 0, len(TILE.layers) - 1)
 
         # Tilemap selection
-        if KEYBOARD.get_key_combo(15, 42):
+        if KEYBOARD.get_key_combo(43, 225):
             self.tile_map -= 1
             self.select = 0
-        if KEYBOARD.get_key_pressed(15):
+        if KEYBOARD.get_key_pressed(43):
             self.tile_map += 1
             self.select = 0
         self.tile_map = f_loop(self.tile_map, 0, len(TILE.tile_maps)-1)
 
         # Changing selection
-        self.select += (KEYBOARD.get_key_pressed(18) -
-                        KEYBOARD.get_key_pressed(16))
+        self.select += (KEYBOARD.get_key_pressed(8) -
+                        KEYBOARD.get_key_pressed(20))
         self.select = f_loop(self.select, 0, len(TILE.tile_maps[self.tile_map][1]) - 1)
 
         # Movement
         self.movement()
 
         # Toggling tile maps
-        if KEYBOARD.get_key_pressed(59):
+        if KEYBOARD.get_key_pressed(58):
             layer = list(TILE.layers.keys())[self.layer]
             TILE.layers[layer].toggle_visibility()
 
         # Place tiles with cursor
-        if KEYBOARD.get_key_pressed(57):
+        if KEYBOARD.get_key_pressed(44):
             # Get arguments
             layer = list(TILE.layers.keys())[self.layer]
             pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
@@ -426,7 +349,7 @@ class Cursor():
             TILE.add_tile(layer, pos, self.tile_map, self.select)
 
         # Remove tiles with cursor
-        if KEYBOARD.get_key_pressed(83):
+        if KEYBOARD.get_key_pressed(76):
             layer = list(TILE.layers.keys())[self.layer]
             pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
 
@@ -466,10 +389,10 @@ class Cursor():
 
     def movement(self):
         """Move cursor."""
-        hspd = (KEYBOARD.get_key_pressed(32, 77) -
-                KEYBOARD.get_key_pressed(30, 75))
-        vspd = (KEYBOARD.get_key_pressed(31, 80) -
-                KEYBOARD.get_key_pressed(17, 72))
+        hspd = (KEYBOARD.get_key_pressed(7, 79) -
+                KEYBOARD.get_key_pressed(4, 80))
+        vspd = (KEYBOARD.get_key_pressed(22, 81) -
+                KEYBOARD.get_key_pressed(26, 82))
         self.pos = f_tupadd(self.pos, f_tupmult((hspd, vspd), self.speed))
 
     def place_object(self):

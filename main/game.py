@@ -21,453 +21,69 @@ from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupround
 from Helper_Functions.file_system import ObjFile
 from Helper_Functions.collisions import f_col_rects
 
+from engine import *
+
+# initialize pygame modules
 pygame.font.init()
+
+# object handler
+class Objects(ObjectHandler):
+    def create_object(self, name, pos, key, data):
+        """Loads a level into the self.obj dictioanry."""
+        if name != 'null':
+            # Object creation
+            if name == 'wall':
+                STCOL.add_wall(pos)
+
+            elif name == 'player':
+                key = self.instantiate_key(key)
+                obj = Player(key, pos, (FULLTILE, FULLTILE), name, data)
+                self.instantiate_object(key, obj)
+
+            elif name == 'button':
+                key = self.instantiate_key(key)
+                obj = Button(key, pos, (FULLTILE, FULLTILE/8), name, data)
+                self.instantiate_object(key, obj)
+
+            elif name == 'door':
+                key = self.instantiate_key(key)
+                obj = Door(key, pos, (FULLTILE, FULLTILE), name, data)
+                self.instantiate_object(key, obj)
+
+            elif name == 'grav-orb':
+                key = self.instantiate_key(key)
+                obj = GravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
+                self.instantiate_object(key, obj)
+
+            elif name == 'spike':
+                key = self.instantiate_key(key)
+                obj = Spike(key, pos, (FULLTILE, FULLTILE/8), name, data)
+                self.instantiate_object(key, obj)
+
 
 # Constants variables
 FULLTILE = 32
 HALFTILE = int(FULLTILE/2)
-WIDTH, HEIGHT = 32 * FULLTILE, 24 * FULLTILE
+SIZE = (32 * FULLTILE, 24 * FULLTILE)
 FPS = 60
 
 # File paths
-DEFAULT_PATH = __file__[:-8]
+DEFAULT_PATH = __file__[:-len(os.path.basename(__file__))]
 ASSET_PATH = os.path.join(DEFAULT_PATH, 'Assets')
 SPRITE_PATH = os.path.join(ASSET_PATH, 'Sprites')
 LEVEL_PATH = os.path.join(ASSET_PATH, 'Levels')
 TILEMAP_PATH = os.path.join(ASSET_PATH, 'Tilemaps')
 
 
-# Helper functions
-# Convert (4 bit tuples to 8 bit tuples)
-def f_swatch(rgb=(0, 0, 0)) -> tuple:
-    """Convers 8 bit tuple to 16 bit tuple(RGB)."""
-    return f_tupadd(f_tupmult(f_tupadd(rgb, 1), 32), -1)
-
-# Flip color
-def f_cinverse(rgb=(0, 0, 0)) -> tuple:
-    """Converts 16 bit tuple to its 16 bit inverse(RGB)."""
-    return f_tupmult(f_tupadd((-255, -255, -255), rgb), -1)
-
-# Creates a grid
-def f_make_grid(width, height, default_value):
-    """Makes a grid populated with some default value."""
-    grid = []
-    for _ in range(width):
-        grid.append([default_value] * height)
-    return grid
-
-# Return a value following packman logic
-def f_loop(val, minval, maxval):
-    """Returns a number that loops between the min and max
-    Ex. n = 8, minval = 3, maxval = 5;
-        8 is 3 more then 5
-        minval + 3 = 6
-        6 is 1 more then 5
-        minval + 1 = 4
-        minval < 4 < maxval
-        return 4
-    """
-    if minval <= val <= maxval:
-        return val
-    if val <= minval:
-        return maxval - (minval - val) + 1
-    return minval + (val - maxval) - 1
-
-# Return the value closest to the range min to max
-def f_limit(val, minval, maxval):
-    """Reutrns value n
-    limits/clamps the value n between the min and max
-    """
-    if val < minval:
-        return minval
-    if val > maxval:
-        return maxval
-    return val
-
-# Handle events
-def f_event_handler(event):
-    """Handles inputs and events."""
-    # Key pressed
-    if event.type == KEYDOWN:
-        KEYBOARD.set_key(event.scancode, 1)
-
-    # Key released
-    elif event.type == KEYUP:
-        KEYBOARD.set_key(event.scancode, 0)
-
-    # Mouse movement
-    elif event.type == MOUSEMOTION:
-        MOUSE.pos = event.pos
-        MOUSE.rel = f_tupadd(MOUSE.rel, event.rel)
-
-    # Mouse pressed
-    elif event.type == MOUSEBUTTONDOWN:
-        MOUSE.button_pressed[event.button] = 1
-        MOUSE.button_held[event.button] = 1
-        MOUSE.button_pressed_pos[event.button] = event.pos
-
-    # Mouse released
-    elif event.type == MOUSEBUTTONUP:
-        MOUSE.button_pressed[event.button] = 0
-        MOUSE.button_held[event.button] = 0
-
-
-# Handles graphics
-class Window():
-    """Handles graphics."""
-    def __init__(self, width: int, height: int):
-        self.display = pygame.display.set_mode((width, height))
-        self.height, self.height = width, height
-        self.fonts = {'arial12': pygame.font.SysFont('arial', 12)}
-
-    def add_font(self, name: str, size):
-        """Adds a font to WIN.fonts."""
-        try:
-            self.fonts[name + str(size)]
-        except KeyError:
-            self.fonts[name + str(size)] = pygame.font.SysFont(name, size)
-            return None
-        return None
-
-    def draw_text(self, pos: tuple, text: str, font='arial12', color=(0, 0, 0)):
-        """Draws text at a position in a given font and color."""
-        self.display.blit(self.fonts[font].render(text, 0, color), pos)
-
-    def draw_rect(self, pos: tuple, size=(FULLTILE, FULLTILE), color=(0, 0, 0)):
-        """Draws a rectangle at a position in a given color."""
-        pygame.draw.rect(self.display, color, pygame.Rect(pos, size))
-
-    def draw_image(self, image, pos=(0, 0)):
-        """Draws an image at a position."""
-        self.display.blit(image, pos)
-
-    def blank(self):
-        """Blanks the screen in-between frames."""
-        self.display.fill(f_swatch((7, 7, 7)))
-
-# Handles level loading
-class Level():
-    """Object which contains all levels in the game."""
-    def __init__(self):
-        self.levels = {}
-        self.current_level = ''
-
-    def load(self):
-        """Load all levels in levels directory."""
-        for file in os.listdir(LEVEL_PATH):
-            if file[-4:] == '.lvl':
-                self.add_level(file)
-
-    def add_level(self, name: str):
-        """Add level to dictionary of levels."""
-        if os.path.exists(os.path.join(LEVEL_PATH, name)):
-            self.levels[name] = name
-
-    def load_level(self, level_name: str):
-        """Load level parts such as GameObjects and Tiles."""
-        level = ObjFile(LEVEL_PATH, level_name + '.lvl')
-        level.read()
-        self.current_level = level_name
-        obj_list = level.file.readlines()
-
-        # Convert types
-        for count in enumerate(obj_list):
-            obj_list[count[0]] = (ast.literal_eval(obj_list[count[0]][:-1]))
-            if not isinstance(obj_list[count[0]], list):
-                obj_list[count[0]] = []
-
-        # Close file
-        level.close()
-
-        # Clear entities
-        OBJ.clear()
-        STCOL.clear()
-        DYCOL.clear()
-
-        # Create objects
-        for arg in obj_list:
-            # Interpret object info
-            name = arg[0]
-            if name != 'tile-layer':
-                pos, key, data = arg[1:4]
-                OBJ.create_object(name, pos, key, data)
-            else:
-                # Interpret layer info
-                layer_name, grid = arg[1:3]
-                size = (len(grid), len(grid[0]))
-                TILE.add_layer(layer_name, size, grid)
-
-    def reset(self):
-        """Restart current level."""
-        self.load_level(self.current_level)
-
-# Handles object instances
-class Objects():
-    """Handles game objects."""
-    def __init__(self):
-        # 65535 tacked objects max
-        self.pool_size = 2**16 - 1
-        self.pool = {}
-        for item in range(self.pool_size):
-            self.pool[item] = 1
-        self.obj = {}
-
-    def update(self, dt):
-        """Update all GameObjects."""
-        objcopy = self.obj.copy()
-        for key in objcopy:
-            try:
-                self.obj[key].update(dt)
-            except KeyError:
-                print('key {key} does not exist'.format(key=key))
-
-    def render_early(self):
-        """Render that occurs before the background."""
-        for key in self.obj:
-            self.obj[key].render_early()
-
-    def render(self):
-        """Render that occurs between background and foreground."""
-        for key in self.obj:
-            self.obj[key].render()
-
-    def render_late(self):
-        """Render that occurs after the foreground."""
-        for key in self.obj:
-            self.obj[key].render_late()
-
-    def instantiate_key(self, key=None):
-        """Add a ref. to a game object in the self.obj dictionary."""
-        if key is None:
-            key = self.pool.popitem()[0]
-        else:
-            try:
-                self.pool[key]
-            except IndexError:
-                print(self.pool)
-                print('key {key} is not in pool'.format(key=key))
-                key = self.pool.popitem()[0]
-        return key
-
-    def instantiate_object(self, key, obj):
-        """Add a ref. to a game object in the self.obj dictionary."""
-        self.obj[key] = obj
-
-    def delete(self, key):
-        """Removes a ref. of a game object from the self.obj dictionary."""
-        self.obj[key].delete()
-        del self.obj[key]
-        self.pool[key] = 1
-
-    def create_object(self, name, pos, key, data):
-        """Loads a level into the self.obj dictioanry."""
-        # Object creation
-        if name == 'wall':
-            STCOL.add_wall((int(pos[0] / FULLTILE), int(pos[1] / FULLTILE)))
-
-        elif name == 'player':
-            key = self.instantiate_key(key)
-            obj = Player(key, pos, (FULLTILE, FULLTILE), name, data)
-            self.instantiate_object(key, obj)
-
-        elif name == 'button':
-            key = self.instantiate_key(key)
-            obj = Button(key, pos, (FULLTILE, FULLTILE/8), name, data)
-            self.instantiate_object(key, obj)
-
-        elif name == 'door':
-            key = self.instantiate_key(key)
-            obj = Door(key, pos, (FULLTILE, FULLTILE), name, data)
-            self.instantiate_object(key, obj)
-
-        elif name == 'grav-orb':
-            key = self.instantiate_key(key)
-            obj = GravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
-            self.instantiate_object(key, obj)
-
-        elif name == 'spike':
-            key = self.instantiate_key(key)
-            obj = Spike(key, pos, (FULLTILE, FULLTILE/8), name, data)
-            self.instantiate_object(key, obj)
-
-    def clear(self):
-        """Clear all GameObjects."""
-        objcopy = self.obj.copy()
-        for obj in objcopy:
-            self.delete(obj)
-
-# Handles static collision
-class StaticCollider():
-    """Handles static collisions aligned to a grid."""
-    def __init__(self, size: tuple):
-        self.size = size
-        self.grid = f_make_grid(*self.size, 0)
-        #self.image = pygame.image.load(os.path.join(SPRITE_PATH, 'wall.png'))
-
-    def add_wall(self, pos: tuple):
-        """Add a wall at a given position."""
-        self.grid[pos[0]][pos[1]] = 1
-
-    def remove_wall(self, pos: tuple):
-        """Remove a wall at a given position."""
-        self.grid[pos[0]][pos[1]] = 0
-
-    def get_col(self, pos) -> bool:
-        """Check for a wall at a given position."""
-        pos = (floor(pos[0]/FULLTILE), floor(pos[1]/FULLTILE))
-        try:
-            return self.grid[pos[0]][pos[1]]
-        except IndexError:
-            return 0
-
-    def clear(self):
-        """Clear all Static collision points off of grid"""
-        self.grid = f_make_grid(*self.size, 0)
-
-# Handles Dynamic collisions
-class DynamicCollider():
-    """Handles collisions with moving objects."""
-    def __init__(self):
-        self.colliders = {}
-
-    def add_collider(self, key, obj):
-        """Adds a collider to self.colliders."""
-        self.colliders[key] = obj
-
-    def remove_collider(self, key):
-        """Removes a collider to self.colliders."""
-        try:
-            del self.colliders[key]
-        except KeyError:
-            pass
-
-    def get_collision(self, pos, rect, key=-1) -> list:
-        """Checks each collider to see if they overlap a rectangle."""
-        collide = []
-        dom = f_tupadd(rect[0], pos[0])
-        ran = f_tupadd(rect[1], pos[1])
-        for col in self.colliders:
-            if col != key:
-                cobj = self.colliders[col]
-                crect = cobj.crect
-                cpos = cobj.pos
-                cdom = f_tupadd(crect[0], cpos[0])
-                cran = f_tupadd(crect[1], cpos[1])
-                if f_col_rects(dom, ran, cdom, cran):
-                    collide.append(cobj)
-        return collide
-
-    def clear(self):
-        """Remove all colliders."""
-        self.colliders = {}
-
-# Tile map
-class TileMap():
-    """Handles background and foreground graphics."""
-    def __init__(self):
-        self.layers = {}
-        self.tile_maps = []
-
-    def render(self, layer: str):
-        """Render tiles at a specific layer."""
-        self.layers[layer].render()
-
-    def load(self):
-        """Add Tilemap to list of tilemaps."""
-        for file in os.listdir(TILEMAP_PATH):
-            if file[-4:] == '.png':
-                self.add_tile_map(file[:-4], file)
-
-    def add_tile_map(self, name: str, fname: str):
-        """Adds a new tilemap to the tile_maps dictionary."""
-        tile_set = pygame.image.load(os.path.join(TILEMAP_PATH, fname)).convert()
-        new_tile_map = []
-        for xpos in range(int((tile_set.get_width() / HALFTILE))):
-            surface = pygame.Surface((HALFTILE, HALFTILE)) # pylint: disable=too-many-function-args
-            surface.blit(tile_set, (0, 0), area=pygame.Rect(
-                (xpos * (HALFTILE), 0), (HALFTILE, HALFTILE)))
-            new_tile_map.append(surface)
-        self.tile_maps.append((name, new_tile_map))
-
-    def remove_tile_map(self, name: str):
-        """Removes a tilemap from the tile_maps dictionary."""
-        try:
-            del self.tile_maps[name]
-        except KeyError:
-            print('tilemap {} does not exist'.format(name))
-
-    def add_layer(self, layer: str, size: tuple, grid=None):
-        """Creates a layer."""
-        if grid is None:
-            self.layers[layer] = TileLayer(layer, size)
-        else:
-            self.layers[layer] = TileLayer(layer, size, grid)
-
-    def remove_layer(self, layer: str):
-        """Removes an existing layer."""
-        try:
-            del self.layers[layer]
-        except KeyError:
-            print('layer {} does not exist'.format(layer))
-
-    def add_tile(self, layer: str, pos: tuple, tilemap_id: int, tile_id: int):
-        """Places a tile."""
-        self.layers[layer].add_tile(pos, (tilemap_id, tile_id))
-
-    def remove_tile(self, layer: str, pos: tuple):
-        """Removes a tile."""
-        self.layers[layer].remove_tile(pos)
-
-    def get_tile(self, tile_mapid, tile_id):
-        """Gets tile image."""
-        return self.tile_maps[tile_mapid][1][tile_id]
-
-# Layer with tiles
-class TileLayer():
-    """Layer containing all of the tiles in a lookup form."""
-    def __init__(self, name, size, grid=None):
-        self.name = name
-        width, height = size[0], size[1]
-        self.visible = True
-        if grid is None:
-            grid = f_make_grid(width, height, None)
-        self.grid = grid
-
-    def render(self):
-        """Draw tiles."""
-        if self.visible:
-            for column in enumerate(self.grid):
-                for row in enumerate(self.grid[column[0]]):
-                    tile_info = self.grid[column[0]][row[0]]
-                    if tile_info is not None:
-                        tile = TILE.get_tile(*tile_info)
-                        pos = f_tupmult((column[0], row[0]), HALFTILE)
-                        WIN.draw_image(tile, pos)
-
-    def toggle_visibility(self):
-        """Turn layer invisible."""
-        self.visible = not self.visible
-
-    def add_tile(self, pos, tile_info):
-        """Add tiles to grid on the layer."""
-        self.grid[pos[0]][pos[1]] = tile_info
-
-    def remove_tile(self, pos):
-        """Remove tiles from the grid on the grid."""
-        self.grid[pos[0]][pos[1]] = None
-
-
 # Constant objects
-WIN = Window(WIDTH, HEIGHT)
-OBJ = Objects()
-LEVEL = Level()
-level_size = f_tupmult((WIDTH, HEIGHT), 1/FULLTILE)
-level_size = f_tupround(level_size, 0)
-STCOL = StaticCollider(level_size)
+WIN = Window(*SIZE)
+STCOL = StaticCollider(f_tupround(f_tupmult(SIZE, 1/FULLTILE),0), FULLTILE)
 DYCOL = DynamicCollider()
+OBJ = Objects()
 KEYBOARD = ObjKeyboard()
 MOUSE = ObjMouse()
-TILE = TileMap()
+TILE = TileMap(TILEMAP_PATH, FULLTILE, WIN)
+LEVEL = Level(LEVEL_PATH, OBJ, STCOL, DYCOL, TILE)
 
 
 # Setup program
@@ -475,7 +91,6 @@ pygame.event.set_allowed([QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
                       MOUSEBUTTONUP, MOUSEMOTION])
 pygame.display.set_caption("Game X")
 TILE.load()
-LEVEL.load()
 
 
 # Gameplay objects
@@ -684,11 +299,15 @@ class Player(GameObject):
         # Jumping
         if self.grounded != 0 and self.jump_key > 0 and self.jump_delay == 0:
             if self.grounded > 0:
+                if self.grav != 0:
+                    self.vspd = -(self.hspd/8)**2
                 self.jump_delay = self.coyote
-                self.vspd = -(self.jump_speed + (self.hspd/8)**2)
+                self.vspd -= self.jump_speed
             elif self.grounded < 0:
+                if self.grav != 0:
+                    self.vspd = (self.hspd/8)**2
                 self.jump_delay = self.coyote
-                self.vspd = (self.jump_speed + (self.hspd/8)**2)
+                self.vspd += self.jump_speed
         else:
             self.jump_delay -= np.sign(self.jump_delay)
 
@@ -854,11 +473,10 @@ def main():
     """Main game loop."""
     clock = pygame.time.Clock()
     run = True
+    dt = 1
 
     # Gameplay loop
     while run:
-        dt = clock.tick(FPS)
-        dt *= (FPS / 1000)
         KEYBOARD.reset()
         MOUSE.reset()
 
@@ -868,7 +486,7 @@ def main():
             if event.type == QUIT:
                 run = False
             else:
-                f_event_handler(event)
+                f_event_handler(event, KEYBOARD, MOUSE)
 
         # Quit by escape
         if KEYBOARD.get_key_pressed(41):
@@ -878,7 +496,7 @@ def main():
         OBJ.update(dt)
 
         # clear frame
-        WIN.blank()
+        #WIN.blank()
 
         # Render background layers
         OBJ.render_early()
@@ -895,8 +513,12 @@ def main():
         fps = 'fps: {:3f}'.format(clock.get_fps())
         WIN.draw_text((FULLTILE, FULLTILE), fps, color=f_swatch((7, 7, 7)))
 
-        # update display
+        # Update display
         pygame.display.update()
+
+        # Tick clock
+        dt = clock.tick(FPS)
+        dt *= (FPS / 1000)
 
     pygame.quit()
 
