@@ -20,3 +20,5 @@ while run == 1:
             run = 0
         if event.type == pygame.KEYDOWN:
             print(event.scancode)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            print(event.button)

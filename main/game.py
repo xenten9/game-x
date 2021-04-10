@@ -28,13 +28,6 @@ from engine import f_swatch, f_loop, f_limit
 pygame.font.init()
 
 
-# Constants variables
-FULLTILE = 32
-HALFTILE = int(FULLTILE/2)
-LEVEL_SIZE = (32, 24)
-SIZE = f_tupmult(LEVEL_SIZE, FULLTILE)
-FPS = 60
-
 # File paths
 PATH = {}
 PATH['DEFAULT'] = __file__[:-len(os.path.basename(__file__))]
@@ -45,7 +38,7 @@ PATH['TILEMAPS'] = os.path.join(PATH['ASSETS'], 'Tilemaps')
 
 
 # Object creator
-def f_create_object(name: str, pos: tuple, key: int, data: list):
+def f_create_object(name: str, pos: tuple, data: list, entid: int, key: int):
     if name != 'null':
         # Object creation
         if name == 'wall':
@@ -149,7 +142,7 @@ class GameObject():
     def render(self, window):
         """Rendering at the same time as other objects."""
         pos = self.pos
-        window.draw_image(self.frames[self.frame], pos)
+        window.draw_image(pos, self.frames[self.frame])
 
     def render_late(self, window):
         """Rendering after foreground layer."""
@@ -456,7 +449,6 @@ class Spike(GameObject):
 def main():
     """Main game loop."""
     clock = pygame.time.Clock()
-    run = True
     dt = 1
 
     # Gameplay loop
@@ -492,10 +484,17 @@ def main():
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
 
+    # Quit pygame
     pygame.quit()
 
 if __name__ == "__main__":
-    # Constant objects
+    # Constants variables
+    FULLTILE = 32
+    LEVEL_SIZE = (32, 24)
+    SIZE = f_tupmult(LEVEL_SIZE, FULLTILE)
+    FPS = 60
+
+    # Game controller
     GAME = Game(SIZE, LEVEL_SIZE, FULLTILE, PATH, f_create_object)
 
     # Setup program

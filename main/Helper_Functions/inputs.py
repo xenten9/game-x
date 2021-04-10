@@ -75,7 +75,7 @@ class ObjMouse():
                 pass
         return 0
 
-    def get_button_presssed_pos(self, button) -> tuple:
+    def get_button_pressed_pos(self, button) -> tuple:
         """Returns the position of where a mouse clicked with a button."""
         try:
             return self.button_pressed_pos[button]

@@ -135,7 +135,10 @@ class Game():
         self.KEYBOARD.reset()
         self.MOUSE.reset()
 
-    def load_level(self, level_name: str):
+    def load_level(self, level_name=None):
+        self.LEVEL.load_level(level_name)
+
+    def save_level(self, level_name=None):
         self.LEVEL.load_level(level_name)
 
     def clear(self):
@@ -172,7 +175,7 @@ class Window():
         """Draws a rectangle at a position in a given color."""
         pygame.draw.rect(self.display, color, pygame.Rect(pos, size))
 
-    def draw_image(self, image, pos=(0, 0)):
+    def draw_image(self, pos: tuple, image):
         """Draws an image at a position."""
         self.display.blit(image, pos)
 
@@ -189,8 +192,25 @@ class Level():
         self.game = game
         self.level_path = level_path
 
-    def load_level(self, level_name: str):
+    def load_level(self, level_name=None):
         """Load level parts such as GameObjects and Tiles."""
+        # Get level name
+        if level_name is None:
+            while level_name in ('', None):
+                level_name = input('load level name? ')
+                if level_name in ('', None):
+                    print('improper level name.')
+                else:
+                    path = os.path.join(self.level_path, level_name + '.lvl')
+                    if not os.path.exists(path):
+                        level_name = None
+                        print('improper level name.')
+        else:
+            path = os.path.join(self.level_path, level_name + '.lvl')
+            if not os.path.exists(path):
+                raise Exception('LEVEL ERROR\npath:{}\nlevel name: {}\nlevel not found'.format(path, level_name))
+
+        # Load level file
         level = ObjFile(self.level_path, level_name + '.lvl')
         level.read()
         self.current_level = level_name
@@ -218,8 +238,40 @@ class Level():
                 size = (len(grid), len(grid[0]))
                 self.game.TILE.add_layer(layer_name, size, grid)
             else:
-                pos, key, data = arg[1:4]
-                self.game.OBJ.create_object(name, pos, key, data)
+                pos, key, data, entid = arg[1:5]
+                self.game.OBJ.create_object(name, pos, data, entid, key)
+
+        print('successful level load!')
+
+    def save_level(self, level_name=None):
+        """Load level parts such as GameObjects and Tiles."""
+        # Get level name
+        if level_name is None:
+            while level_name in ('', None):
+                level_name = input('load level name? ')
+                if level_name in ('', None):
+                    print('improper level name.')
+
+        # Create file object and open it to writing
+        level = ObjFile(self.level_path, level_name + '.lvl')
+        level.create(1) # Overwrite file if it exists
+        level.write()
+
+        # Write each object to file
+        for key in self.obj:
+            obj = self.obj[key]
+            info = [obj.name, obj.pos, obj.key, obj.data, obj.entid]
+            level.file.write(str(info) + '\n')
+
+        # Write layers
+        for layer_name in self.game.TILE.layers:
+            info = ['tile-layer', layer_name,
+                    self.game.TILE.layers[layer_name].grid, 0, 0]
+            level.file.write(str(info) + '\n')
+
+        # Close file
+        level.close()
+        print('successful level save!')
 
     def reset(self):
         """Restart current level."""
@@ -235,7 +287,26 @@ class ObjectHandler():
         for item in range(self.pool_size):
             self.pool[item] = 1
         self.obj = {}
+        self.object_names = [
+            'null',
+            'player',
+            'wall',
+            'button',
+            'door',
+            'grav-orb',
+            'spike'
+        ]
+        self.object_colors = [
+            (0, 0, 0),
+            (2, 5, 5),
+            (1, 1, 1),
+            (1, 6, 1),
+            (2, 2, 2),
+            (2, 7, 2),
+            (7, 7, 7)
+        ]
         self.object_function = object_function
+        self.visible = True
 
     def update(self, dt):
         """Update all GameObjects."""
@@ -246,20 +317,26 @@ class ObjectHandler():
             except KeyError:
                 print('key {} does not exist'.format(key))
 
+    def toggle_visibility(self):
+        self.visible = not self.visible
+
     def render_early(self, window):
         """Render that occurs before the background."""
-        for key in self.obj:
-            self.obj[key].render_early(window)
+        if self.visible:
+            for key in self.obj:
+                self.obj[key].render_early(window)
 
     def render(self, window):
         """Render that occurs between background and foreground."""
-        for key in self.obj:
-            self.obj[key].render(window)
+        if self.visible:
+            for key in self.obj:
+                self.obj[key].render(window)
 
     def render_late(self, window):
         """Render that occurs after the foreground."""
-        for key in self.obj:
-            self.obj[key].render_late(window)
+        if self.visible:
+            for key in self.obj:
+                self.obj[key].render_late(window)
 
     def instantiate_key(self, key=None):
         """Add a ref. to a game object in the self.obj dictionary."""
@@ -278,14 +355,18 @@ class ObjectHandler():
         """Add a ref. to a game object in the self.obj dictionary."""
         self.obj[key] = obj
 
-    def create_object(self, name: str, pos: tuple, key: int, data: list):
+    def create_object(self, name: str, pos: tuple, data: list, entid: int, key=None):
         """Creates instances of objects and instantiates them."""
-        self.object_function(name, pos, key, data)
+        self.object_function(name, pos, data, entid, key)
 
     def delete(self, key):
         """Removes a ref. of a game object from the self.obj dictionary."""
         del self.obj[key]
         self.pool[key] = 1
+
+    def get_id_info(self, entid: int) -> tuple:
+        """Returns the (name, color) of a given objectid."""
+        return (self.object_names[entid], self.object_colors[entid])
 
     def clear(self):
         """Clear all GameObjects."""
@@ -454,7 +535,7 @@ class TileLayer():
                         tile = self.tile.get_tile(*tile_info)
                         pos = f_tupmult((column[0], row[0]),
                                         self.tile.half_tile)
-                        self.game.WIN.draw_image(tile, pos)
+                        self.game.WIN.draw_image(pos, tile)
 
     def toggle_visibility(self):
         """Turn layer invisible."""
