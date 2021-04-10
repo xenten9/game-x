@@ -13,7 +13,7 @@ import pygame
 from Helper_Functions.inputs import ObjKeyboard, ObjMouse
 from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
 from Helper_Functions.file_system import ObjFile
-from engine import (Game, f_swatch, f_cinverse, f_make_grid, f_loop, f_limit)
+from engine import (GameHandler, f_swatch, f_cinverse, f_make_grid, f_loop, f_limit)
 
 # initialize pygame modules
 pygame.font.init()
@@ -427,7 +427,7 @@ if __name__ == "__main__":
 
 
     # Game controller
-    GAME = Game(SIZE, LEVEL_SIZE, FULLTILE, PATH, f_create_object)
+    GAME = GameHandler(SIZE, LEVEL_SIZE, FULLTILE, PATH, f_create_object)
 
     # Level editing tool
     CUR = Cursor((0, 0))
