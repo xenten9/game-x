@@ -1,21 +1,29 @@
+"""engine.py
+    engine.py is a game engine which uses pygame as a base.
+"""
+# Pylint not being cool
+# pylint: disable=no-name-in-module
+# pylint: disable=invalid-name
+# pylint: disable=unused-import
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-instance-attributes
+
+
 # Imports
 import os
-from math import floor
 import ast
+
+import pygame
+from pygame.locals import (QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
+                           MOUSEBUTTONUP, MOUSEMOTION)
 
 from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupround
 from Helper_Functions.file_system import ObjFile
 from Helper_Functions.collisions import f_col_rects
 from Helper_Functions.inputs import ObjKeyboard, ObjMouse
 
-import pygame
-from pygame.locals import (QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
-                           MOUSEBUTTONUP, MOUSEMOTION)
-
 
 # Methods
-# Handle events
-
 # Convert (4 bit tuples to 8 bit tuples)
 def f_swatch(rgb=(0, 0, 0)) -> tuple:
     """Convers 8 bit tuple to 16 bit tuple(RGB)."""
@@ -64,7 +72,8 @@ def f_limit(val, minval, maxval):
 
 
 # Classes
-class Game():
+class GameHandler():
+    """Game handler."""
     def __init__(self, screen_size: tuple, level_size: tuple,
                  full_tile: int, paths: list, object_function):
         # File paths
@@ -91,9 +100,11 @@ class Game():
         self.run = 1
 
     def update(self, dt):
+        """Update all GameObjects."""
         self.OBJ.update(dt)
 
     def render(self):
+        """Render differnet layers"""
         # Render background layers
         self.OBJ.render_early(self.WIN)
         self.TILE.render('background')
@@ -132,21 +143,26 @@ class Game():
             self.MOUSE.button_held[event.button] = 0
 
     def input_reset(self):
+        """Resets inputs for the keyboard and mouse."""
         self.KEYBOARD.reset()
         self.MOUSE.reset()
 
     def load_level(self, level_name=None):
+        """Loads a level from level path."""
         self.LEVEL.load_level(level_name)
 
     def save_level(self, level_name=None):
+        """Saves a level to level path."""
         self.LEVEL.load_level(level_name)
 
     def clear(self):
+        """Clears out all objects and colliders."""
         self.OBJ.clear()
         self.STCOL.clear()
         self.DYCOL.clear()
 
     def end(self):
+        """Ends the game."""
         self.clear()
         self.run = 0
 
@@ -208,7 +224,11 @@ class Level():
         else:
             path = os.path.join(self.level_path, level_name + '.lvl')
             if not os.path.exists(path):
-                raise Exception('LEVEL ERROR\npath:{}\nlevel name: {}\nlevel not found'.format(path, level_name))
+                code = ['LEVEL ERROR\n',
+                        'path: {}\n'.format(path),
+                        'level name: {}\n'.format(level_name),
+                        'level not found']
+                raise Exception(''.join(code))
 
         # Load level file
         level = ObjFile(self.level_path, level_name + '.lvl')
@@ -244,7 +264,7 @@ class Level():
         print('successful level load!')
 
     def save_level(self, level_name=None):
-        """Load level parts such as GameObjects and Tiles."""
+        """Saves level to level path."""
         # Get level name
         if level_name is None:
             while level_name in ('', None):
@@ -258,8 +278,8 @@ class Level():
         level.write()
 
         # Write each object to file
-        for key in self.obj:
-            obj = self.obj[key]
+        for key in self.game.OBJ:
+            obj = self.game.OBJ[key]
             info = [obj.name, obj.pos, obj.key, obj.data, obj.entid]
             level.file.write(str(info) + '\n')
 
@@ -318,6 +338,7 @@ class ObjectHandler():
                 print('key {} does not exist'.format(key))
 
     def toggle_visibility(self):
+        """Stop rendering for all objects."""
         self.visible = not self.visible
 
     def render_early(self, window):
@@ -548,4 +569,3 @@ class TileLayer():
     def remove_tile(self, pos):
         """Remove tiles from the grid on the grid."""
         self.grid[pos[0]][pos[1]] = None
-

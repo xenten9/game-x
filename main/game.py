@@ -1,28 +1,29 @@
 """game.py dev project."""
+# Pylint not being cool
 # pylint: disable=no-member
 # pylint: disable=no-name-in-module
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=unnecessary-pass
 # pylint: disable=too-many-branches
+# pylint: disable=invalid-name
+# pylint: disable=unused-argument
+
 
 # Imports
-import os
+from os import path
 from math import floor
-import ast
 
 import pygame
 import numpy as np
 from pygame.locals import (QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
                            MOUSEBUTTONUP, MOUSEMOTION)
 
-from Helper_Functions.inputs import ObjKeyboard, ObjMouse
-from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupround
-from Helper_Functions.file_system import ObjFile
+from Helper_Functions.tuple_functions import f_tupadd, f_tupmult
 from Helper_Functions.collisions import f_col_rects
 
-from engine import Game
-from engine import f_swatch, f_loop, f_limit
+from engine import GameHandler
+from engine import f_swatch, f_loop
 
 # initialize pygame modules
 pygame.font.init()
@@ -30,15 +31,16 @@ pygame.font.init()
 
 # File paths
 PATH = {}
-PATH['DEFAULT'] = __file__[:-len(os.path.basename(__file__))]
-PATH['ASSETS'] = os.path.join(PATH['DEFAULT'], 'Assets')
-PATH['SPRITES'] = os.path.join(PATH['ASSETS'], 'Sprites')
-PATH['LEVELS'] = os.path.join(PATH['ASSETS'], 'Levels')
-PATH['TILEMAPS'] = os.path.join(PATH['ASSETS'], 'Tilemaps')
+PATH['DEFAULT'] = __file__[:-len(path.basename(__file__))]
+PATH['ASSETS'] = path.join(PATH['DEFAULT'], 'Assets')
+PATH['SPRITES'] = path.join(PATH['ASSETS'], 'Sprites')
+PATH['LEVELS'] = path.join(PATH['ASSETS'], 'Levels')
+PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'Tilemaps')
 
 
 # Object creator
 def f_create_object(name: str, pos: tuple, data: list, entid: int, key: int):
+    """Function used to create objects."""
     if name != 'null':
         # Object creation
         if name == 'wall':
@@ -105,7 +107,7 @@ class GameObject():
         if overwrite:
             self._frames = []
         for file in fnames:
-            file_path = os.path.join(GAME.SPRITE_PATH, file)
+            file_path = path.join(GAME.SPRITE_PATH, file)
             self._frames.append(pygame.image.load(file_path).convert_alpha())
     frames = property(get_frames)
 
@@ -168,13 +170,18 @@ class Player(GameObject):
         self.color = f_swatch((2, 5, 5))
 
         # Keys
-        self.jump_keys = (44, 26, 82)
-        self.jump_key = 0
-        self.left_keys = (4, 80)
-        self.left_key = 0
-        self.right_keys = (7, 79)
-        self.right_key = 0
-        self.run_keys =  (225, 224)
+        self.keys = {}
+        self.key = {}
+        self.keys['jump'] = (44, 26, 82)
+        self.keys['left'] = (4, 80)
+        self.keys['right'] = (7, 79)
+        self.keys['run'] = (225, 224)
+        self.key['jump'] = 0
+        self.key['hjump'] = 0
+        self.key['left'] = 0
+        self.key['right'] = 0
+        self.key['run'] = 0
+
 
         # Ground
         self.hspd, self.vspd = 0, 0
@@ -223,6 +230,18 @@ class Player(GameObject):
 
     def get_inputs(self):
         """Get all of the inputs read before moving."""
+        # Horizontal controls
+        self.key['left'] = GAME.KEYBOARD.get_key_held(*self.keys['left'])
+        self.key['right'] = GAME.KEYBOARD.get_key_held(*self.keys['right'])
+        self.key['run'] = GAME.KEYBOARD.get_key_held(*self.keys['run'])
+
+        # Veritcal controls
+        self.key['jump'] -= np.sign(self.key['jump'])
+        if (GAME.KEYBOARD.get_key_pressed(*self.keys['jump'])
+            and self.key['jump'] <= 0):
+            self.key['jump'] = self.jump_lenience
+        self.key['hjump'] = GAME.KEYBOARD.get_key_held(*self.keys['jump'])
+
         # Grounded
         self.grounded -= np.sign(self.grounded)
         if self.grav >= 0 and self.scollide(f_tupadd(self.pos, (0, 1))):
@@ -236,30 +255,17 @@ class Player(GameObject):
             else:
                 self.grounded = -1
 
-        # Jumping
-        self.jump_key -= 1
-        if (GAME.KEYBOARD.get_key_pressed(*self.jump_keys)
-            and self.jump_key <= 0):
-            self.jump_key = self.jump_lenience
-        self.jump_hold_key = GAME.KEYBOARD.get_key_held(*self.jump_keys)
-        self.jump_key = f_limit(self.jump_key, 0, self.jump_lenience)
-
-        # Horizontal controls
-        self.left_key = GAME.KEYBOARD.get_key_held(*self.left_keys)
-        self.right_key = GAME.KEYBOARD.get_key_held(*self.right_keys)
-        self.run_key = GAME.KEYBOARD.get_key_held(*self.run_keys)
-
     def movement(self):
         """Handle player movement."""
         # Horizontal speed
-        move = (self.right_key - self.left_key)
+        move = (self.key['right'] - self.key['left'])
         if self.grounded and self.grav != 0:
             if move != 0:
                 # Dynamic grounded
                 self.hspd *= self.ground_fric_dynamic
 
                 # Running
-                if self.run_key:
+                if self.key['run']:
                     self.hspd += move * self.run_speed
                 else:
                     self.hspd += move * self.walk_speed
@@ -278,7 +284,7 @@ class Player(GameObject):
 
         # Vertical speed
         # Jumping
-        if self.grounded != 0 and self.jump_key > 0 and self.jump_delay == 0:
+        if self.grounded != 0 and self.key['jump'] > 0 and self.jump_delay == 0:
             if self.grounded > 0:
                 if self.grav != 0:
                     self.vspd = -(self.hspd/8)**2
@@ -295,7 +301,7 @@ class Player(GameObject):
         # Jump gravity
         if np.sign(self.vspd) == np.sign(self.grav):
             self.vspd += self.grav * self.fallgrav
-        elif self.jump_hold_key:
+        elif self.key['hjump']:
             self.vspd += self.grav * self.jumpgrav
         else:
             self.vspd += self.grav
@@ -495,7 +501,7 @@ if __name__ == "__main__":
     FPS = 60
 
     # Game controller
-    GAME = Game(SIZE, LEVEL_SIZE, FULLTILE, PATH, f_create_object)
+    GAME = GameHandler(SIZE, LEVEL_SIZE, FULLTILE, PATH, f_create_object)
 
     # Setup program
     pygame.event.set_allowed([QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
