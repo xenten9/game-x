@@ -221,6 +221,7 @@ class Cursor():
 
         # Toggling tile maps
         if self.key_toggle:
+            layer = list(GAME.TILE.layers.keys())[self.layer]
             GAME.TILE.layers[layer].toggle_visibility()
 
         # Place tiles with cursor
