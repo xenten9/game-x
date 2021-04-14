@@ -1,94 +1,104 @@
-"""game.py dev project level editor."""
-# pylint: disable=no-member
-# pylint: disable=too-many-function-args
-# pylint: disable=unnecessary-pass
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-instance-attributes
+from os import path
+from math import floor
+import numpy as np
+from ast import literal_eval
 
-# Imports
-import os
-import ast
-import pygame
+from pygame import image, event as pyevent
+from pygame.time import Clock
+from pygame.locals import QUIT
 
-from Helper_Functions.inputs import ObjKeyboard, ObjMouse
-from Helper_Functions.tuple_functions import f_tupadd, f_tupmult, f_tupgrid, f_tupround
-from Helper_Functions.file_system import ObjFile
-from engine import (GameHandler, f_swatch, f_cinverse, f_make_grid, f_loop, f_limit)
+from engine.components.camera import ObjCamera
+from engine.engine import GameHandler, f_loop
+from engine.helper_functions.tuple_functions import f_tupadd, f_tupgrid
 
-# initialize pygame modules
-pygame.font.init()
+print('################')
+FULLTILE = 32
+HALFTILE = 16
+FPS = 60
 
-def f_create_object(name: str, pos: tuple, data: list, entid: int, key=None):
-    """Creates entities."""
-    color = GAME.OBJ.get_id_info(entid)[1]
-    color = f_swatch(color)
-    size = (FULLTILE, FULLTILE)
-    if key is None:
-        key = GAME.OBJ.instantiate_key()
-    else:
-        key = GAME.OBJ.instantiate_key(key)
-    obj = Entity(pos, name, size, color, key, entid, data)
-    GAME.OBJ.instantiate_object(key, obj)
+PATH = {}
+PATH['DEFAULT'] = __file__[:-len(path.basename(__file__))]
+PATH['ASSETS'] = path.join(PATH['DEFAULT'], 'assets')
+PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
+PATH['DEVSPRITES'] = path.join(PATH['ASSETS'], 'dev_sprites')
+PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
+PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
 
-# Handles object instances
-#class Objects():
-#    """Handles game objects."""
-#    def __init__(self):
-#        self.visible = True
-#
-#    def toggle_visibility(self):
-#        """Toggle Entity visibility."""
-#        self.visible = not self.visible
+def object_creator(**kwargs):
+    name = kwargs['name']
+    pos = kwargs['pos']
+    if name != 'wall':
+        key = kwargs['key']
+        data = kwargs['data']
+        key = GAME.obj.instantiate_key(key)
+        ObjEntity(name, key, pos, data)
 
-# Adds objects to level
-class Cursor():
-    """Edits level."""
+class ObjCursor:
     def __init__(self, pos):
         # Default variables
         self.pos = pos
-        self.color = f_swatch((6, 6, 6))
-        self.speed = 0
+        self.color = (192, 192, 192)
+        self.name = 'cursor'
 
         # Modes
         self.mode = 0
-
         self.obj_select = 0
-
         self.tile_select = 0
         self.tile_map = 0
         self.layer = 0
+        self.selected_object = None
 
-        # Inputs
-        # State machine saving and loading
-        self.key_save = 0
-        self.key_load = 0
-        self.key_modeup = 0
-        self.key_modedown = 0
+        # Names
+        self.object_names = ['player',
+                             'button',
+                             'door',
+                             'grav-orb']
 
-        # Keyboard object
-        self.key_place = 0
-        self.key_remove = 0
-        self.key_selup = 0
-        self.key_seldown = 0
-        self.key_toggle = 0
-        self.key_tab = 0
-        self.key_shift = 0
+        # Input keys
+        self.keys = {
+            # Keyboard
+            'save': (22,),
+            'load': (15,),
+            'modeup': (16,),
+            'modedown': (17,),
+            'next': (8,),
+            'prev': (20,),
+            'f1': (58,),
+            'tab': (43,),
+            'shift': (225,),
+            'control': (224,),
+            'nextset': (27,),
+            'prevset': (29,),
+        }
+        self.mkeys = {
+            'place': (1,),
+            'remove': (3,)
+        }
 
-        # Keyboard tile
-        self.key_tileup = 0
-        self.key_tiledown = 0
-
-        # Keyboard movement
-        self.key_up = 0
-        self.key_down = 0
-        self.key_left = 0
-        self.key_right = 0
-
-        # Mouse
-        self.mkey_place = 0
-        self.mkey_remove = 0
-        self.mpkey_place = 0
-        self.mpkey_remove = 0
+        # input vars
+        self.key = {
+            # Keyboard
+            'save': 0,
+            'load': 0,
+            'modeup': 0,
+            'modedown': 0,
+            'next': 0,
+            'prev': 0,
+            'f1': 0,
+            'tab': 0,
+            'shift': 0,
+            'control': 0,
+            'Hcontrol': 0,
+            'Hshift': 0,
+            'nextset': 0,
+            'prevset': 0,
+        }
+        self.mkey = {
+            'place': 0,
+            'Hplace': 0,
+            'remove': 0,
+            'Hremove': 0
+        }
 
     def update(self, dt):
         """Update cursor pos and level changes."""
@@ -96,351 +106,335 @@ class Cursor():
         self.get_inputs()
 
         # Change modes
-        if self.key_modeup or self.key_modedown:
-            self.mode += self.key_modeup - self.key_modedown
+        if self.key['modeup'] or self.key['modedown']:
+            self.mode += self.key['modeup'] - self.key['modedown']
             self.pos = f_tupgrid(self.pos, FULLTILE)
-        self.mode = f_loop(self.mode, 0, 1)
+        self.mode = f_loop(self.mode, 0, 2)
 
         # Saving and loading
-        if self.key_save:
-            GAME.save_level()
-        elif self.key_load:
-            GAME.load_level()
+        if self.key['save'] and self.key['Hcontrol']:
+            GAME.level.save()
+        elif self.key['load'] and self.key['Hcontrol']:
+            GAME.level.load()
 
         # State machine
         if self.mode == 0: # Object mode
-            self.speed = FULLTILE
             self.mode0()
         elif self.mode == 1: # Tile mode
-            self.speed = HALFTILE
             self.mode1()
+        elif self.mode == 2: # Wall mode
+            self.mode2()
 
     def get_inputs(self):
-        # State machine saving and loading
-        self.key_save = GAME.KEYBOARD.get_key_combo(22, 224) # S + Ctrl
-        self.key_load = GAME.KEYBOARD.get_key_combo(15, 224) # L + Ctrl
-        self.key_modeup = GAME.KEYBOARD.get_key_pressed(16) # M
-        self.key_modedown = GAME.KEYBOARD.get_key_pressed(17) # N
+        for key in self.key:
+            if key[0] != 'H':
+                self.key[key] = GAME.input.kb.get_key_pressed(*self.keys[key])
+            else:
+                self.key[key] = GAME.input.kb.get_key_held(*self.keys[key[1:]])
 
-        # Keyboard object
-        self.key_place = GAME.KEYBOARD.get_key_pressed(44) # Space
-        self.key_remove = GAME.KEYBOARD.get_key_pressed(76) # Del
-        self.key_selup = GAME.KEYBOARD.get_key_pressed(8) # E
-        self.key_seldown = GAME.KEYBOARD.get_key_pressed(20) # Q
-        self.key_toggle = GAME.KEYBOARD.get_key_pressed(58) # F1
-        self.key_tab = GAME.KEYBOARD.get_key_pressed(43) # Tab
-        self.key_shift = GAME.KEYBOARD.get_key_held(225) # Shift
-
-        # Keyboard tile
-        self.key_tileup = GAME.KEYBOARD.get_key_pressed(29) # Z
-        self.key_tiledown = GAME.KEYBOARD.get_key_pressed(27) # X
-
-        # Keyboard movement
-        self.key_up = GAME.KEYBOARD.get_key_pressed(26, 82) # W or UpArrow
-        self.key_down = GAME.KEYBOARD.get_key_pressed(22, 81) # S or DownArrow
-        self.key_left = GAME.KEYBOARD.get_key_pressed(4, 80) # A or LeftArrow
-        self.key_right = GAME.KEYBOARD.get_key_pressed(7, 79) # D or RightArrow
-
-        # Mouse
-        self.mkey_place = GAME.MOUSE.get_button_held(1) # Left mouse
-        self.mkey_remove = GAME.MOUSE.get_button_held(3) # Right mouse
-        self.mpkey_place = GAME.MOUSE.get_button_pressed(1) # Left mouse
-        self.mpkey_remove = GAME.MOUSE.get_button_pressed(3) # Right mouse
+        for key in self.mkey:
+            if key[0] != 'H':
+                self.mkey[key] = GAME.input.ms.get_button_pressed(*self.mkeys[key])
+            else:
+                self.mkey[key] = GAME.input.ms.get_button_held(*self.mkeys[key[1:]])
 
     def mode0(self):
         """Object mode."""
-        # Keyboard
         # Changing selection
-        self.obj_select += (self.key_selup - self.key_seldown)
-        self.obj_select = f_loop(self.obj_select, 0,
-                                 len(GAME.OBJ.object_names) - 1)
-
-        # Movement
-        self.movement()
+        self.obj_select += self.key['next'] - self.key['prev']
+        length = len(self.object_names) - 1
+        self.obj_select = f_loop(self.obj_select, 0, length)
 
         # Toggling objects
-        if self.key_toggle:
-            GAME.OBJ.toggle_visibility()
-
-        # Place and remove objects with cursor
-        if self.key_place:
-            self.place_object()
-        if self.key_remove:
-            self.remove_object()
+        if self.key['f1']:
+            GAME.obj.toggle_visibility()
 
         # View/Edit data
-        if self.key_tab:
+        if self.key['tab'] and self.selected_object != None:
             self.view_object_data()
 
-        # Mouse
+        # Deselect object
+        if self.mkey['place']:
+            self.selected_object = None
+
         # Place object
-        if self.mkey_place:
-            pos = GAME.MOUSE.get_pos()
+        if self.mkey['Hplace'] and self.key['Hcontrol']:
+            pos = GAME.input.ms.get_pos()
             pos = f_tupgrid(pos, FULLTILE)
-            if self.pos != pos or self.mpkey_place:
+            if pos != self.pos or self.mkey['place']:
                 self.pos = pos
                 self.place_object()
+        # Select and move object
+        elif self.mkey['Hplace']:
+            pos = GAME.input.ms.get_pos()
+            pos = f_tupgrid(pos, FULLTILE)
+            if pos != self.pos or self.mkey['place']:
+                self.pos = pos
+                obj = self.selected_object
+                if obj is not None:
+                    if obj.pos != pos:
+                        obj.pos = pos
+                    self.selected_object = obj
+                self.selected_object = self.get_overlaping_object()
 
         # Remove object
-        if self.mkey_remove:
-            pos = GAME.MOUSE.get_pos()
+        elif self.mkey['Hremove'] and self.key['Hcontrol']:
+            pos = GAME.input.ms.get_pos()
             pos = f_tupgrid(pos, FULLTILE)
-            if self.pos != pos or self.mpkey_remove:
+            if pos != self.pos or self.mkey['remove']:
                 self.pos = pos
                 self.remove_object()
 
     def mode1(self):
         """Tile mode."""
-        # Keyboard
         # Layer selection
-        if self.key_tab:
-            if self.key_shift:
+        if self.key['tab']:
+            if self.key['shift']:
                 self.layer -= 1
             else:
                 self.layer += 1
-            layer_len = len(GAME.TILE.layers)-1
-            self.layer = f_loop(self.layer, 0, layer_len)
+            length = len(GAME.tile.layers)-1
+            self.layer = f_loop(self.layer, 0, length)
 
         # Tilemap selection
-        if self.key_tileup:
+        if self.key['nextset']:
             self.tile_map += 1
             self.tile_select = 0
-        if self.key_tiledown:
+        if self.key['prevset']:
             self.tile_map -= 1
             self.tile_select = 0
-        tile_map_len = len(GAME.TILE.tile_maps)-1
-        self.tile_map = f_loop(self.tile_map, 0, tile_map_len)
+        length = len(GAME.tile.tile_maps)-1
+        self.tile_map = f_loop(self.tile_map, 0, length)
 
         # Changing selection
-        self.tile_select += (self.key_selup - self.key_seldown)
-        tile_maps_len = len(GAME.TILE.tile_maps[self.tile_map][1])-1
-        self.tile_select = f_loop(self.tile_select, 0, tile_maps_len)
-
-        # Movement
-        self.movement()
+        self.tile_select += (self.key['next'] - self.key['prev'])
+        length = len(GAME.tile.tile_maps[self.tile_map])-1
+        self.tile_select = f_loop(self.tile_select, 0, length)
 
         # Toggling tile maps
-        if self.key_toggle:
-            layer = list(GAME.TILE.layers.keys())[self.layer]
-            GAME.TILE.layers[layer].toggle_visibility()
-
-        # Place tiles with cursor
-        if self.key_place:
-            self.place_tile()
-        # Remove tiles with cursor
-        if self.key_remove:
-            self.remove_tile()
+        if self.key['f1']:
+            layer = list(GAME.tile.layers.keys())[self.layer]
+            GAME.tile.layers[layer].toggle_visibility()
 
         # Mouse
         # Place tile
-        if self.mkey_place:
+        if self.mkey['Hplace'] and self.key['Hcontrol']:
             # Update position
-            pos = GAME.MOUSE.get_pos()
+            pos = GAME.input.ms.get_pos()
             pos = f_tupgrid(pos, HALFTILE)
-            if self.pos != pos or self.mpkey_place:
+            if self.pos != pos or self.mkey['place']:
                 self.pos = pos
                 self.place_tile()
 
         # Remove tile
-        if self.mkey_remove:
+        elif self.mkey['Hremove'] and self.key['Hcontrol']:
             # Update position
-            pos = GAME.MOUSE.get_pos()
+            pos = GAME.input.ms.get_pos()
             pos = f_tupgrid(pos, HALFTILE)
-            if self.pos != pos or self.mpkey_remove:
+            if self.pos != pos or self.mkey['remove']:
                 self.pos = pos
                 self.remove_tile()
 
-    def movement(self):
-        """Move cursor."""
-        hspd = (self.key_right - self.key_left)
-        vspd = (self.key_down - self.key_up)
-        self.pos = f_tupadd(self.pos, f_tupmult((hspd, vspd), self.speed))
+    def mode2(self):
+        # Wall mode
+        if self.key['f1']:
+            GAME.collider.st.toggle_visibility()
+
+        # Place object
+        if self.mkey['Hplace']:
+            pos = GAME.input.ms.get_pos()
+            pos = f_tupgrid(pos, FULLTILE)
+            if pos != self.pos or self.mkey['place']:
+                self.pos = pos
+                GAME.collider.st.add(pos)
+
+        # Remove object
+        elif self.mkey['Hremove']:
+            pos = GAME.input.ms.get_pos()
+            pos = f_tupgrid(pos, FULLTILE)
+            if pos != self.pos or self.mkey['remove']:
+                self.pos = pos
+                GAME.collider.st.remove(pos)
+
+    def get_overlaping_object(self):
+        for key in GAME.obj.obj:
+            obj = GAME.obj.obj[key]
+            if obj.pos == self.pos and obj.name != self.name:
+                return obj
+        return None
 
     def place_object(self):
         """Places object under cursor."""
         self.remove_object()
-        name = GAME.OBJ.get_id_info(self.obj_select)[0]
-        size = (FULLTILE, FULLTILE)
-        entid = self.obj_select
-        data = []
-        GAME.OBJ.create_object(name, self.pos, data, entid)
+        name = self.object_names[self.obj_select]
+        GAME.obj.create_object(name=name, key=None, pos=self.pos, data=[])
 
     def remove_object(self):
         """Removes object under cursor."""
-        obj_copy = GAME.OBJ.obj.copy()
-        for element in obj_copy:
-            obj = GAME.OBJ.obj[element]
-            if obj.pos == self.pos:
-                GAME.OBJ.delete(element)
+        obj = self.get_overlaping_object()
+        while obj is not None:
+            GAME.obj.delete(obj.key)
+            obj = self.get_overlaping_object()
 
     def place_tile(self):
-        layer = list(GAME.TILE.layers.keys())[self.layer]
-        pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
-        GAME.TILE.add_tile(layer, pos, self.tile_map, self.tile_select)
+        """Places tile under cursor."""
+        layer = self.get_current_layer()
+        layer.place(self.pos, self.tile_map, self.tile_select)
 
     def remove_tile(self):
-        layer = list(GAME.TILE.layers.keys())[self.layer]
-        pos = f_tupround(f_tupmult(self.pos, 1/HALFTILE), -1)
-        GAME.TILE.remove_tile(layer, pos)
+        """Removes tile under cursor."""
+        self.get_current_layer().remove(self.pos)
+
+    def get_current_layer(self):
+        return GAME.tile.layers[list(GAME.tile.layers.keys())[self.layer]]
+
+    def get_current_tilemap(self):
+        return GAME.tile.tile_maps[self.tile_map]
+
+    def get_current_tile(self):
+        return self.get_current_tilemap()[self.tile_select]
 
     def view_object_data(self):
         """Print object data or edit it if shift is held."""
-        objcopy = GAME.OBJ.obj.copy()
-        for element in objcopy:
-            obj = GAME.OBJ.obj[element]
+        obj = self.selected_object
+        if self.key['Hshift']:
             datatype = None
-            if obj.pos == self.pos:
-                if self.key_shift:
-                    while datatype != list:
-                        data = input('enter data list: ')
-                        try:
-                            data = ast.literal_eval(data)
-                        except (ValueError, SyntaxError):
-                            pass
-                        else:
-                            datatype = type(data)
-
-                        if datatype != list:
-                            print('input must be a list')
-                    obj.data = data
-                    print('successful data write.')
+            while datatype != list:
+                data = input('enter data list: ')
+                try:
+                    data = literal_eval(data)
+                except (ValueError, SyntaxError):
+                    pass
                 else:
-                    print(obj.name)
-                    print(element)
-                    print(obj.data)
+                    datatype = type(data)
 
-    def render_late(self):
-        """Render cursor and debug text."""
-        color = f_swatch((7, 0, 7))
-        font = 'arial12'
+                if datatype != list:
+                    print('input must be a list')
+            obj.data = data
+            print('successful data write.')
+        else:
+            info = ['name: {}'.format(obj.name),
+                    'id: {}'.format(obj.key),
+                    'data: {}'.format(obj.data)]
+            print('\n'.join(info))
+
+    def draw_early(self, window):
+        pass
+
+    def draw(self, window):
+        pass
+
+    def draw_late(self, window):
+        """Draw cursor and debug text."""
+        color = (224, 128, 224)
+        font = GAME.font.get('arial', 12)
+
+        text = 'pos: ({:.0f}, {:.0f})'.format(*self.pos)
+        window.draw_text((0, 0), text, font, color)
 
         if self.mode == 0:
-            obj = GAME.OBJ.object_names[self.obj_select]
-            size = GAME.WIN.fonts[font].size(obj)
-            GAME.WIN.draw_rect(self.pos, size, self.color)
-            GAME.WIN.draw_text(self.pos, obj, font)
+            obj = self.object_names[self.obj_select]
+            size = font.size(obj)
+            window.draw_text((0, HALFTILE), obj, font, color)
+
         elif self.mode == 1:
-
             # Tile
-            tile = GAME.TILE.tile_maps[self.tile_map][1][self.tile_select]
-            GAME.WIN.draw_image(self.pos, tile)
-
-            # Tilemap name
-            tilemap = GAME.TILE.tile_maps[self.tile_map][0]
-            GAME.WIN.draw_text((0, HALFTILE), tilemap, font, color)
+            tile = self.get_current_tile()
+            window.draw_image(self.pos, tile)
 
             # Layer name
-            layer = list(GAME.TILE.layers.keys())[self.layer]
-            GAME.WIN.draw_text((0, FULLTILE), layer, font, color)
-        GAME.WIN.draw_text((0, 0), str(self.pos), font, color)
+            layer = self.get_current_layer()
+            window.draw_text((0, HALFTILE), layer.name, font, color)
 
-# Sample of game object (level editor)
-class Entity():
-    """Sample game object (level editor)."""
-    def __init__(self, pos, name, size, color, key, entid, data):
-        self.pos = pos
+        elif self.mode == 2:
+            # Wall
+            window.draw_text((0, HALFTILE), 'Wall mode', font, color)
+
+class ObjEntity():
+    def __init__(self, name, key, pos, data):
         self.name = name
-        self.size = size
-        self.color = color
         self.key = key
-        self.entid = entid
-        self.data = []
+        self.pos = pos
+        self.data = data
+        GAME.obj.instantiate_object(key, self)
+        self.image = image.load(path.join(PATH['DEVSPRITES'], name + '.png'))
 
     def update(self, dt):
-        """Entity update call."""
         pass
 
-    def render_early(self, window):
-        """Entity render call."""
+    def draw_early(self, window):
         pass
 
-    def render(self, window):
-        """Entity render call."""
-        window.draw_rect(self.pos, self.size, self.color)
+    def draw(self, window):
+        window.draw_image(self.pos, self.image)
 
-    def render_late(self, window):
-        """Entity render call."""
-        color = f_cinverse(self.color)
-        window.draw_text(self.pos, self.name, 'arial8', color)
+    def draw_late(self, window):
+        pass
 
-# File paths
-PATH = {}
-PATH['DEFAULT'] = __file__[:-len(os.path.basename(__file__))]
-PATH['ASSETS'] = os.path.join(PATH['DEFAULT'], 'Assets')
-PATH['SPRITES'] = os.path.join(PATH['ASSETS'], 'Sprites')
-PATH['LEVELS'] = os.path.join(PATH['ASSETS'], 'Levels')
-PATH['TILEMAPS'] = os.path.join(PATH['ASSETS'], 'Tilemaps')
-
-
-# main code section
 def main():
-    """Main level editing loop."""
-    clock = pygame.time.Clock()
+    """Main game loop."""
+    clock = Clock()
     dt = 1
 
-    # Gameplay loop
     while GAME.run:
-        clock.tick(FPS)
-        GAME.input_reset()
+        GAME.input.reset()
 
         # Event Handler
-        events = pygame.event.get()
-        for event in events:
+        for event in pyevent.get():
             # Exit game
-            if event.type == pygame.QUIT:
-                GAME.end()
+            if event.type == QUIT:
+                return
             else:
-                GAME.handle_events(event)
+                GAME.input.handle_events(event)
 
         # Quit by escape
-        if GAME.KEYBOARD.get_key_pressed(41):
-            GAME.end
+        if GAME.input.kb.get_key_pressed(41):
+            GAME.end()
+            return
 
-        # Update
+        # If in game
+        # Update objects
+        GAME.obj.update(dt)
         CUR.update(dt)
-        GAME.update(dt)
 
-        # Clear frame
-        GAME.WIN.blank()
-        GAME.render()
-        CUR.render_late()
+        # Draw all
+        CAM.blank()
 
-        # Update display
-        pygame.display.update()
+        # Draw background layers
+        GAME.obj.draw_early(CAM)
+        GAME.tile.layers['background'].draw(CAM)
+
+        # Draw objects
+        GAME.obj.draw(CAM)
+        GAME.collider.st.debug_draw(CAM)
+
+        # Draw foreground layers
+        GAME.tile.layers['foreground'].draw(CAM)
+        GAME.obj.draw_late(CAM)
+        CUR.draw_late(CAM)
+
+        # FPS display
+        #fps = 'fps: {:3f}'.format(clock.get_fps())
+        #font = GAME.font.get('arial', 12)
+        #CAM.draw_text((FULLTILE, FULLTILE), fps, font, (255, 255, 255))
+
+        # Render to screen
+        GAME.window.render(CAM)
 
         # Tick clock
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
 
-    # Quit pygame
-    pygame.quit()
 
-# only run if this file is executed
-if __name__ == "__main__":
-    # Constant variables
-    # Constants variables
-    FULLTILE = 32
-    HALFTILE = int(FULLTILE/2)
-    FPS = 60
-    LEVEL_SIZE = (32, 24)
-    SIZE = f_tupmult(LEVEL_SIZE, FULLTILE)
-
-
-    # Game controller
-    GAME = GameHandler(SIZE, LEVEL_SIZE, FULLTILE, PATH, f_create_object)
-
-    # Level editing tool
-    CUR = Cursor((0, 0))
-
-
-    # Setup program
-    pygame.display.set_caption("Game X - Level Editor")
-    GAME.WIN.add_font('arial', 8)
-
-
-    # Load tilemaps into TILE
-    GAME.TILE.load()
-    GAME.TILE.add_layer('background', f_tupmult(LEVEL_SIZE, 2))
-    GAME.TILE.add_layer('foreground', f_tupmult(LEVEL_SIZE, 2))
-
+if __name__ == '__main__':
+    SIZE = (1024, 768)
+    CAM = ObjCamera(SIZE)
+    GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
+    GAME.tile.add_tilemap('0-tileset0.png')
+    GAME.tile.add_tilemap('1-background0.png')
+    GAME.tile.add_layer('background', (6, 6))
+    GAME.tile.add_layer('foreground', (6, 6))
+    key = GAME.obj.instantiate_key()
+    CUR = ObjCursor((0, 0))
     main()
+

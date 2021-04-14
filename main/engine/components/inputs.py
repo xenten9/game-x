@@ -1,4 +1,43 @@
 """Objects used for event handling related to inputs of a keyboard or mouse."""
+from pygame.locals import (KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
+                           MOUSEBUTTONUP, MOUSEMOTION)
+from ..helper_functions.tuple_functions import f_tupadd
+
+class ObjInput():
+    def __init__(self):
+        self.kb = ObjKeyboard()
+        self.ms = ObjMouse()
+
+    def handle_events(self, event):
+        """Handles inputs and events."""
+        # Key pressed
+        if event.type == KEYDOWN:
+            self.kb.set_key(event.scancode, 1)
+
+        # Key released
+        elif event.type == KEYUP:
+            self.kb.set_key(event.scancode, 0)
+
+        # Mouse movement
+        elif event.type == MOUSEMOTION:
+            self.ms.pos = event.pos
+            self.ms.rel = f_tupadd(self.ms.rel, event.rel)
+
+        # Mouse pressed
+        elif event.type == MOUSEBUTTONDOWN:
+            self.ms.button_pressed[event.button] = 1
+            self.ms.button_held[event.button] = 1
+            self.ms.button_pressed_pos[event.button] = event.pos
+
+        # Mouse released
+        elif event.type == MOUSEBUTTONUP:
+            self.ms.button_pressed[event.button] = 0
+            self.ms.button_held[event.button] = 0
+
+    def reset(self):
+        self.kb.reset()
+        self.ms.reset()
+
 # keyboard inputs
 class ObjKeyboard():
     """Record all of the keyoard inputs whether pressed or held."""

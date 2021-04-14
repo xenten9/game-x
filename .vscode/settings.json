@@ -1,4 +1,7 @@
 {
-    "python.autoComplete.extraPaths": ["./main"],
-    "python.pythonPath": "C:\\Program Files\\Python39\\python.exe"
+    "python.autoComplete.extraPaths": ["./main/engine/components"],
+    "python.pythonPath": "C:\\Program Files\\Python39\\python.exe",
+    "python.analysis.disabled": [
+        "unresolved-import"
+    ]
 }

@@ -1,75 +1,66 @@
-"""game.py dev project."""
-# Pylint not being cool
-# pylint: disable=no-member
-# pylint: disable=no-name-in-module
-# pylint: disable=too-many-arguments
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=unnecessary-pass
-# pylint: disable=too-many-branches
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
-
-
-# Imports
 from os import path
 from math import floor
-
-import pygame
 import numpy as np
-from pygame.locals import (QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
-                           MOUSEBUTTONUP, MOUSEMOTION)
 
-from Helper_Functions.tuple_functions import f_tupadd, f_tupmult
-from Helper_Functions.collisions import f_col_rects
+from pygame import image, event as pyevent
+from pygame.time import Clock
+from pygame.locals import QUIT
 
-from engine import GameHandler
-from engine import f_swatch, f_loop
+from engine.components.camera import ObjCamera
+from engine.engine import GameHandler, f_loop
+from engine.helper_functions.tuple_functions import f_tupadd, f_tupgrid
 
-# initialize pygame modules
-pygame.font.init()
+FULLTILE = 32
+FPS = 60
 
-
-# File paths
 PATH = {}
 PATH['DEFAULT'] = __file__[:-len(path.basename(__file__))]
-PATH['ASSETS'] = path.join(PATH['DEFAULT'], 'Assets')
-PATH['SPRITES'] = path.join(PATH['ASSETS'], 'Sprites')
-PATH['LEVELS'] = path.join(PATH['ASSETS'], 'Levels')
-PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'Tilemaps')
+PATH['ASSETS'] = path.join(PATH['DEFAULT'], 'assets')
+PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
+PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
+PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
 
+def object_creator(**kwargs):
+    name = kwargs['name']
+    if name == 'player':
+        key = kwargs['key']
+        pos = kwargs['pos']
+        data = kwargs['data']
+        key = GAME.obj.instantiate_key(key)
+        ObjPlayer(key, pos, (FULLTILE, FULLTILE), name, data)
 
-# Object creator
-def f_create_object(name: str, pos: tuple, data: list, entid: int, key: int):
-    """Function used to create objects."""
-    if name != 'null':
-        # Object creation
-        if name == 'wall':
-            GAME.STCOL.add_wall(pos)
+    elif name == 'grav-orb':
+        key = kwargs['key']
+        pos = kwargs['pos']
+        data = kwargs['data']
+        key = GAME.obj.instantiate_key(key)
+        GravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
 
-        elif name == 'player':
-            key = GAME.OBJ.instantiate_key(key)
-            obj = Player(key, pos, (FULLTILE, FULLTILE), name, data)
-            GAME.OBJ.instantiate_object(key, obj)
+    elif name == 'door':
+        key = kwargs['key']
+        pos = kwargs['pos']
+        data = kwargs['data']
+        key = GAME.obj.instantiate_key(key)
+        Door(key, pos, (FULLTILE, FULLTILE), name, data)
 
-        elif name == 'button':
-            key = GAME.OBJ.instantiate_key(key)
-            obj = Button(key, pos, (FULLTILE, FULLTILE/8), name, data)
-            GAME.OBJ.instantiate_object(key, obj)
+    elif name == 'button':
+        key = kwargs['key']
+        pos = kwargs['pos']
+        data = kwargs['data']
+        key = GAME.obj.instantiate_key(key)
+        Button(key, pos, (FULLTILE, FULLTILE/8), name, data)
 
-        elif name == 'door':
-            key = GAME.OBJ.instantiate_key(key)
-            obj = Door(key, pos, (FULLTILE, FULLTILE), name, data)
-            GAME.OBJ.instantiate_object(key, obj)
+    elif name == 'spike':
+        key = kwargs['key']
+        pos = kwargs['pos']
+        data = kwargs['data']
+        key = GAME.obj.instantiate_key(key)
+        Spike(key, pos, (FULLTILE, FULLTILE/8), name, data)
 
-        elif name == 'grav-orb':
-            key = GAME.OBJ.instantiate_key(key)
-            obj = GravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
-            GAME.OBJ.instantiate_object(key, obj)
+    elif name == 'wall':
+        pos = kwargs['pos']
+        GAME.collider.st.add(pos)
 
-        elif name == 'spike':
-            key = GAME.OBJ.instantiate_key(key)
-            obj = Spike(key, pos, (FULLTILE, FULLTILE/8), name, data)
-            GAME.OBJ.instantiate_object(key, obj)
 
 # Gameplay objects
 class GameObject():
@@ -79,6 +70,7 @@ class GameObject():
         self.pos = pos
         self.size = size
         origin = relative
+        GAME.obj.instantiate_object(key, self)
         width, height = f_tupadd(size, -1)
         self.cpoints = ((origin[0], origin[1]),
                         (origin[0]+width, origin[1]),
@@ -89,27 +81,30 @@ class GameObject():
         self._frame = 0
         self._frames = []
 
-    def get_frame(self):
+    @property
+    def frame(self):
         """Get frame property."""
         return self._frame
-    def set_frame(self, frame: int):
+
+    @frame.setter
+    def frame(self, frame: int):
         """Set frame property."""
         if frame > len(self.frames):
             frame = f_loop(frame, 0, len(self.frames))
         self._frame = frame
-    frame = property(get_frame, set_frame)
 
-    def get_frames(self):
+    @property
+    def frames(self):
         """Get frames property."""
         return self._frames
-    def set_frames(self, overwrite: bool, *fnames):
+
+    @frames.setter
+    def frames(self, fnames):
         """Set frame property."""
-        if overwrite:
-            self._frames = []
+        self._frames = []
         for file in fnames:
-            file_path = path.join(GAME.SPRITE_PATH, file)
-            self._frames.append(pygame.image.load(file_path).convert_alpha())
-    frames = property(get_frames)
+            file_path = path.join(PATH['SPRITES'], file)
+            self._frames.append(image.load(file_path).convert_alpha())
 
     def scollide(self, pos=None, cpoints=None):
         """Check to see if any of the colpoints instersect with STCOL."""
@@ -121,7 +116,7 @@ class GameObject():
 
         # Check for collisions
         for point in cpoints:
-            if GAME.STCOL.get_col(f_tupadd(pos, point)):
+            if GAME.collider.st.get(f_tupadd(pos, point)):
                 return 1
         return 0
 
@@ -135,27 +130,27 @@ class GameObject():
         crect = self.crect
 
         # Check for collision
-        return GAME.DYCOL.get_collision(pos, crect, key)
+        return GAME.collider.dy.get_collision(pos, crect, key)
 
-    def render_early(self, window):
-        """Rendering before the background layer."""
+    def draw_early(self, window):
+        """Drawing before the background layer."""
         pass
 
-    def render(self, window):
-        """Rendering at the same time as other objects."""
+    def draw(self, window):
+        """Drawing at the same time as other objects."""
         pos = self.pos
         window.draw_image(pos, self.frames[self.frame])
 
-    def render_late(self, window):
-        """Rendering after foreground layer."""
+    def draw_late(self, window):
+        """Drawing after foreground layer."""
         pass
 
     def delete(self):
         """Called when object is deleted from Objects dictionary."""
-        GAME.OBJ.delete(self.key)
-        GAME.DYCOL.remove_collider(self.key)
+        GAME.obj.delete(self.key)
+        GAME.collider.dy.remove(self.key)
 
-class Player(GameObject):
+class ObjPlayer(GameObject):
     """Player game object."""
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
@@ -164,24 +159,27 @@ class Player(GameObject):
         self.data = data
 
         # Dynamic collision
-        GAME.DYCOL.add_collider(self.key, self)
+        GAME.collider.dy.add(self.key, self)
 
         # Color
-        self.color = f_swatch((2, 5, 5))
+        self.color = (64, 160, 160)
 
         # Keys
-        self.keys = {}
-        self.key = {}
-        self.keys['jump'] = (44, 26, 82)
-        self.keys['left'] = (4, 80)
-        self.keys['right'] = (7, 79)
-        self.keys['run'] = (225, 224)
-        self.key['jump'] = 0
-        self.key['hjump'] = 0
-        self.key['left'] = 0
-        self.key['right'] = 0
-        self.key['run'] = 0
+        self.keys = {
+            'jump': (44, 26, 82),
+            'left': (4, 80),
+            'right': (7, 79),
+            'run':(225, 224)
+        }
 
+        # Key vars
+        self.key = {
+            'jump': 0,
+            'Hjump': 0,
+            'Hleft': 0,
+            'Hright': 0,
+            'Hrun': 0
+        }
 
         # Ground
         self.hspd, self.vspd = 0, 0
@@ -191,6 +189,7 @@ class Player(GameObject):
         self.ground_fric_dynamic = 0.88
 
         # Jumping
+        self.jump = 0
         self.air_fric_retro = 0.88
         self.air_fric_pro = 0.98
         self.air_speed = 0.4
@@ -200,15 +199,15 @@ class Player(GameObject):
         self.fallgrav = 0.6
         self.jumpgrav = 0.35
         self.grounded = 0
-        self.coyote = 10
-        self.jump_lenience = 5
+        self.coyote = 8
+        self.jump_lenience = 6
         self.jump_delay = 0
 
         # State Machine
         self.mode = 0
 
-        # Rendering
-        self.set_frames(0, 'player.png')
+        # Sprite
+        self.frames = ('player.png',)
 
     def update(self, dt):
         """Called every frame for each game object."""
@@ -216,56 +215,68 @@ class Player(GameObject):
         if self.mode == 0:
             self.movement()
 
-    def render(self, window):
-        """Rendering at the same time as other objects."""
+    def draw(self, window):
+        """Drawing at the same time as other objects."""
         pass
 
-    def render_late(self, window):
-        """Called every frame to render each game object."""
-        super().render(window)
+    def draw_late(self, window):
+        """Called every frame to draw each game object."""
+        super().draw(window)
         text = 'Grounded: {}'.format(self.grounded)
-        window.draw_text((FULLTILE, 1.5*FULLTILE), text, color=f_swatch((7, 7, 7)))
+        color = (255, 255, 255)
+        font = GAME.font.get('arial', 12)
+        window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color)
         text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
-        window.draw_text((FULLTILE, 2*FULLTILE), text, color=f_swatch((7, 7, 7)))
+        window.draw_text((FULLTILE, 2*FULLTILE), text, font, color)
 
     def get_inputs(self):
-        """Get all of the inputs read before moving."""
-        # Horizontal controls
-        self.key['left'] = GAME.KEYBOARD.get_key_held(*self.keys['left'])
-        self.key['right'] = GAME.KEYBOARD.get_key_held(*self.keys['right'])
-        self.key['run'] = GAME.KEYBOARD.get_key_held(*self.keys['run'])
-
-        # Veritcal controls
-        self.key['jump'] -= np.sign(self.key['jump'])
-        if (GAME.KEYBOARD.get_key_pressed(*self.keys['jump'])
-            and self.key['jump'] <= 0):
-            self.key['jump'] = self.jump_lenience
-        self.key['hjump'] = GAME.KEYBOARD.get_key_held(*self.keys['jump'])
-
-        # Grounded
-        self.grounded -= np.sign(self.grounded)
-        if self.grav >= 0 and self.scollide(f_tupadd(self.pos, (0, 1))):
-            if self.grav != 0:
-                self.grounded = self.coyote # Normal Gravity
+        for key in self.key:
+            if key[0] != 'H':
+                self.key[key] = GAME.input.kb.get_key_pressed(*self.keys[key])
             else:
-                self.grounded = 1
-        if self.grav <= 0 and self.scollide(f_tupadd(self.pos, (0, -1))):
-            if self.grav != 0:
-                self.grounded = -self.coyote # Normal Gravity
-            else:
-                self.grounded = -1
+                self.key[key] = GAME.input.kb.get_key_held(*self.keys[key[1:]])
+
+        #for key in self.mkey:
+        #    if key[0] != 'H':
+        #        self.mkey[key] = GAME.input.ms.get_button_pressed(*self.mkeys[key])
+        #    else:
+        #        self.mkey[key] = GAME.input.ms.get_button_held(*self.mkeys[key[1:]])
 
     def movement(self):
         """Handle player movement."""
+        # Veritcal controls
+        self.jump -= np.sign(self.jump)
+        if (self.key['jump'] and self.jump <= 0):
+            self.jump = self.jump_lenience
+
+        # Grounded
+        self.grounded -= np.sign(self.grounded)
+
+        # Floor
+        if self.grav >= 0 and self.scollide(f_tupadd(self.pos, (0, 1))):
+            self.jump_delay = 0
+            if self.grav != 0:
+                self.grounded = self.coyote # Normal Gravity
+            else:
+                self.grounded = 1 # Zero Gravity
+
+        # Ceiling
+        if self.grav <= 0 and self.scollide(f_tupadd(self.pos, (0, -1))):
+            self.jump_delay = 0
+            if self.grav != 0:
+                self.grounded = -self.coyote # Normal Gravity
+            else:
+                self.grounded = -1 # Zero Gravity
+
         # Horizontal speed
-        move = (self.key['right'] - self.key['left'])
+        move = (self.key['Hright'] - self.key['Hleft'])
         if self.grounded and self.grav != 0:
             if move != 0:
                 # Dynamic grounded
                 self.hspd *= self.ground_fric_dynamic
 
                 # Running
-                if self.key['run']:
+                if self.key['Hrun']:
                     self.hspd += move * self.run_speed
                 else:
                     self.hspd += move * self.walk_speed
@@ -301,7 +312,7 @@ class Player(GameObject):
         # Jump gravity
         if np.sign(self.vspd) == np.sign(self.grav):
             self.vspd += self.grav * self.fallgrav
-        elif self.key['hjump']:
+        elif self.key['Hjump']:
             self.vspd += self.grav * self.jumpgrav
         else:
             self.vspd += self.grav
@@ -344,9 +355,7 @@ class Button(GameObject):
         self.name = name
         self.data = data
         self.door = data[0]
-
-        # Rendering
-        self.set_frames(0, 'button0.png', 'button1.png')
+        self.frames = ('button0.png', 'button1.png')
 
     def update(self, dt):
         """Called every frame for each game object."""
@@ -355,15 +364,7 @@ class Button(GameObject):
             for obj in col:
                 if obj.name == 'player':
                     self.frame = 1
-                    GAME.OBJ.obj[self.door].frame = 1
-
-    def get_collision_self(self, pos, size):
-        """See if object is pressing button."""
-        bdom = [self.pos[0], self.pos[0] + self.size[0]-1]
-        bran = [self.pos[1], self.pos[1] + self.size[1]-1]
-        cdom = [pos[0], pos[0] + size[0]-1]
-        cran = [pos[1], pos[1] + size[1]-1]
-        return f_col_rects(bdom, bran, cdom, cran)
+                    GAME.obj.obj[self.door].frame = 1
 
 class Door(GameObject):
     """Door game object."""
@@ -375,7 +376,7 @@ class Door(GameObject):
         self.next_level = data[0]
 
         # Images
-        self.set_frames(0, 'door0.png', 'door1.png')
+        self.frames = ('door0.png', 'door1.png')
 
     def update(self, dt):
         """Called every frame for each game object."""
@@ -383,15 +384,7 @@ class Door(GameObject):
             col = self.dcollide()
             for obj in col:
                 if obj.name == 'player':
-                    GAME.LEVEL.load_level(self.next_level)
-
-    def get_collision_self(self, pos, size):
-        """See if object is pressing button."""
-        bdom = [self.pos[0], self.pos[0] + self.size[0]-1]
-        bran = [self.pos[1], self.pos[1] + self.size[1]-1]
-        cdom = [pos[0], pos[0] + size[0]-1]
-        cran = [pos[1], pos[1] + size[1]-1]
-        return f_col_rects(bdom, bran, cdom, cran)
+                    GAME.level.load(self.next_level)
 
 class GravOrb(GameObject):
     """GravOrb game object."""
@@ -402,7 +395,7 @@ class GravOrb(GameObject):
         self.data = data
 
         # Images
-        self.set_frames(0, 'grav-orb.png')
+        self.frames = ('grav-orb.png',)
 
     def update(self, dt):
         """Called every frame for each game object."""
@@ -441,74 +434,74 @@ class Spike(GameObject):
         self.data = data
 
         # Images
-        self.set_frames(0, 'spike0.png')
+        self.frames = ('spike.png',)
 
     def update(self, dt):
         """Called every frame for each game object."""
         col = self.dcollide()
         for obj in col:
             if obj.name == 'player':
-                GAME.LEVEL.reset()
+                GAME.level.reset()
 
 
-# Main code section
 def main():
     """Main game loop."""
-    clock = pygame.time.Clock()
+    clock = Clock()
     dt = 1
 
-    # Gameplay loop
     while GAME.run:
-        GAME.input_reset()
+        GAME.input.reset()
 
         # Event Handler
-        for event in pygame.event.get():
+        for event in pyevent.get():
             # Exit game
             if event.type == QUIT:
-                GAME.end()
+                return
             else:
-                GAME.handle_events(event)
+                GAME.input.handle_events(event)
 
         # Quit by escape
-        if GAME.KEYBOARD.get_key_pressed(41):
+        if GAME.input.kb.get_key_pressed(41):
             GAME.end()
+            return
 
         # Update objects
-        GAME.update(dt)
+        GAME.obj.update(dt)
 
-        # Render
-        GAME.render()
+        # Draw all
+        CAM.blank()
+
+        # Draw background layers
+        GAME.obj.draw_early(CAM)
+        GAME.tile.layers['background'].draw(CAM)
+
+        # Draw objects
+        GAME.obj.draw(CAM)
+        #GAME.collider.st.debug_draw(CAM)
+
+        # Draw foreground layers
+        GAME.tile.layers['foreground'].draw(CAM)
+        GAME.obj.draw_late(CAM)
 
         # FPS display
         fps = 'fps: {:3f}'.format(clock.get_fps())
-        GAME.WIN.draw_text((FULLTILE, FULLTILE), fps, color=f_swatch((7, 7, 7)))
+        font = GAME.font.get('arial', 12)
+        CAM.draw_text((FULLTILE, FULLTILE), fps, font, (255, 255, 255))
 
-        # Update display
-        pygame.display.update()
+        # Render to screen
+        GAME.window.render(CAM)
 
         # Tick clock
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
 
-    # Quit pygame
-    pygame.quit()
 
-if __name__ == "__main__":
-    # Constants variables
-    FULLTILE = 32
-    LEVEL_SIZE = (32, 24)
-    SIZE = f_tupmult(LEVEL_SIZE, FULLTILE)
-    FPS = 60
-
-    # Game controller
-    GAME = GameHandler(SIZE, LEVEL_SIZE, FULLTILE, PATH, f_create_object)
-
-    # Setup program
-    pygame.event.set_allowed([QUIT, KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
-                        MOUSEBUTTONUP, MOUSEMOTION])
-    pygame.display.set_caption("Game X")
-    GAME.TILE.load()
-
-    GAME.load_level('level0')
-
+if __name__ == '__main__':
+    SIZE = (1024, 768)
+    CAM = ObjCamera(SIZE)
+    GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
+    GAME.tile.add_tilemap('0-tileset0.png')
+    GAME.tile.add_tilemap('1-background0.png')
+    GAME.level.load('level1')
     main()
+
