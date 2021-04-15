@@ -1,14 +1,16 @@
 from os import path
 from math import floor
 import numpy as np
+from time import time
 
 from pygame import image, event as pyevent
 from pygame.time import Clock
 from pygame.locals import QUIT
 
 from engine.components.camera import ObjCamera
-from engine.engine import GameHandler, f_loop
-from engine.helper_functions.tuple_functions import f_tupadd, f_tupgrid
+from engine.engine import GameHandler, f_loop, f_limit
+from engine.helper_functions.tuple_functions import (
+    f_tupadd, f_tupgrid, f_tupmult)
 
 FULLTILE = 32
 FPS = 60
@@ -34,33 +36,51 @@ def object_creator(**kwargs):
         pos = kwargs['pos']
         data = kwargs['data']
         key = GAME.obj.instantiate_key(key)
-        GravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
+        ObjGravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
 
     elif name == 'door':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
         key = GAME.obj.instantiate_key(key)
-        Door(key, pos, (FULLTILE, FULLTILE), name, data)
+        ObjDoor(key, pos, (FULLTILE, FULLTILE), name, data)
 
     elif name == 'button':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
         key = GAME.obj.instantiate_key(key)
-        Button(key, pos, (FULLTILE, FULLTILE/8), name, data)
+        ObjButton(key, pos, (FULLTILE, FULLTILE/8), name, data)
 
     elif name == 'spike':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
         key = GAME.obj.instantiate_key(key)
-        Spike(key, pos, (FULLTILE, FULLTILE/8), name, data)
+        ObjSpike(key, pos, (FULLTILE, FULLTILE/8), name, data)
 
-    elif name == 'wall':
+    elif name == 'spike-inv':
+        key = kwargs['key']
         pos = kwargs['pos']
-        GAME.collider.st.add(pos)
+        data = kwargs['data']
+        key = GAME.obj.instantiate_key(key)
+        ObjSpikeInv(key, pos, (FULLTILE, FULLTILE/8), name, data)
 
+class ObjView(ObjCamera):
+    def __init__(self, size):
+        super().__init__(size)
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, value):
+        level_size0, level_size1 = GAME.level.level_size
+        size0, size1 = self._size
+        value0 = f_limit(value[0], 0, level_size0 - size0)
+        value1 = f_limit(value[1], 0, level_size1 - size1)
+        self._pos = (value0, value1)
 
 # Gameplay objects
 class GameObject():
@@ -98,13 +118,15 @@ class GameObject():
         """Get frames property."""
         return self._frames
 
-    @frames.setter
-    def frames(self, fnames):
+    def set_frames(self, *fnames, alpha=0):
         """Set frame property."""
         self._frames = []
         for file in fnames:
             file_path = path.join(PATH['SPRITES'], file)
-            self._frames.append(image.load(file_path).convert_alpha())
+            if alpha == 0:
+                self._frames.append(image.load(file_path).convert())
+            elif alpha == 1:
+                self._frames.append(image.load(file_path).convert_alpha())
 
     def scollide(self, pos=None, cpoints=None):
         """Check to see if any of the colpoints instersect with STCOL."""
@@ -159,7 +181,7 @@ class ObjPlayer(GameObject):
         self.data = data
 
         # Dynamic collision
-        GAME.collider.dy.add(self.key, self)
+        GAME.collider.dy.add(key, self)
 
         # Color
         self.color = (64, 160, 160)
@@ -205,15 +227,24 @@ class ObjPlayer(GameObject):
 
         # State Machine
         self.mode = 0
+        self.campos = (0, 0)
 
         # Sprite
-        self.frames = ('player.png',)
+        self.set_frames('player.png')
 
     def update(self, dt):
         """Called every frame for each game object."""
         self.get_inputs()
         if self.mode == 0:
             self.movement()
+            self.campos = f_tupadd(self.pos, f_tupmult(CAM._size, -1/2))
+            CAM.pos = self.campos
+            col = self.dcollide()
+            for obj in col:
+                try:
+                    obj.collide(self)
+                except AttributeError:
+                    pass
 
     def draw(self, window):
         """Drawing at the same time as other objects."""
@@ -225,9 +256,9 @@ class ObjPlayer(GameObject):
         text = 'Grounded: {}'.format(self.grounded)
         color = (255, 255, 255)
         font = GAME.font.get('arial', 12)
-        window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color)
+        window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color, gui = 1)
         text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
-        window.draw_text((FULLTILE, 2*FULLTILE), text, font, color)
+        window.draw_text((FULLTILE, 2*FULLTILE), text, font, color, gui = 1)
 
     def get_inputs(self):
         for key in self.key:
@@ -347,101 +378,125 @@ class ObjPlayer(GameObject):
         self.hspd = hspd
         self.vspd = vspd
 
-class Button(GameObject):
+class ObjButton(GameObject):
     """Button game object."""
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
         super().__init__(key, pos, size, relative=(0, FULLTILE-size[1]))
+        GAME.collider.dy.add(key, self)
         self.name = name
         self.data = data
-        self.door = data[0]
-        self.frames = ('button0.png', 'button1.png')
+        self.set_frames('button0.png', 'button1.png', alpha=1)
 
     def update(self, dt):
         """Called every frame for each game object."""
-        if self.frame == 0:
-            col = self.dcollide()
-            for obj in col:
-                if obj.name == 'player':
-                    self.frame = 1
-                    GAME.obj.obj[self.door].frame = 1
+        pass
 
-class Door(GameObject):
+    def collide(self, obj):
+        self.door = GAME.obj.obj[self.data[0]]
+        self.frame = 1
+        self.door.frame = 1
+
+class ObjDoor(GameObject):
     """Door game object."""
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
         super().__init__(key, pos, size)
+        GAME.collider.dy.add(key, self)
         self.name = name
         self.data = data
         self.next_level = data[0]
 
         # Images
-        self.frames = ('door0.png', 'door1.png')
+        self.set_frames('door0.png', 'door1.png')
 
     def update(self, dt):
         """Called every frame for each game object."""
-        if self.frame == 1:
-            col = self.dcollide()
-            for obj in col:
-                if obj.name == 'player':
-                    GAME.level.load(self.next_level)
+        pass
 
-class GravOrb(GameObject):
+    def collide(self, obj):
+        if obj.name == 'player':
+            if self.frame == 1:
+                GAME.level.load(self.next_level)
+
+class ObjGravOrb(GameObject):
     """GravOrb game object."""
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
         super().__init__(key, pos, size)
+        GAME.collider.dy.add(key, self)
         self.name = name
         self.data = data
 
         # Images
-        self.frames = ('grav-orb.png',)
+        self.set_frames('grav-orb.png', alpha=1)
 
     def update(self, dt):
         """Called every frame for each game object."""
-        col = self.dcollide()
-        for obj in col:
-            if obj.name == 'player':
-                grav_mult = self.data[0]
+        pass
 
-                # Toggle zero grav
-                if grav_mult == 0:
-                    if obj.grav == 0:
-                        obj.grav = obj.default_grav
-                    else:
-                        obj.grav = 0
+    def collide(self, obj):
+        if obj.name == 'player':
+            grav_mult = self.data[0]
 
-                # Change positive gravity
-                elif grav_mult > 0:
+            # Toggle zero grav
+            if grav_mult == 0:
+                if obj.grav == 0:
+                    obj.grav = obj.default_grav
+                else:
+                    obj.grav = 0
+
+            # Change positive gravity
+            elif grav_mult > 0:
+                obj.grav = obj.default_grav * grav_mult
+
+            # Flip gravity and change grav ammount
+            elif grav_mult < 0:
+                if np.sign(obj.grav) in (0, 1):
                     obj.grav = obj.default_grav * grav_mult
+                else:
+                    obj.grav = obj.default_grav * -grav_mult
 
-                # Flip gravity and change grav ammount
-                elif grav_mult < 0:
-                    if np.sign(obj.grav) in (0, 1):
-                        obj.grav = obj.default_grav * grav_mult
-                    else:
-                        obj.grav = obj.default_grav * -grav_mult
+            # Remove self after collision with player
+            self.delete()
 
-                # Remove self after collision with player
-                self.delete()
-
-class Spike(GameObject):
+class ObjSpike(GameObject):
     """Spike game object."""
     def __init__(self, key, pos, size, name, data):
         # GameObject initialization
         super().__init__(key, pos, size, relative=(0, FULLTILE-size[1]))
+        GAME.collider.dy.add(key, self)
         self.name = name
         self.data = data
 
         # Images
-        self.frames = ('spike.png',)
+        self.set_frames('spike.png', alpha=1)
 
     def update(self, dt):
-        """Called every frame for each game object."""
-        col = self.dcollide()
-        for obj in col:
-            if obj.name == 'player':
-                GAME.level.reset()
+        pass
+
+    def collide(self, obj):
+        if obj.name == 'player':
+            GAME.level.reset()
+
+class ObjSpikeInv(GameObject):
+    """Spike game object."""
+    def __init__(self, key, pos, size, name, data):
+        # GameObject initialization
+        super().__init__(key, pos, size, relative=(0, 0))
+        GAME.collider.dy.add(key, self)
+        self.name = name
+        self.data = data
+
+        # Images
+        self.set_frames('spike-inv.png', alpha=1)
+
+    def update(self, dt):
+        pass
+
+    def collide(self, obj):
+        if obj.name == 'player':
+            GAME.level.reset()
 
 
 def main():
@@ -466,11 +521,14 @@ def main():
             return
 
         # Update objects
+        t = time()
         GAME.obj.update(dt)
+        print('update: {}'.format((time() - t) * FPS))
 
         # Draw all
-        CAM.blank()
+        #CAM.blank()
 
+        t = time()
         # Draw background layers
         GAME.obj.draw_early(CAM)
         GAME.tile.layers['background'].draw(CAM)
@@ -486,10 +544,11 @@ def main():
         # FPS display
         fps = 'fps: {:3f}'.format(clock.get_fps())
         font = GAME.font.get('arial', 12)
-        CAM.draw_text((FULLTILE, FULLTILE), fps, font, (255, 255, 255))
+        CAM.draw_text((FULLTILE, FULLTILE), fps, font, (255, 255, 255), gui = 1)
 
         # Render to screen
         GAME.window.render(CAM)
+        print('render: {}'.format((time() - t) * FPS))
 
         # Tick clock
         dt = clock.tick(FPS)
@@ -497,11 +556,11 @@ def main():
 
 
 if __name__ == '__main__':
-    SIZE = (1024, 768)
-    CAM = ObjCamera(SIZE)
+    SIZE = (1024, 576)
+    CAM = ObjView(SIZE)
     GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
     GAME.tile.add_tilemap('0-tileset0.png')
     GAME.tile.add_tilemap('1-background0.png')
-    GAME.level.load('level1')
+    GAME.level.load('level2')
     main()
 

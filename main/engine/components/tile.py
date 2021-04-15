@@ -5,7 +5,7 @@ from os import path
 from ..helper_functions.tuple_functions import (
     f_tupmult, f_tupgrid, f_tupround)
 from ..helper_functions.number_functions import (
-    f_make_grid, f_change_grid_dimensions)
+    f_make_grid, f_change_grid_dimensions, f_minimize_grid)
 
 # Tile map
 class ObjTileMap():
@@ -78,8 +78,11 @@ class ObjTileLayer():
         try:
             self.grid[pos[0]][pos[1]] = (tilemap_id, tile_id)
         except IndexError:
-            size = (max(pos[0] + 1, len(self.grid)),
-                    max(pos[1] + 1, len(self.grid[0])))
+            if len(self.grid) == 0:
+                size = (pos[0]+1, pos[1]+1)
+            else:
+                size = (max(pos[0] + 1, len(self.grid)),
+                        max(pos[1] + 1, len(self.grid[0])))
             self.dialate(size)
             self.grid[pos[0]][pos[1]] = (tilemap_id, tile_id)
 
@@ -111,3 +114,6 @@ class ObjTileLayer():
     def dialate(self, size):
         self.size = size
         self.grid = f_change_grid_dimensions(self.grid, size, None)
+
+    def minimize(self):
+        self.grid = f_minimize_grid(self.grid, None)

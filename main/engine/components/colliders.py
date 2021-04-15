@@ -1,6 +1,6 @@
 from ..helper_functions.tuple_functions import f_tupround, f_tupmult, f_tupadd
 from ..helper_functions.number_functions import (
-    f_make_grid, f_change_grid_dimensions)
+    f_make_grid, f_change_grid_dimensions, f_minimize_grid)
 from ..helper_functions.collisions import f_col_rects
 
 class ObjCollider():
@@ -24,8 +24,11 @@ class ObjStaticCollider():
         try:
             self.grid[pos[0]][pos[1]] = 1
         except IndexError:
-            size = (max(pos[0] + 1, len(self.grid)),
-                    max(pos[1] + 1, len(self.grid[0])))
+            if len(self.grid) == 0:
+                size = (f_tupadd(pos, (1, 1)))
+            else:
+                size = (max(pos[0] + 1, len(self.grid)),
+                        max(pos[1] + 1, len(self.grid[0])))
             self.expand(size)
             self.grid[pos[0]][pos[1]] = 1
 
@@ -66,6 +69,9 @@ class ObjStaticCollider():
                         pos = f_tupmult((row, column), self.tile_size)
                         tile = (self.tile_size, self.tile_size)
                         window.draw_rect(pos, tile)
+
+    def minimize(self):
+        self.grid = f_minimize_grid(self.grid, 0)
 
 # Handles Dynamic collisions
 class ObjDynamicCollider():

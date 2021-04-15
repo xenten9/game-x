@@ -1,4 +1,4 @@
-from pygame import display, Surface, font, Rect, draw
+from pygame import display, Surface, font, Rect, draw, transform
 font.init()
 
 # Handles graphics
@@ -12,6 +12,8 @@ class ObjWindow():
     def render(self, camera):
         """Called when self.surface needs to be rendered to the screen."""
         surface = camera.surface
+        if surface.get_size() != self.size:
+            surface = transform.scale(surface, self.size)
         self.display.blit(surface, (0, 0))
         display.update()
 

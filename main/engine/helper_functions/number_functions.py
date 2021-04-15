@@ -1,3 +1,4 @@
+from copy import deepcopy
 
 # Creates a grid
 def f_make_grid(size, default_value):
@@ -11,13 +12,47 @@ def f_make_grid(size, default_value):
 def f_change_grid_dimensions(grid, size, value):
     """Updates an existing grid to be a new size."""
     new_grid = f_make_grid(size, value)
-    for row, _ in enumerate(grid):
-        for column, old in enumerate(grid[row]):
+    for column, _ in enumerate(grid):
+        for row, old in enumerate(grid[column]):
             try:
-                new_grid[row][column] = old
+                new_grid[column][row] = old
             except IndexError:
                 pass
     return new_grid
+
+# Returns a grid with no empty rows or columns
+def f_minimize_grid(grid, nullval):
+    if len(grid) == 0:
+        return []
+    width, height = len(grid), len(grid[0])
+    for n in range(1, width):
+        column = f_get_column(grid, width-n)
+        if not f_is_list_empty(column, nullval):
+            width -= n - 1
+            break
+
+    for n in range(1, height):
+        row = f_get_row(grid ,height-n)
+        if not f_is_list_empty(row, nullval):
+            height -= n - 1
+            break
+
+    return f_change_grid_dimensions(grid, (width, height), nullval)
+
+def f_is_list_empty(inlist, nullval):
+    for cell in inlist:
+            if cell != nullval:
+                return 0
+    return 1
+
+def f_get_column(grid, column):
+    return grid[column]
+
+def f_get_row(grid, row):
+    out = []
+    for column in grid:
+        out.append(column[row])
+    return out
 
 # Return a value following packman logic
 def f_loop(val, minval, maxval):

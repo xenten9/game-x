@@ -55,14 +55,6 @@ class ObjLevel():
         # Clear entities
         self.game.clear()
 
-        # Set level size
-        tile_layer = obj_list[0]
-        if tile_layer[0] == 'tile-layer':
-            size = (len(tile_layer[2]), len(tile_layer[2][0]))
-            self.level_size = f_tupmult(size, self.game.FULLTILE)
-        else:
-            raise Exception('levels first line is not a tile-layer')
-
         # Create objects
         for arg in obj_list:
             # Interpret object info
@@ -74,6 +66,7 @@ class ObjLevel():
                 self.game.tile.add_layer(layer_name, size, grid)
             elif name == 'static-collider':
                 self.game.collider.st.grid = arg[1]
+                self.level_size = f_tupmult((len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
             else:
                 pos, key, data = arg[1:4]
                 self.game.obj.create_object(name=name, pos=pos, data=data, key=key)

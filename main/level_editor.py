@@ -9,7 +9,8 @@ from pygame.locals import QUIT
 
 from engine.components.camera import ObjCamera
 from engine.engine import GameHandler, f_loop
-from engine.helper_functions.tuple_functions import f_tupadd, f_tupgrid
+from engine.helper_functions.tuple_functions import (
+    f_tupadd, f_tupgrid, f_tupmult)
 
 print('################')
 FULLTILE = 32
@@ -27,11 +28,52 @@ PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
 def object_creator(**kwargs):
     name = kwargs['name']
     pos = kwargs['pos']
-    if name != 'wall':
-        key = kwargs['key']
-        data = kwargs['data']
-        key = GAME.obj.instantiate_key(key)
-        ObjEntity(name, key, pos, data)
+    key = kwargs['key']
+    data = kwargs['data']
+    key = GAME.obj.instantiate_key(key)
+    ObjEntity(name, key, pos, data)
+
+class ObjCameraMovable(ObjCamera):
+    def __init__(self, size):
+        super().__init__(size)
+        self.keys = {
+            'left': (4, 80),
+            'right': (7, 79),
+            'up': (26, 82),
+            'down': (22, 81)
+        }
+
+        self.key = {
+            'left': 0,
+            'right': 0,
+            'up': 0,
+            'down': 0
+        }
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, value):
+        if value[0] < 0:
+            value = (0, value[1])
+        if value[1] < 0:
+            value = (value[0], 0)
+        self._pos = value
+
+    def update(self, dt):
+        self.get_inputs()
+        hspd = (self.key['right'] - self.key['left']) * FULLTILE
+        vspd = (self.key['down'] - self.key['up']) * FULLTILE
+        self.pos = f_tupadd(self.pos, (hspd, vspd))
+
+    def get_inputs(self):
+        for key in self.key:
+                if key[0] != 'H':
+                    self.key[key] = GAME.input.kb.get_key_pressed(*self.keys[key])
+                else:
+                    self.key[key] = GAME.input.kb.get_key_held(*self.keys[key[1:]])
 
 class ObjCursor:
     def __init__(self, pos):
@@ -49,10 +91,13 @@ class ObjCursor:
         self.selected_object = None
 
         # Names
-        self.object_names = ['player',
-                             'button',
-                             'door',
-                             'grav-orb']
+        self.object_names = [
+            'player',
+            'button',
+            'door',
+            'grav-orb',
+            'spike',
+            'spike-inv']
 
         # Input keys
         self.keys = {
@@ -69,11 +114,10 @@ class ObjCursor:
             'control': (224,),
             'nextset': (27,),
             'prevset': (29,),
-        }
+            'reload': (21,)}
         self.mkeys = {
             'place': (1,),
-            'remove': (3,)
-        }
+            'remove': (3,)}
 
         # input vars
         self.key = {
@@ -92,13 +136,12 @@ class ObjCursor:
             'Hshift': 0,
             'nextset': 0,
             'prevset': 0,
-        }
+            'reload': 0}
         self.mkey = {
             'place': 0,
             'Hplace': 0,
             'remove': 0,
-            'Hremove': 0
-        }
+            'Hremove': 0}
 
     def update(self, dt):
         """Update cursor pos and level changes."""
@@ -110,6 +153,13 @@ class ObjCursor:
             self.mode += self.key['modeup'] - self.key['modedown']
             self.pos = f_tupgrid(self.pos, FULLTILE)
         self.mode = f_loop(self.mode, 0, 2)
+
+        # Reload # NOTE # use before saving level in order to shrink grids
+        if self.key['reload'] and self.key['Hcontrol']:
+            GAME.collider.st.minimize()
+            for layer in GAME.tile.layers:
+                layer = GAME.tile.layers[layer]
+                layer.minimize()
 
         # Saving and loading
         if self.key['save'] and self.key['Hcontrol']:
@@ -159,14 +209,14 @@ class ObjCursor:
 
         # Place object
         if self.mkey['Hplace'] and self.key['Hcontrol']:
-            pos = GAME.input.ms.get_pos()
+            pos = f_tupadd(GAME.input.ms.get_pos(), CAM.pos)
             pos = f_tupgrid(pos, FULLTILE)
             if pos != self.pos or self.mkey['place']:
                 self.pos = pos
                 self.place_object()
         # Select and move object
         elif self.mkey['Hplace']:
-            pos = GAME.input.ms.get_pos()
+            pos = f_tupadd(GAME.input.ms.get_pos(), CAM.pos)
             pos = f_tupgrid(pos, FULLTILE)
             if pos != self.pos or self.mkey['place']:
                 self.pos = pos
@@ -179,7 +229,7 @@ class ObjCursor:
 
         # Remove object
         elif self.mkey['Hremove'] and self.key['Hcontrol']:
-            pos = GAME.input.ms.get_pos()
+            pos = f_tupadd(GAME.input.ms.get_pos(), CAM.pos)
             pos = f_tupgrid(pos, FULLTILE)
             if pos != self.pos or self.mkey['remove']:
                 self.pos = pos
@@ -220,7 +270,7 @@ class ObjCursor:
         # Place tile
         if self.mkey['Hplace'] and self.key['Hcontrol']:
             # Update position
-            pos = GAME.input.ms.get_pos()
+            pos = f_tupadd(GAME.input.ms.get_pos(), CAM.pos)
             pos = f_tupgrid(pos, HALFTILE)
             if self.pos != pos or self.mkey['place']:
                 self.pos = pos
@@ -229,7 +279,7 @@ class ObjCursor:
         # Remove tile
         elif self.mkey['Hremove'] and self.key['Hcontrol']:
             # Update position
-            pos = GAME.input.ms.get_pos()
+            pos = f_tupadd(GAME.input.ms.get_pos(), CAM.pos)
             pos = f_tupgrid(pos, HALFTILE)
             if self.pos != pos or self.mkey['remove']:
                 self.pos = pos
@@ -242,7 +292,7 @@ class ObjCursor:
 
         # Place object
         if self.mkey['Hplace']:
-            pos = GAME.input.ms.get_pos()
+            pos = f_tupadd(GAME.input.ms.get_pos(), CAM.pos)
             pos = f_tupgrid(pos, FULLTILE)
             if pos != self.pos or self.mkey['place']:
                 self.pos = pos
@@ -250,7 +300,7 @@ class ObjCursor:
 
         # Remove object
         elif self.mkey['Hremove']:
-            pos = GAME.input.ms.get_pos()
+            pos = f_tupadd(GAME.input.ms.get_pos(), CAM.pos)
             pos = f_tupgrid(pos, FULLTILE)
             if pos != self.pos or self.mkey['remove']:
                 self.pos = pos
@@ -330,25 +380,25 @@ class ObjCursor:
         font = GAME.font.get('arial', 12)
 
         text = 'pos: ({:.0f}, {:.0f})'.format(*self.pos)
-        window.draw_text((0, 0), text, font, color)
+        window.draw_text((0, 0), text, font, color, gui=1)
 
         if self.mode == 0:
             obj = self.object_names[self.obj_select]
             size = font.size(obj)
-            window.draw_text((0, HALFTILE), obj, font, color)
+            window.draw_text((0, HALFTILE), obj, font, color, gui=1)
 
         elif self.mode == 1:
             # Tile
             tile = self.get_current_tile()
-            window.draw_image(self.pos, tile)
+            window.draw_image(f_tupadd(f_tupmult(CAM.pos, -1), self.pos), tile, gui=1)
 
             # Layer name
             layer = self.get_current_layer()
-            window.draw_text((0, HALFTILE), layer.name, font, color)
+            window.draw_text((0, HALFTILE), layer.name, font, color, gui=1)
 
         elif self.mode == 2:
             # Wall
-            window.draw_text((0, HALFTILE), 'Wall mode', font, color)
+            window.draw_text((0, HALFTILE), 'Wall mode', font, color, gui=1)
 
 class ObjEntity():
     def __init__(self, name, key, pos, data):
@@ -396,6 +446,7 @@ def main():
         # Update objects
         GAME.obj.update(dt)
         CUR.update(dt)
+        CAM.update(dt)
 
         # Draw all
         CAM.blank()
@@ -414,9 +465,9 @@ def main():
         CUR.draw_late(CAM)
 
         # FPS display
-        #fps = 'fps: {:3f}'.format(clock.get_fps())
-        #font = GAME.font.get('arial', 12)
-        #CAM.draw_text((FULLTILE, FULLTILE), fps, font, (255, 255, 255))
+        fps = 'fps: {:3f}'.format(clock.get_fps())
+        font = GAME.font.get('arial', 12)
+        CAM.draw_text((0, FULLTILE), fps, font, (255, 0, 255), gui=1)
 
         # Render to screen
         GAME.window.render(CAM)
@@ -428,7 +479,7 @@ def main():
 
 if __name__ == '__main__':
     SIZE = (1024, 768)
-    CAM = ObjCamera(SIZE)
+    CAM = ObjCameraMovable(SIZE)
     GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
     GAME.tile.add_tilemap('0-tileset0.png')
     GAME.tile.add_tilemap('1-background0.png')
