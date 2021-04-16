@@ -18,8 +18,8 @@ HALFTILE = 16
 FPS = 60
 
 PATH = {}
-PATH['DEFAULT'] = __file__[:-len(path.basename(__file__))]
-PATH['ASSETS'] = path.join(PATH['DEFAULT'], 'assets')
+PATH['MAIN'] = __file__[:-len(path.basename(__file__))]
+PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
 PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
 PATH['DEVSPRITES'] = path.join(PATH['ASSETS'], 'dev_sprites')
 PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
@@ -330,10 +330,13 @@ class ObjCursor:
         """Places tile under cursor."""
         layer = self.get_current_layer()
         layer.place(self.pos, self.tile_map, self.tile_select)
+        layer.generate()
 
     def remove_tile(self):
         """Removes tile under cursor."""
-        self.get_current_layer().remove(self.pos)
+        layer = self.get_current_layer()
+        layer.remove(self.pos)
+        layer.generate()
 
     def get_current_layer(self):
         return GAME.tile.layers[list(GAME.tile.layers.keys())[self.layer]]
@@ -483,9 +486,7 @@ if __name__ == '__main__':
     GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
     GAME.tile.add_tilemap('0-tileset0.png')
     GAME.tile.add_tilemap('1-background0.png')
-    GAME.tile.add_layer('background', (6, 6))
-    GAME.tile.add_layer('foreground', (6, 6))
-    key = GAME.obj.instantiate_key()
+    GAME.level.load('default')
     CUR = ObjCursor((0, 0))
     main()
 

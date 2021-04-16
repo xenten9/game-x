@@ -1,0 +1,174 @@
+###
+time: 5.235
+update: 0.014
+render: 1.768
+###
+time: 10.235
+update: 0.065
+render: 1.755
+###
+time: 15.181
+update: 0.011
+render: 1.798
+###
+time: 20.231
+update: 0.144
+render: 1.791
+###
+time: 25.283
+update: 0.213
+render: 1.967
+###
+time: 30.250
+update: 0.102
+render: 1.954
+###
+time: 35.283
+update: 0.200
+render: 1.935
+###
+time: 40.233
+update: 0.100
+render: 1.968
+###
+time: 45.256
+update: 0.194
+render: 1.978
+###
+time: 50.203
+update: 0.077
+render: 1.923
+###
+time: 55.247
+update: 0.205
+render: 1.946
+###
+time: 60.290
+update: 0.201
+render: 1.960
+###
+time: 65.336
+update: 0.077
+render: 1.878
+###
+time: 70.288
+update: 0.093
+render: 1.930
+###
+time: 75.348
+update: 0.194
+render: 1.914
+###
+time: 80.298
+update: 0.054
+render: 1.840
+###
+time: 85.235
+update: 0.097
+render: 1.982
+###
+time: 90.288
+update: 0.163
+render: 1.924
+###
+time: 95.268
+update: 0.044
+render: 1.990
+###
+time: 100.215
+update: 0.007
+render: 1.807
+###
+time: 105.258
+update: 0.151
+render: 1.825
+###
+time: 110.307
+update: 0.079
+render: 1.970
+###
+time: 115.252
+update: 0.097
+render: 1.957
+###
+time: 120.198
+update: 0.113
+render: 1.959
+
+
+
+###
+time: 4.975
+update: 0.010
+render: 1.623
+###
+time: 9.951
+update: 0.042
+render: 1.667
+###
+time: 14.883
+update: 0.007
+render: 1.690
+###
+time: 19.830
+update: 0.011
+render: 1.682
+###
+time: 24.867
+update: 0.133
+render: 1.686
+###
+time: 29.900
+update: 0.048
+render: 1.753
+###
+time: 34.932
+update: 0.133
+render: 1.776
+###
+time: 39.870
+update: 0.044
+render: 1.756
+###
+time: 44.918
+update: 0.183
+render: 1.760
+###
+time: 49.920
+update: 0.133
+render: 1.754
+###
+time: 55.038
+update: 0.230
+render: 1.775
+###
+time: 59.984
+update: 0.056
+render: 1.754
+###
+time: 64.969
+update: 0.054
+render: 1.766
+###
+time: 69.900
+update: 0.004
+render: 1.607
+###
+time: 74.833
+update: 0.007
+render: 1.727
+
+
+
+###
+time: 4.965
+update: 0.013
+render: 1.776
+###
+time: 9.902
+update: 0.015
+render: 1.731
+###
+time: 14.961
+update: 0.016
+render: 1.757
