@@ -71,6 +71,9 @@ class ObjLevel():
                 pos, key, data = arg[1:4]
                 self.game.obj.create_object(name=name, pos=pos, data=data, key=key)
 
+        for layer in self.game.tile.layers:
+            self.game.tile.layers[layer].generate()
+
         print('successful level load!')
 
     def save(self, level_name=None):

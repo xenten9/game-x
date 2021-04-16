@@ -429,7 +429,12 @@ class ObjGravOrb(GameObject):
         self.data = data
 
         # Images
-        self.set_frames('grav-orb.png', alpha=1)
+        if self.data[0] > 0:
+            self.set_frames('grav-orb0.png', alpha=1)
+        elif self.data[0] == 0:
+            self.set_frames('grav-orb1.png', alpha=1)
+        elif self.data[0] < 1:
+            self.set_frames('grav-orb2.png', alpha=1)
 
     def update(self, dt):
         """Called every frame for each game object."""
@@ -526,8 +531,6 @@ def main():
         print('update: {}'.format((time() - t) * FPS))
 
         # Draw all
-        #CAM.blank()
-
         t = time()
         # Draw background layers
         GAME.obj.draw_early(CAM)
@@ -535,7 +538,6 @@ def main():
 
         # Draw objects
         GAME.obj.draw(CAM)
-        #GAME.collider.st.debug_draw(CAM)
 
         # Draw foreground layers
         GAME.tile.layers['foreground'].draw(CAM)
@@ -561,6 +563,6 @@ if __name__ == '__main__':
     GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
     GAME.tile.add_tilemap('0-tileset0.png')
     GAME.tile.add_tilemap('1-background0.png')
-    GAME.level.load('level2')
+    GAME.level.load('level1')
     main()
 

@@ -23,7 +23,7 @@ class ObjTileMap():
         halftile = self.game.HALFTILE
         for xpos in range(int((tile_set.get_width() / halftile))):
             # new surface
-            surface = Surface((halftile, halftile)) # pylint: disable=too-many-function-args
+            surface = Surface((halftile, halftile))
 
             # write section of image to surface
             surface.blit(tile_set, (0, 0), area=Rect(
@@ -70,6 +70,7 @@ class ObjTileLayer():
         if grid is None:
             grid = f_make_grid(size, None)
         self.grid = grid
+        self.surface = None
         self.visible = True
 
     def place(self, pos: tuple, tilemap_id: int, tile_id: int):
@@ -97,15 +98,7 @@ class ObjTileLayer():
     def draw(self, window):
         """Draw tiles."""
         if self.visible:
-            for column in enumerate(self.grid):
-                for row in enumerate(self.grid[column[0]]):
-                    tile_info = self.grid[column[0]][row[0]]
-                    if tile_info is not None:
-                        self.half_tile = self.game.HALFTILE
-                        tile = self.tile.get_image(*tile_info)
-                        pos = f_tupmult((column[0], row[0]),
-                                        self.half_tile)
-                        window.draw_image(pos, tile)
+            window.draw_image((0, 0), self.surface)
 
     def toggle_visibility(self):
         """Turn layer invisible."""
@@ -117,3 +110,17 @@ class ObjTileLayer():
 
     def minimize(self):
         self.grid = f_minimize_grid(self.grid, None)
+
+    def generate(self):
+        size = f_tupmult(self.size, self.game.HALFTILE)
+        self.surface = Surface(size).convert_alpha()
+        self.surface.fill([0, 0, 0, 0])
+        for column in enumerate(self.grid):
+                for row in enumerate(self.grid[column[0]]):
+                    tile_info = self.grid[column[0]][row[0]]
+                    if tile_info is not None:
+                        self.half_tile = self.game.HALFTILE
+                        tile = self.tile.get_image(*tile_info)
+                        pos = f_tupmult((column[0], row[0]),
+                                        self.half_tile)
+                        self.surface.blit(tile, pos)
