@@ -1,0 +1,33 @@
+
+
+
+###
+time: 4.947
+update: 0.008
+render: 1.566
+###
+time: 9.926
+update: 0.000
+render: 1.578
+###
+time: 14.962
+update: 0.110
+render: 1.605
+
+
+
+
+
+
+###
+time: 4.941
+update: 0.008
+render: 1.581
+###
+time: 9.904
+update: 0.004
+render: 1.692
+###
+time: 15.021
+update: 0.116
+render: 1.623

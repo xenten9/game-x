@@ -19,7 +19,7 @@ FPS = 60
 SIZE = (1024, 768)
 
 PATH = {}
-PATH['MAIN'] = __file__[:-len(path.basename(__file__))]
+PATH['MAIN'] = getcwd()
 PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
 PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
 PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
@@ -521,15 +521,15 @@ def main():
     # Timing info
     clock = Clock()
     dt = 1
-    STARTTIME = time()
-    TIME = []
+    #STARTTIME = time()
+    #TIME = []
 
     # Append new line to debug file
-    debug = ObjFile(path.join(PATH['MAIN'], 'debug'), 'debug.txt')
-    debug.append()
-    debug.file.write('\n\n\n')
-    debug.close
-    del debug
+    #debug = ObjFile(path.join(PATH['MAIN'], 'debug'), 'debug.txt')
+    #debug.append()
+    #debug.file.write('\n\n\n')
+    #debug.close
+    #del debug
 
     while GAME.run:
         GAME.input.reset()
@@ -550,7 +550,7 @@ def main():
         # Update objects
         t = time()
         GAME.obj.update(dt)
-        TIME.append(round((time() - t), 3))
+        #TIME.append(round((time() - t), 3))
 
         # Draw all
         t = time()
@@ -572,30 +572,29 @@ def main():
 
         # Render to screen
         GAME.window.render(GAME.cam)
-        TIME.append(round((time() - t), 3))
+        #TIME.append(round((time() - t), 3))
 
         # Tick clock
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
 
         # Write render data to disk
-        if len(TIME) >= 5*2*FPS:
-            #print('writing time data to disk')
-            debug = ObjFile(path.join(PATH['MAIN'], 'debug'), 'debug.txt')
-            debug.append()
-            t0 = 0
-            t1 = 1
-            for i in range(200):
-                t0 += TIME[2*i]
-                t1 += TIME[2*i+1]
-            debug.file.write('###\n')
-            debug.file.write('time: {:.3f}\n'.format(time()-STARTTIME))
-            debug.file.write('update: {:.3f}\n'.format(t0))
-            debug.file.write('render: {:.3f}\n'.format(t1))
-            debug.close()
-            TIME.clear()
+        #if len(TIME) >= 5*2*FPS:
+        #    #print('writing time data to disk')
+        #    debug = ObjFile(path.join(PATH['MAIN'], 'debug'), 'debug.txt')
+        #    debug.append()
+        #    t0 = 0
+        #    t1 = 1
+        #    for i in range(200):
+        #        t0 += TIME[2*i]
+        #        t1 += TIME[2*i+1]
+        #    debug.file.write('###\n')
+        #    debug.file.write('time: {:.3f}\n'.format(time()-STARTTIME))
+        #    debug.file.write('update: {:.3f}\n'.format(t0))
+        #    debug.file.write('render: {:.3f}\n'.format(t1))
+        #    debug.close()
+        #    TIME.clear()
 
 
 if __name__ == '__main__':
     main()
-
