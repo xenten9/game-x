@@ -12,7 +12,7 @@ class ObjObjectHandler():
         self.visible = True
 
     # Update all objects
-    def update(self, dt):
+    def update(self, dt, **kwargs):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
@@ -21,7 +21,7 @@ class ObjObjectHandler():
             except KeyError:
                 print('key {} does not exist'.format(key))
             else:
-                self.obj[key].update(dt)
+                self.obj[key].update(dt, **kwargs)
 
     # Draw calls
     def draw_early(self, window):

@@ -66,10 +66,11 @@ class ObjLevel():
                 self.game.tile.add_layer(layer_name, size, grid)
             elif name == 'static-collider':
                 self.game.collider.st.grid = arg[1]
-                self.level_size = f_tupmult((len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
+                self.size = f_tupmult((len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
+                self.game.cam.set_level_size(self.size)
             else:
                 pos, key, data = arg[1:4]
-                self.game.obj.create_object(name=name, pos=pos, data=data, key=key)
+                self.game.obj.create_object(game=self.game, name=name, pos=pos, data=data, key=key)
 
         for layer in self.game.tile.layers:
             self.game.tile.layers[layer].generate()

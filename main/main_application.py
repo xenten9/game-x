@@ -1,4 +1,5 @@
-from os import path
+import sys
+from os import path, getcwd
 from math import floor
 import numpy as np
 from time import time
@@ -7,14 +8,15 @@ from pygame import image, event as pyevent
 from pygame.time import Clock
 from pygame.locals import QUIT
 
-from engine.components.camera import ObjCamera
-from engine.engine import GameHandler, f_loop, f_limit
-from engine.helper_functions.tuple_functions import (
+from .engine.components.camera import ObjCamera
+from .engine.engine import GameHandler, f_loop, f_limit
+from .engine.helper_functions.tuple_functions import (
     f_tupadd, f_tupgrid, f_tupmult)
-from engine.helper_functions.file_system import ObjFile
+from .engine.helper_functions.file_system import ObjFile
 
 FULLTILE = 32
 FPS = 60
+SIZE = (1024, 768)
 
 PATH = {}
 PATH['MAIN'] = __file__[:-len(path.basename(__file__))]
@@ -25,51 +27,55 @@ PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
 
 def object_creator(**kwargs):
     name = kwargs['name']
+    game = kwargs['game']
     if name == 'player':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = GAME.obj.instantiate_key(key)
-        ObjPlayer(key, pos, (FULLTILE, FULLTILE), name, data)
+        key = game.obj.instantiate_key(key)
+        ObjPlayer(game, key, pos, (FULLTILE, FULLTILE), name, data)
 
     elif name == 'grav-orb':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = GAME.obj.instantiate_key(key)
-        ObjGravOrb(key, pos, (FULLTILE, FULLTILE), name, data)
+        key = game.obj.instantiate_key(key)
+        ObjGravOrb(game, key, pos, (FULLTILE, FULLTILE), name, data)
 
     elif name == 'door':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = GAME.obj.instantiate_key(key)
-        ObjDoor(key, pos, (FULLTILE, FULLTILE), name, data)
+        key = game.obj.instantiate_key(key)
+        ObjDoor(game, key, pos, (FULLTILE, FULLTILE), name, data)
 
     elif name == 'button':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = GAME.obj.instantiate_key(key)
-        ObjButton(key, pos, (FULLTILE, FULLTILE/8), name, data)
+        key = game.obj.instantiate_key(key)
+        ObjButton(game, key, pos, (FULLTILE, FULLTILE/8), name, data)
 
     elif name == 'spike':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = GAME.obj.instantiate_key(key)
-        ObjSpike(key, pos, (FULLTILE, FULLTILE/8), name, data)
+        key = game.obj.instantiate_key(key)
+        ObjSpike(game, key, pos, (FULLTILE, FULLTILE/8), name, data)
 
     elif name == 'spike-inv':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = GAME.obj.instantiate_key(key)
-        ObjSpikeInv(key, pos, (FULLTILE, FULLTILE/8), name, data)
+        key = game.obj.instantiate_key(key)
+        ObjSpikeInv(game, key, pos, (FULLTILE, FULLTILE/8), name, data)
 
 class ObjView(ObjCamera):
     def __init__(self, size):
         super().__init__(size)
+
+    def set_level_size(self, size):
+        self.level_size = size
 
     @property
     def pos(self):
@@ -77,7 +83,7 @@ class ObjView(ObjCamera):
 
     @pos.setter
     def pos(self, value):
-        level_size0, level_size1 = GAME.level.level_size
+        level_size0, level_size1 = self.level_size
         size0, size1 = self._size
         value0 = f_limit(value[0], 0, level_size0 - size0)
         value1 = f_limit(value[1], 0, level_size1 - size1)
@@ -86,12 +92,13 @@ class ObjView(ObjCamera):
 # Gameplay objects
 class GameObject():
     """Class which all game objects inherit from."""
-    def __init__(self, key, pos, size, relative=(0, 0)):
+    def __init__(self, game, key, pos, size, relative=(0, 0)):
+        self.game = game
         self.key = key
         self.pos = pos
         self.size = size
         origin = relative
-        GAME.obj.instantiate_object(key, self)
+        game.obj.instantiate_object(key, self)
         width, height = f_tupadd(size, -1)
         self.cpoints = ((origin[0], origin[1]),
                         (origin[0]+width, origin[1]),
@@ -139,7 +146,7 @@ class GameObject():
 
         # Check for collisions
         for point in cpoints:
-            if GAME.collider.st.get(f_tupadd(pos, point)):
+            if self.game.collider.st.get(f_tupadd(pos, point)):
                 return 1
         return 0
 
@@ -153,7 +160,7 @@ class GameObject():
         crect = self.crect
 
         # Check for collision
-        return GAME.collider.dy.get_collision(pos, crect, key)
+        return self.game.collider.dy.get_collision(pos, crect, key)
 
     def draw_early(self, window):
         """Drawing before the background layer."""
@@ -170,22 +177,18 @@ class GameObject():
 
     def delete(self):
         """Called when object is deleted from Objects dictionary."""
-        GAME.obj.delete(self.key)
-        GAME.collider.dy.remove(self.key)
+        self.game.obj.delete(self.key)
+        self.game.collider.dy.remove(self.key)
 
 class ObjPlayer(GameObject):
     """Player game object."""
-    def __init__(self, key, pos, size, name, data):
+    def __init__(self, game, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size)
+        super().__init__(game, key, pos, size)
         self.name = name
         self.data = data
-
-        # Dynamic collision
-        GAME.collider.dy.add(key, self)
-
-        # Color
-        self.color = (64, 160, 160)
+        self.game = game
+        game.collider.dy.add(key, self)
 
         # Keys
         self.keys = {
@@ -233,13 +236,13 @@ class ObjPlayer(GameObject):
         # Sprite
         self.set_frames('player.png')
 
-    def update(self, dt):
+    def update(self, dt, **kwargs):
         """Called every frame for each game object."""
         self.get_inputs()
         if self.mode == 0:
             self.movement()
-            self.campos = f_tupadd(self.pos, f_tupmult(CAM._size, -1/2))
-            CAM.pos = self.campos
+            self.campos = f_tupadd(self.pos, f_tupmult(self.game.cam._size, -1/2))
+            self.game.cam.pos = self.campos
             col = self.dcollide()
             for obj in col:
                 try:
@@ -256,7 +259,7 @@ class ObjPlayer(GameObject):
         super().draw(window)
         text = 'Grounded: {}'.format(self.grounded)
         color = (255, 255, 255)
-        font = GAME.font.get('arial', 12)
+        font = self.game.font.get('arial', 12)
         window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color, gui = 1)
         text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
         window.draw_text((FULLTILE, 2*FULLTILE), text, font, color, gui = 1)
@@ -264,15 +267,11 @@ class ObjPlayer(GameObject):
     def get_inputs(self):
         for key in self.key:
             if key[0] != 'H':
-                self.key[key] = GAME.input.kb.get_key_pressed(*self.keys[key])
+                self.key[key] = self.game.input.kb.get_key_pressed(
+                    *self.keys[key])
             else:
-                self.key[key] = GAME.input.kb.get_key_held(*self.keys[key[1:]])
-
-        #for key in self.mkey:
-        #    if key[0] != 'H':
-        #        self.mkey[key] = GAME.input.ms.get_button_pressed(*self.mkeys[key])
-        #    else:
-        #        self.mkey[key] = GAME.input.ms.get_button_held(*self.mkeys[key[1:]])
+                self.key[key] = self.game.input.kb.get_key_held(
+                    *self.keys[key[1:]])
 
     def movement(self):
         """Handle player movement."""
@@ -381,29 +380,31 @@ class ObjPlayer(GameObject):
 
 class ObjButton(GameObject):
     """Button game object."""
-    def __init__(self, key, pos, size, name, data):
+    def __init__(self, game, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size, relative=(0, FULLTILE-size[1]))
-        GAME.collider.dy.add(key, self)
+        super().__init__(game, key, pos, size, relative=(0, FULLTILE-size[1]))
+        self.game = game
+        game.collider.dy.add(key, self)
         self.name = name
         self.data = data
         self.set_frames('button0.png', 'button1.png', alpha=1)
 
-    def update(self, dt):
+    def update(self, dt, **kwargs):
         """Called every frame for each game object."""
         pass
 
     def collide(self, obj):
-        self.door = GAME.obj.obj[self.data[0]]
+        self.door = self.game.obj.obj[self.data[0]]
         self.frame = 1
         self.door.frame = 1
 
 class ObjDoor(GameObject):
     """Door game object."""
-    def __init__(self, key, pos, size, name, data):
+    def __init__(self, game, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size)
-        GAME.collider.dy.add(key, self)
+        super().__init__(game, key, pos, size)
+        self.game = game
+        game.collider.dy.add(key, self)
         self.name = name
         self.data = data
         self.next_level = data[0]
@@ -411,21 +412,22 @@ class ObjDoor(GameObject):
         # Images
         self.set_frames('door0.png', 'door1.png')
 
-    def update(self, dt):
+    def update(self, dt, **kwargs):
         """Called every frame for each game object."""
         pass
 
     def collide(self, obj):
         if obj.name == 'player':
             if self.frame == 1:
-                GAME.level.load(self.next_level)
+                self.game.level.load(self.next_level)
 
 class ObjGravOrb(GameObject):
     """GravOrb game object."""
-    def __init__(self, key, pos, size, name, data):
+    def __init__(self, game, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size)
-        GAME.collider.dy.add(key, self)
+        super().__init__(game, key, pos, size)
+        self.game = game
+        game.collider.dy.add(key, self)
         self.name = name
         self.data = data
 
@@ -437,7 +439,7 @@ class ObjGravOrb(GameObject):
         elif self.data[0] < 1:
             self.set_frames('grav-orb2.png', alpha=1)
 
-    def update(self, dt):
+    def update(self, dt, **kwargs):
         """Called every frame for each game object."""
         pass
 
@@ -468,49 +470,60 @@ class ObjGravOrb(GameObject):
 
 class ObjSpike(GameObject):
     """Spike game object."""
-    def __init__(self, key, pos, size, name, data):
+    def __init__(self, game, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size, relative=(0, FULLTILE-size[1]))
-        GAME.collider.dy.add(key, self)
+        super().__init__(game, key, pos, size, relative=(0, FULLTILE-size[1]))
+        self.game = game
         self.name = name
         self.data = data
+        game.collider.dy.add(key, self)
 
         # Images
         self.set_frames('spike.png', alpha=1)
 
-    def update(self, dt):
+    def update(self, dt, **kwargs):
         pass
 
     def collide(self, obj):
         if obj.name == 'player':
-            GAME.level.reset()
+            self.game.level.reset()
 
 class ObjSpikeInv(GameObject):
     """Spike game object."""
-    def __init__(self, key, pos, size, name, data):
+    def __init__(self, game, key, pos, size, name, data):
         # GameObject initialization
-        super().__init__(key, pos, size, relative=(0, 0))
-        GAME.collider.dy.add(key, self)
+        super().__init__(game, key, pos, size, relative=(0, 0))
+        self.game = game
         self.name = name
         self.data = data
+        game.collider.dy.add(key, self)
 
         # Images
         self.set_frames('spike-inv.png', alpha=1)
 
-    def update(self, dt):
+    def update(self, dt, **kwargs):
         pass
 
     def collide(self, obj):
         if obj.name == 'player':
-            GAME.level.reset()
+            self.game.level.reset()
 
 
 def main():
     """Main game loop."""
+    camera = ObjView(SIZE)
+    GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
+    GAME.cam = camera
+    GAME.tile.add_tilemap('0-tileset0.png')
+    GAME.tile.add_tilemap('1-background0.png')
+    GAME.level.load('level1')
+
+    # Timing info
     clock = Clock()
     dt = 1
     STARTTIME = time()
     TIME = []
+
     # Append new line to debug file
     debug = ObjFile(path.join(PATH['MAIN'], 'debug'), 'debug.txt')
     debug.append()
@@ -523,7 +536,7 @@ def main():
 
         # Event Handler
         for event in pyevent.get():
-            # Exit game
+            # Exit GAME
             if event.type == QUIT:
                 return
             else:
@@ -542,23 +555,23 @@ def main():
         # Draw all
         t = time()
         # Draw background layers
-        GAME.obj.draw_early(CAM)
-        GAME.tile.layers['background'].draw(CAM)
+        GAME.obj.draw_early(GAME.cam)
+        GAME.tile.layers['background'].draw(GAME.cam)
 
         # Draw objects
-        GAME.obj.draw(CAM)
+        GAME.obj.draw(GAME.cam)
 
         # Draw foreground layers
-        GAME.tile.layers['foreground'].draw(CAM)
-        GAME.obj.draw_late(CAM)
+        GAME.tile.layers['foreground'].draw(GAME.cam)
+        GAME.obj.draw_late(GAME.cam)
 
         # FPS display
         fps = 'fps: {:3f}'.format(clock.get_fps())
         font = GAME.font.get('arial', 12)
-        CAM.draw_text((FULLTILE, FULLTILE), fps, font, (255, 255, 255), gui = 1)
+        GAME.cam.draw_text((FULLTILE, FULLTILE), fps, font, (255, 255, 255), gui = 1)
 
         # Render to screen
-        GAME.window.render(CAM)
+        GAME.window.render(GAME.cam)
         TIME.append(round((time() - t), 3))
 
         # Tick clock
@@ -567,7 +580,7 @@ def main():
 
         # Write render data to disk
         if len(TIME) >= 5*2*FPS:
-            print('writing time data to disk')
+            #print('writing time data to disk')
             debug = ObjFile(path.join(PATH['MAIN'], 'debug'), 'debug.txt')
             debug.append()
             t0 = 0
@@ -584,11 +597,5 @@ def main():
 
 
 if __name__ == '__main__':
-    SIZE = (1024, 768)
-    CAM = ObjView(SIZE)
-    GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
-    GAME.tile.add_tilemap('0-tileset0.png')
-    GAME.tile.add_tilemap('1-background0.png')
-    GAME.level.load('level1')
     main()
 
