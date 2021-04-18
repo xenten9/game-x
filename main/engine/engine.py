@@ -28,6 +28,7 @@ from .components.colliders import ObjCollider
 from .components.object_handler import ObjObjectHandler
 from .components.tile import ObjTileMap
 from .components.font import ObjFont
+from .components.audio import ObjMixer
 
 # Methods
 # Flip color
@@ -98,7 +99,7 @@ def f_limit(val, minval, maxval):
 
 # Classes
 # Game handling object
-class GameHandler():
+class ObjGameHandler():
     """Game handler."""
     def __init__(self, screen_size: tuple, full_tile: int,
                  path: list, object_creator):
@@ -115,8 +116,9 @@ class GameHandler():
         self.collider = ObjCollider(self)
         self.level = ObjLevel(self, self.PATH['LEVELS'])
         self.tile = ObjTileMap(self, self.PATH['TILEMAPS'])
-        self.input = ObjInput()
+        self.input = ObjInput(self)
         self.font = ObjFont()
+        self.audio = ObjMixer(self)
 
         # Game loop
         self.run = 1
@@ -126,6 +128,7 @@ class GameHandler():
         self.obj.clear()
         self.collider.st.clear()
         self.collider.dy.clear()
+        self.audio.sfx.clear()
 
     def end(self):
         """Ends the game."""

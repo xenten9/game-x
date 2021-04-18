@@ -67,7 +67,10 @@ class ObjLevel():
             elif name == 'static-collider':
                 self.game.collider.st.grid = arg[1]
                 self.size = f_tupmult((len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
-                self.game.cam.set_level_size(self.size)
+                try:
+                    self.game.cam.set_level_size(self.size)
+                except AttributeError:
+                    print('camera has no method: set_leveL_size')
             else:
                 pos, key, data = arg[1:4]
                 self.game.obj.create_object(game=self.game, name=name, pos=pos, data=data, key=key)

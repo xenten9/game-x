@@ -1,0 +1,223 @@
+
+
+
+###
+time: 4.937
+update: 0.019
+render: 1.793
+###
+time: 9.867
+update: 0.007
+render: 1.730
+###
+time: 14.891
+update: 0.156
+render: 1.838
+###
+time: 19.899
+update: 0.181
+render: 1.917
+###
+time: 24.936
+update: 0.069
+render: 1.986
+###
+time: 29.959
+update: 0.156
+render: 1.871
+###
+time: 34.881
+update: 0.059
+render: 1.864
+###
+time: 39.893
+update: 0.175
+render: 1.937
+###
+time: 44.890
+update: 0.077
+render: 1.932
+###
+time: 49.815
+update: 0.086
+render: 1.954
+###
+time: 54.827
+update: 0.060
+render: 1.897
+###
+time: 59.749
+update: 0.066
+render: 1.898
+###
+time: 64.756
+update: 0.068
+render: 1.889
+###
+time: 69.697
+update: 0.073
+render: 1.906
+###
+time: 74.625
+update: 0.085
+render: 1.926
+###
+time: 79.616
+update: 0.106
+render: 1.871
+###
+time: 84.567
+update: 0.053
+render: 1.737
+
+
+
+###
+time: 4.971
+update: 0.004
+render: 1.741
+###
+time: 9.904
+update: 0.009
+render: 1.876
+###
+time: 14.903
+update: 0.083
+render: 1.764
+###
+time: 19.816
+update: 0.005
+render: 1.778
+###
+time: 24.839
+update: 0.119
+render: 1.773
+###
+time: 29.865
+update: 0.073
+render: 1.923
+###
+time: 34.814
+update: 0.072
+render: 1.932
+###
+time: 39.930
+update: 0.165
+render: 1.902
+###
+time: 44.887
+update: 0.057
+render: 1.890
+###
+time: 49.915
+update: 0.047
+render: 1.913
+###
+time: 54.844
+update: 0.047
+render: 1.875
+###
+time: 59.779
+update: 0.073
+render: 1.908
+###
+time: 64.804
+update: 0.086
+render: 1.806
+###
+time: 69.749
+update: 0.010
+render: 1.802
+###
+time: 74.674
+update: 0.007
+render: 1.812
+###
+time: 79.700
+update: 0.128
+render: 1.851
+###
+time: 84.644
+update: 0.064
+render: 1.891
+###
+time: 89.663
+update: 0.167
+render: 1.934
+###
+time: 94.678
+update: 0.139
+render: 1.907
+
+
+
+###
+time: 4.949
+update: 0.011
+render: 1.823
+###
+time: 9.884
+update: 0.004
+render: 1.810
+###
+time: 14.885
+update: 0.133
+render: 1.872
+###
+time: 19.924
+update: 0.076
+render: 1.923
+###
+time: 24.876
+update: 0.054
+render: 1.936
+###
+time: 29.894
+update: 0.084
+render: 2.002
+###
+time: 34.909
+update: 0.058
+render: 1.910
+###
+time: 39.834
+update: 0.075
+render: 1.955
+###
+time: 44.841
+update: 0.160
+render: 1.918
+###
+time: 49.945
+update: 0.171
+render: 1.941
+###
+time: 54.886
+update: 0.042
+render: 1.920
+###
+time: 59.904
+update: 0.173
+render: 1.898
+###
+time: 64.834
+update: 0.067
+render: 1.918
+###
+time: 69.814
+update: 0.114
+render: 1.947
+###
+time: 74.758
+update: 0.009
+render: 1.811
+###
+time: 79.719
+update: 0.049
+render: 1.795
+
+
+
+
+
+

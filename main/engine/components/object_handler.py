@@ -11,7 +11,18 @@ class ObjObjectHandler():
         self.obj = {}
         self.visible = True
 
-    # Update all objects
+    # Update calls
+    def update_early(self, dt, **kwargs):
+        """Update all GameObjects."""
+        objcopy = self.obj.copy()
+        for key in objcopy:
+            try:
+                self.obj[key]
+            except KeyError:
+                print('key {} does not exist'.format(key))
+            else:
+                self.obj[key].update_early(dt, **kwargs)
+
     def update(self, dt, **kwargs):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
@@ -22,6 +33,17 @@ class ObjObjectHandler():
                 print('key {} does not exist'.format(key))
             else:
                 self.obj[key].update(dt, **kwargs)
+
+    def update_late(self, dt, **kwargs):
+        """Update all GameObjects."""
+        objcopy = self.obj.copy()
+        for key in objcopy:
+            try:
+                self.obj[key]
+            except KeyError:
+                print('key {} does not exist'.format(key))
+            else:
+                self.obj[key].update_late(dt, **kwargs)
 
     # Draw calls
     def draw_early(self, window):

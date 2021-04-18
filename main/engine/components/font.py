@@ -1,4 +1,5 @@
 from pygame import font
+font.init()
 
 class ObjFont():
     def __init__(self):
@@ -22,3 +23,6 @@ class ObjFont():
             return
         else:
             return self.fonts[name + str(size)]
+
+    def __del__(self):
+        font.quit()

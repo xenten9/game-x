@@ -11,6 +11,8 @@ PATH['ASSETS'] = path.join(PATH['DEFAULT'], 'assets')
 PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
 PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
 PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
+PATH['MUSIC'] = path.join(PATH['ASSETS'], 'music')
+PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
 
 SIZE = (480, 320)
 

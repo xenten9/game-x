@@ -1,5 +1,4 @@
-from pygame import display, Surface, font, Rect, draw, transform
-font.init()
+from pygame import display, Surface, Rect, draw, transform
 
 # Handles graphics
 class ObjWindow():

@@ -4,7 +4,8 @@ from pygame.locals import (KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
 from ..helper_functions.tuple_functions import f_tupadd
 
 class ObjInput():
-    def __init__(self):
+    def __init__(self, game):
+        self.game = game
         self.kb = ObjKeyboard()
         self.ms = ObjMouse()
 
@@ -33,6 +34,10 @@ class ObjInput():
         elif event.type == MOUSEBUTTONUP:
             self.ms.button_pressed[event.button] = 0
             self.ms.button_held[event.button] = 0
+
+        # Music end
+        elif event.type == 56709:
+            self.game.audio.music.end()
 
     def reset(self):
         self.kb.reset()
