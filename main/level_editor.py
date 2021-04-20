@@ -9,12 +9,12 @@ from pygame.locals import QUIT
 
 if __name__ != '__main__':
     from .engine.components.camera import ObjCamera
-    from .engine.engine import GameHandler, f_loop
+    from .engine.engine import ObjGameHandler, f_loop
     from .engine.helper_functions.tuple_functions import (
         f_tupadd, f_tupgrid, f_tupmult)
 else:
     from engine.components.camera import ObjCamera
-    from engine.engine import GameHandler, f_loop
+    from engine.engine import ObjGameHandler, f_loop
     from engine.helper_functions.tuple_functions import (
         f_tupadd, f_tupgrid, f_tupmult)
 
@@ -51,15 +51,13 @@ class ObjView(ObjCamera):
             'left': (4, 80),
             'right': (7, 79),
             'up': (26, 82),
-            'down': (22, 81)
-        }
+            'down': (22, 81)}
 
         self.key = {
             'left': 0,
             'right': 0,
             'up': 0,
-            'down': 0
-        }
+            'down': 0}
 
     @property
     def pos(self):
@@ -129,7 +127,10 @@ class ObjCursor:
             'control': (224,),
             'nextset': (27,),
             'prevset': (29,),
+            'nextlayer': (25,),
+            'prevlayer': (6,),
             'reload': (21,)}
+
         self.mkeys = {
             'place': (1,),
             'remove': (3,)}
@@ -151,7 +152,10 @@ class ObjCursor:
             'Hshift': 0,
             'nextset': 0,
             'prevset': 0,
+            'nextlayer': 0,
+            'prevlayer': 0,
             'reload': 0}
+
         self.mkey = {
             'place': 0,
             'Hplace': 0,
@@ -191,6 +195,7 @@ class ObjCursor:
             self.mode2()
 
     def get_inputs(self):
+        """Register inputs and change variables."""
         for key in self.key:
             if key[0] != 'H':
                 self.key[key] = self.game.input.kb.get_key_pressed(
@@ -210,9 +215,11 @@ class ObjCursor:
     def mode0(self):
         """Object mode."""
         # Changing selection
-        self.obj_select += self.key['next'] - self.key['prev']
-        length = len(self.object_names) - 1
-        self.obj_select = f_loop(self.obj_select, 0, length)
+        dobj = self.key['next'] - self.key['prev']
+        if dobj != 0:
+            self.obj_select += dobj
+            length = len(self.object_names) - 1
+            self.obj_select = f_loop(self.obj_select, 0, length)
 
         # Toggling objects
         if self.key['f1']:
@@ -257,33 +264,55 @@ class ObjCursor:
     def mode1(self):
         """Tile mode."""
         # Layer selection
-        if self.key['tab']:
-            if self.key['shift']:
-                self.layer -= 1
-            else:
-                self.layer += 1
-            length = len(self.game.tile.layers)-1
-            self.layer = f_loop(self.layer, 0, length)
+        self.layer += self.key['nextlayer'] - self.key['prevlayer']
+        length = len(self.game.tile.layers)-1
+        self.layer = f_loop(self.layer, 0, length)
 
         # Tilemap selection
-        if self.key['nextset']:
-            self.tile_map += 1
+        dset = self.key['nextset'] - self.key['prevset']
+        if dset != 0:
             self.tile_select = 0
-        if self.key['prevset']:
-            self.tile_map -= 1
-            self.tile_select = 0
-        length = len(self.game.tile.tile_maps)-1
-        self.tile_map = f_loop(self.tile_map, 0, length)
+            self.tile_map += dset
+            length = len(self.game.tile.tile_maps)-1
+            self.tile_map = f_loop(self.tile_map, 0, length)
 
         # Changing selection
-        self.tile_select += (self.key['next'] - self.key['prev'])
-        length = len(self.game.tile.tile_maps[self.tile_map])-1
-        self.tile_select = f_loop(self.tile_select, 0, length)
+        dtile = (self.key['next'] - self.key['prev'])
+        if dtile != 0:
+            self.tile_select += dtile
+            length = len(self.game.tile.tile_maps[self.tile_map])-1
+            self.tile_select = f_loop(self.tile_select, 0, length)
 
         # Toggling tile maps
         if self.key['f1']:
             layer = list(self.game.tile.layers.keys())[self.layer]
             self.game.tile.layers[layer].toggle_visibility()
+
+        # View/Edit data
+        if self.key['tab']:
+            if self.key['Hshift']:
+                text = ''
+                while True:
+                    text = input('Edit data? ')
+                    try:
+                        text = literal_eval(text)
+                    except (SyntaxError, ValueError):
+                        if text == 'exit':
+                            break
+                        print('input must be dictionary')
+                        continue
+                    if text == 'exit':
+                            break
+                    if not isinstance(text, dict):
+                        print('input must be dictionary')
+                    else:
+                        break
+                if text != 'exit':
+                    layer = self.get_current_layer().data = text
+                    print('data succesfully written.')
+            else:
+                layer = self.get_current_layer()
+                print(layer.data)
 
         # Mouse
         # Place tile
@@ -337,7 +366,7 @@ class ObjCursor:
         """Places object under cursor."""
         self.remove_object()
         name = self.object_names[self.obj_select]
-        self.game.obj.create_object(name=name, game=self.game, key=None, pos=self.pos, data=[])
+        self.game.obj.create_object(name=name, game=self.game, key=None, pos=self.pos, data={})
 
     def remove_object(self):
         """Removes object under cursor."""
@@ -371,20 +400,23 @@ class ObjCursor:
         """Print object data or edit it if shift is held."""
         obj = self.selected_object
         if self.key['Hshift']:
-            datatype = None
-            while datatype != list:
-                data = input('enter data list: ')
+            text = ''
+            while True:
                 try:
-                    data = literal_eval(data)
-                except (ValueError, SyntaxError):
-                    pass
+                    text = literal_eval(input('Edit data? '))
+                except (SyntaxError, ValueError):
+                    print('input must be list')
+                    continue
+                if text == 'exit':
+                    break
+                if not isinstance(text, dict):
+                    print('input must be dictionary')
                 else:
-                    datatype = type(data)
+                    break
+            if text != 'exit':
+                obj.data = text
+                print('data succesfully written.')
 
-                if datatype != list:
-                    print('input must be a list')
-            obj.data = data
-            print('successful data write.')
         else:
             info = ['name: {}'.format(obj.name),
                     'id: {}'.format(obj.key),
@@ -434,9 +466,6 @@ class ObjEntity():
         game.obj.instantiate_object(key, self)
         self.image = image.load(path.join(PATH['DEVSPRITES'], name + '.png'))
 
-    def update(self, dt):
-        pass
-
     def draw_early(self, window):
         pass
 
@@ -446,13 +475,23 @@ class ObjEntity():
     def draw_late(self, window):
         pass
 
+    def update_early(self, dt):
+        pass
+
+    def update(self, dt):
+        pass
+
+    def update_late(self, dt):
+        pass
+
 def main():
     """Main game loop."""
-    GAME = GameHandler(SIZE, FULLTILE, PATH, object_creator)
+    GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator)
     GAME.cam = ObjView(GAME, SIZE)
     GAME.tile.add_tilemap('0-tileset0.png')
     GAME.tile.add_tilemap('1-background0.png')
     GAME.level.load('default')
+    GAME.parallax = 0
     CUR = ObjCursor(GAME, (0, 0))
 
     clock = Clock()

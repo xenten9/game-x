@@ -3,7 +3,7 @@ from pygame import Surface, Rect
 from os import path
 
 from ..helper_functions.tuple_functions import (
-    f_tupmult, f_tupgrid, f_tupround)
+    f_tupmult, f_tupgrid, f_tupround, f_tupadd)
 from ..helper_functions.number_functions import (
     f_make_grid, f_change_grid_dimensions, f_minimize_grid)
 
@@ -41,12 +41,12 @@ class ObjTileMap():
         except KeyError:
             print('tilemap {} does not exist'.format(name))
 
-    def add_layer(self, layer: str, size: tuple, grid=None):
+    def add_layer(self, layer: str, size: tuple, data: list, grid=None):
         """Creates a layer."""
         if grid is None:
-            self.layers[layer] = ObjTileLayer(self.game, layer, self, size)
+            self.layers[layer] = ObjTileLayer(self.game, layer, self, size, data)
         else:
-            self.layers[layer] = ObjTileLayer(self.game, layer, self, size, grid)
+            self.layers[layer] = ObjTileLayer(self.game, layer, self, size, data, grid)
 
     def remove_layer(self, layer: str):
         """Removes an existing layer."""
@@ -62,7 +62,7 @@ class ObjTileMap():
 # Layer with tiles
 class ObjTileLayer():
     """Layer containing all of the tiles in a lookup form."""
-    def __init__(self, game, name, tile_handler, size, grid=None):
+    def __init__(self, game, name, tile_handler, size, data, grid=None):
         self.game = game
         self.name = name
         self.tile = tile_handler
@@ -72,6 +72,15 @@ class ObjTileLayer():
         self.grid = grid
         self.surface = None
         self.visible = True
+        self.data = data
+        try:
+            self.parallax = f_tupadd((1, 1), f_tupmult(data['parallax'], -1))
+        except KeyError:
+            self.parallax = (0, 0)
+
+    def update(self, dt):
+        """Implement parallax."""
+        pass
 
     def place(self, pos: tuple, tilemap_id: int, tile_id: int):
         """Add tiles to grid on the layer."""
@@ -98,20 +107,28 @@ class ObjTileLayer():
     def draw(self, window):
         """Draw tiles."""
         if self.visible:
-            window.draw_image((0, 0), self.surface)
+            if self.game.parallax == 1 and self.parallax != (0, 0):
+                pos = f_tupmult(window.pos, self.parallax)
+                pos = f_tupgrid(pos, 1)
+                window.draw_image(pos, self.surface)
+            else:
+                window.draw_image((0, 0), self.surface)
 
     def toggle_visibility(self):
         """Turn layer invisible."""
         self.visible = not self.visible
 
     def dialate(self, size):
+        """Change the size of the grid."""
         self.size = size
         self.grid = f_change_grid_dimensions(self.grid, size, None)
 
     def minimize(self):
+        """Get rid of empty rows and columns."""
         self.grid = f_minimize_grid(self.grid, None)
 
     def generate(self):
+        """Cache grid to memory and update the surface to match the current grid."""
         size = f_tupmult(self.size, self.game.HALFTILE)
         self.surface = Surface(size).convert_alpha()
         self.surface.fill([0, 0, 0, 0])

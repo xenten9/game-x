@@ -20,7 +20,7 @@ class ObjFont():
             self.fonts[name + str(size)]
         except KeyError:
             self.fonts[name + str(size)] = font.SysFont(name, size)
-            return
+            return self.fonts[name + str(size)]
         else:
             return self.fonts[name + str(size)]
 

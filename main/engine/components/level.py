@@ -61,9 +61,9 @@ class ObjLevel():
             name = arg[0]
             if name == 'tile-layer':
                 # Interpret layer info
-                layer_name, grid = arg[1:3]
+                layer_name, grid, data = arg[1:4]
                 size = (len(grid), len(grid[0]))
-                self.game.tile.add_layer(layer_name, size, grid)
+                self.game.tile.add_layer(layer_name, size, data, grid)
             elif name == 'static-collider':
                 self.game.collider.st.grid = arg[1]
                 self.size = f_tupmult((len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
@@ -98,7 +98,7 @@ class ObjLevel():
 
         # Write layers
         for name, layer in self.game.tile.layers.items():
-            info = ['tile-layer', name, layer.grid]
+            info = ['tile-layer', name, layer.grid, layer.data]
             level.file.write(str(info) + '\n')
 
         # Write stcol

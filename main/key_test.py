@@ -1,4 +1,4 @@
-from engine.engine import GameHandler
+from engine.engine import ObjGameHandler
 from pygame import event as pyevent
 from os import path
 from pygame.locals import QUIT
@@ -16,7 +16,7 @@ PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
 
 SIZE = (480, 320)
 
-GAME = GameHandler(SIZE, 32, PATH, None)
+GAME = ObjGameHandler(SIZE, 32, PATH, None)
 
 def main():
     """Main game loop."""
