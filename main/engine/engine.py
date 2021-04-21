@@ -90,6 +90,7 @@ class ObjGameHandler():
 
     def end(self):
         """Ends the game."""
-        self.clear()
+        self.clear_ent()
+        self.clear_cache()
         self.run = 0
         pygame.quit()
