@@ -1,17 +1,30 @@
-from os import path, getcwd
+##############################################################################
+# OS import
+from os import path, getcwd, system, name as osname
+
+# Clear terminal
+if osname == 'nt':
+    system('cls')
+else:
+    system('clear')
+print('################') # sepperator
+
+# Base imports
 from ast import literal_eval
 from typing import Optional
 
+# Library imports
 from pygame import image, event as pyevent, Surface
 from pygame.time import Clock
 from pygame.locals import QUIT
 
-if __name__ != '__main__':
+# Custom imports
+if __name__ != '__main__': # If main file
     from .engine.components.camera import ObjCamera
     from .engine.engine import ObjGameHandler, f_loop
     from .engine.helper_functions.tuple_functions import (
         f_tupadd, f_tupgrid, f_tupmult)
-else:
+else: # If being called as a module
     from engine.components.camera import ObjCamera
     from engine.engine import ObjGameHandler, f_loop
     from engine.helper_functions.tuple_functions import (
@@ -123,7 +136,9 @@ class ObjCursor(Entity):
         self.mode = 0
         self.obj_select = 0
         self.tile_select = 0
-        self.tile_map = 0
+        self.tilemap_select = 0
+        self.tilemap_id = game.tile.tilemaps_list[self.tilemap_select]
+        self.tilemap = self.get_current_tilemap()
         self.layer = 0
         self.selected_object = None
 
@@ -208,8 +223,11 @@ class ObjCursor(Entity):
         # Saving and loading
         if self.key['save'] and self.key['Hcontrol']:
             self.game.level.save()
+            self.game.tile.add_all()
+            return
         elif self.key['load'] and self.key['Hcontrol']:
             self.game.level.load()
+            return
 
         # State machine
         if self.mode == 0: # Object mode
@@ -297,15 +315,18 @@ class ObjCursor(Entity):
         dset = self.key['nextset'] - self.key['prevset']
         if dset != 0:
             self.tile_select = 0
-            self.tile_map += dset
-            length = len(self.game.tile.tile_maps)-1
-            self.tile_map = f_loop(self.tile_map, 0, length)
+            self.tilemap_select += dset
+            length = len(self.game.tile.tilemaps_list)-1
+
+            self.tilemap_select = f_loop(self.tilemap_select, 0, length)
+            self.tilemap_id = self.game.tile.tilemaps_list[self.tilemap_select]
+            self.tilemap = self.get_current_tilemap()
 
         # Changing selection
         dtile = (self.key['next'] - self.key['prev'])
         if dtile != 0:
             self.tile_select += dtile
-            length = len(self.game.tile.tile_maps[self.tile_map])-1
+            length = len(self.tilemap)-1
             self.tile_select = f_loop(self.tile_select, 0, length)
 
         # Toggling tile maps
@@ -403,7 +424,8 @@ class ObjCursor(Entity):
     def place_tile(self):
         """Places tile under cursor."""
         layer = self.get_current_layer()
-        layer.place(self.pos, self.tile_map, self.tile_select)
+        tile_map = self.tilemap_id
+        layer.place(self.pos, tile_map, self.tile_select)
         layer.generate()
 
     def remove_tile(self):
@@ -416,10 +438,10 @@ class ObjCursor(Entity):
         return self.game.tile.layers[list(self.game.tile.layers.keys())[self.layer]]
 
     def get_current_tilemap(self) -> list:
-        return self.game.tile.tile_maps[self.tile_map]
+        return self.game.tile.tilemaps[self.tilemap_id]
 
     def get_current_tile(self) -> Surface:
-        return self.get_current_tilemap()[self.tile_select]
+        return self.tilemap[self.tile_select]
 
     def view_object_data(self):
         """Print object data or edit it if shift is held."""
@@ -427,9 +449,12 @@ class ObjCursor(Entity):
         if self.key['Hshift']:
             text = ''
             while True:
+                text = input('Edit data? ')
                 try:
-                    text = literal_eval(input('Edit data? '))
+                    text = literal_eval(text)
                 except (SyntaxError, ValueError):
+                    if text == 'exit':
+                        break
                     print('input must be list')
                     continue
                 if text == 'exit':
@@ -464,8 +489,8 @@ class ObjCursor(Entity):
         elif self.mode == 1:
             # Tile
             tile = self.get_current_tile()
-            window.draw_image(f_tupadd(f_tupmult(self.game.cam.pos, -1),
-                                       self.pos), tile, gui=1)
+            pos = f_tupadd(f_tupmult(self.game.cam.pos, -1), self.pos)
+            window.draw_image(pos, tile, gui=1)
 
             # Layer name
             layer = self.get_current_layer()
@@ -492,9 +517,8 @@ def main():
     """Main game loop."""
     GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator)
     GAME.cam = ObjView(GAME, SIZE)
-    GAME.tile.add_tilemap('0-tileset0.png')
-    GAME.tile.add_tilemap('1-background0.png')
     GAME.level.load('default')
+    GAME.tile.add_all()
     GAME.parallax = 0
     CUR = ObjCursor(GAME, (0, 0))
 
@@ -502,6 +526,7 @@ def main():
     dt = 1
 
     while GAME.run:
+        # Reset inputs for held keys
         GAME.input.reset()
 
         # Event Handler
@@ -511,34 +536,15 @@ def main():
                 return
             else:
                 GAME.input.handle_events(event)
-
-        # Quit by escape
         if GAME.input.kb.get_key_pressed(41):
             GAME.end()
             return
 
         # Update objects
-        GAME.obj.update_early(dt)
-        GAME.obj.update(dt)
-        GAME.obj.update_late(dt)
-        CUR.update(dt)
-        GAME.cam.update(dt)
+        update(GAME, dt, cursor=CUR)
 
-        # Draw all
-        GAME.cam.blank()
-
-        # Draw background layers
-        GAME.obj.draw_early(GAME.cam)
-        GAME.tile.layers['background'].draw(GAME.cam)
-
-        # Draw objects
-        GAME.obj.draw(GAME.cam)
-        GAME.collider.st.debug_draw(GAME.cam)
-
-        # Draw foreground layers
-        GAME.tile.layers['foreground'].draw(GAME.cam)
-        GAME.obj.draw_late(GAME.cam)
-        CUR.draw_late(GAME.cam)
+        # Draw objects and tile layers
+        draw(GAME, cursor=CUR)
 
         # FPS display
         fps = 'fps: {:3f}'.format(clock.get_fps())
@@ -546,11 +552,49 @@ def main():
         GAME.cam.draw_text((0, FULLTILE), fps, font, (255, 0, 255), gui=1)
 
         # Render to screen
-        GAME.window.render(GAME.cam)
+        render(GAME)
 
         # Tick clock
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
+
+def update(game: object, dt: float, **kwargs):
+    game.obj.update_early(dt)
+    game.obj.update(dt)
+    game.obj.update_late(dt)
+    game.cam.update(dt)
+
+    # Update cursor if provided
+    if kwargs != {}:
+        try:
+            kwargs['cursor']
+        except KeyError:
+            pass
+        else:
+            kwargs['cursor'].update(dt)
+
+def draw(game: object, **kwargs):
+    cam = game.cam
+
+    cam.blank()
+    game.obj.draw_early(cam)
+    game.tile.layers['background'].draw(cam)
+    game.obj.draw(cam)
+    game.collider.st.debug_draw(cam)
+    game.tile.layers['foreground'].draw(cam)
+    game.obj.draw_late(cam)
+
+    # Draw cursor if provided
+    if kwargs != {}:
+        try:
+            kwargs['cursor']
+        except KeyError:
+            pass
+        else:
+            kwargs['cursor'].draw_late(cam)
+
+def render(game: object):
+    game.window.render(game.cam)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 ##############################################################################
+# OS import
 from os import path, getcwd, system, name as osname
 
 # Clear terminal
@@ -6,18 +7,21 @@ if osname == 'nt':
     system('cls')
 else:
     system('clear')
+print('################') # sepperator
 
+# Base imports
 from math import floor
 import numpy as np
 from time import time
 import datetime
 
+# Library Imports
 from pygame import image, event as pyevent, Surface
 from pygame.time import Clock
 from pygame.locals import QUIT
 
-# If main file
-if __name__ == '__main__':
+# Custom imports
+if __name__ == '__main__': # If main file
     from engine.components.camera import ObjCamera
     from engine.engine import ObjGameHandler, f_loop, f_limit
     from engine.helper_functions.tuple_functions import (
@@ -25,9 +29,7 @@ if __name__ == '__main__':
     from engine.helper_functions.file_system import ObjFile
     from engine.components.menu import (
         ObjMenu, ObjTextElement)
-
-# If being called as a module
-else:
+else: # If being called as a module
     from .engine.components.camera import ObjCamera
     from .engine.engine import ObjGameHandler, f_loop, f_limit
     from .engine.helper_functions.tuple_functions import (
@@ -36,7 +38,7 @@ else:
     from .engine.components.menu import (
         ObjMenu, ObjTextElement)
 
-print('################')
+print('################') # sepperator
 
 # Constants
 if True:
@@ -340,10 +342,10 @@ class ObjPlayer(GameObject):
         self.set_frames('player.png')
 
         # Audio
-        #try:
-        #    game.audio.sfx.tracks['boop.wav']
-        #except KeyError:
-        #    game.audio.sfx.add('boop.wav')
+        try:
+            game.audio.sfx.tracks['boop.wav']
+        except KeyError:
+            game.audio.sfx.add('boop.wav')
 
     def update(self, dt):
         """Called every frame for each game object."""
@@ -357,6 +359,8 @@ class ObjPlayer(GameObject):
             col = self.dcollide()
             for obj in col:
                 try:
+                    if obj.name in ('spike', 'spike-inv'):
+                        self.game.audio.sfx.play('boop.wav')
                     if obj.collide(self) == 'return':
                         return
                 except AttributeError:
@@ -379,14 +383,14 @@ class ObjPlayer(GameObject):
     def draw_late(self, window):
         """Called every frame to draw each game object."""
         super().draw(window)
-        color = (255, 255, 255)
-        font = self.game.font.get('arial', 12)
-        #text = 'Grounded: {}'.format(self.grounded)
-        #window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color, gui = 1)
-        #text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
-        #window.draw_text((FULLTILE, 2*FULLTILE), text, font, color, gui = 1)
-        gui = Surface(self.game.window.size)
-        gui.get_width
+        # color = (255, 255, 255)
+        # font = self.game.font.get('arial', 12)
+        # text = 'Grounded: {}'.format(self.grounded)
+        # window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color, gui = 1)
+        # text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
+        # window.draw_text((FULLTILE, 2*FULLTILE), text, font, color, gui = 1)
+        # gui = Surface(self.game.window.size)
+        # gui.get_width
 
     def get_inputs(self):
         for key in self.key:
@@ -636,8 +640,6 @@ def main():
     """Main game loop."""
     GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator)
     GAME.cam = ObjView(SIZE)
-    GAME.tile.add_tilemap('0-tileset0.png')
-    GAME.tile.add_tilemap('1-background0.png')
     GAME.level.load('level1')
     GAME.parallax = 1
 
@@ -745,7 +747,7 @@ def draw(game: object):
     cam = game.cam
 
     # Blank screen
-    game.cam.blank()
+    cam.blank()
     game.obj.draw_early(cam)
     game.tile.layers['background'].draw(cam)
     game.obj.draw(game.cam)

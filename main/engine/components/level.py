@@ -6,14 +6,14 @@ from ..helper_functions.tuple_functions import f_tupmult
 
 # Handles level loading
 class ObjLevel():
-    """Object which contains all levels in the game."""
-    def __init__(self, game, level_path):
+    """Object which loads and saves levels."""
+    def __init__(self, game):
         self.game = game
-        self.level_path = level_path
+        self.level_path = game.PATH['LEVELS']
         self.current_level = ''
         self.level_size = (0, 0)
 
-    def load(self, level_name=None):
+    def load(self, level_name:str = None):
         """Load level parts such as GameObjects and Tiles."""
         # Get level name
         if level_name is None:
@@ -40,10 +40,9 @@ class ObjLevel():
         # Load level file
         level = ObjFile(self.level_path, level_name + '.lvl')
         level.read()
-        self.current_level = level_name
         obj_list = level.file.readlines()
 
-        # Convert types
+        # Convert from str to proper types
         for count in enumerate(obj_list):
             obj_list[count[0]] = (literal_eval(obj_list[count[0]][:-1]))
             if not isinstance(obj_list[count[0]], list):
@@ -52,35 +51,50 @@ class ObjLevel():
         # Close file
         level.close()
 
-        # Clear entities
-        self.game.clear()
+        # Clear level
+        if self.current_level != level_name:
+            self.game.clear_cache()
+        self.game.clear_ent()
 
-        # Create objects
+        # Create level
         for arg in obj_list:
-            # Interpret object info
             name = arg[0]
+
+            # TILE LAYER
             if name == 'tile-layer':
-                # Interpret layer info
                 layer_name, grid, data = arg[1:4]
                 size = (len(grid), len(grid[0]))
                 self.game.tile.add_layer(layer_name, size, data, grid)
+
+            # STATIC COLLIDER
             elif name == 'static-collider':
                 self.game.collider.st.grid = arg[1]
-                self.size = f_tupmult((len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
+                self.size = f_tupmult(
+                    (len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
+                # Update camera level size to bind camera position
                 try:
                     self.game.cam.set_level_size(self.size)
                 except AttributeError:
                     print('camera has no method: set_leveL_size')
+
+            # OBJECT
             else:
                 pos, key, data = arg[1:4]
-                self.game.obj.create_object(game=self.game, name=name, pos=pos, data=data, key=key)
+                self.game.obj.create_object(
+                    game=self.game, name=name,pos=pos, data=data, key=key)
 
+        # Render all layers after being built
         for layer in self.game.tile.layers:
             self.game.tile.layers[layer].generate()
 
-        print('successful level load!')
+        # Say level succesful level laod if level is no reloaded
+        if self.current_level != level_name:
+            print('successful level load!')
 
-    def save(self, level_name=None):
+        # Update current level
+        self.current_level = level_name
+
+    def save(self, level_name:str = None):
         """Saves level to level path."""
         # Get level name
         if level_name is None:

@@ -1,6 +1,6 @@
 from pygame.image import load
 from pygame import Surface, Rect
-from os import path
+from os import path, listdir
 
 from ..helper_functions.tuple_functions import (
     f_tupmult, f_tupgrid, f_tupround, f_tupadd)
@@ -10,43 +10,50 @@ from ..helper_functions.number_functions import (
 # Tile map
 class ObjTileMap():
     """Handles background and foreground graphics."""
-    def __init__(self, game, tile_path: str):
+    def __init__(self, game):
         self.game = game
         self.layers = {}
-        self.tile_maps = []
-        self.tile_path = tile_path
+        self.tilemaps = {}
+        self.tilemaps_list = []
+        self.tilemap_path = game.PATH['TILEMAPS']
+        self.clear()
 
     def add_tilemap(self, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
-        tile_set = load(path.join(self.tile_path, fname)).convert()
+        # Get image
+        tile_set = load(path.join(self.tilemap_path, fname)).convert()
         new_tile_map = []
-        halftile = self.game.HALFTILE
-        for xpos in range(int((tile_set.get_width() / halftile))):
-            # new surface
-            surface = Surface((halftile, halftile))
+        half = self.game.HALFTILE
 
-            # write section of image to surface
-            surface.blit(tile_set, (0, 0), area=Rect(
-                (xpos * (halftile), 0),
-                (halftile, halftile)))
+        # Iterate through each tile in image
+        for xpos in range(round((tile_set.get_width() / half))):
+            # New surface
+            surface = Surface((half, half))
 
-            # add surface to tilemap
+            # Write section of image to surface
+            surface.blit(tile_set, (0, 0),
+                         area=Rect((xpos * (half), 0),
+                                   (half, half)))
+
+            # Add surface to tilemap
             new_tile_map.append(surface)
-        self.tile_maps.append(new_tile_map)
 
-    def remove_tilemap(self, name: str):
+        # Add tilemap to list of tilemaps
+        index = int(fname[0])
+        self.tilemaps[index] = new_tile_map
+        self.tilemaps_list.append(index)
+
+    def remove_tilemap(self, map_id: int):
         """Removes a tilemap from the tile_maps dictionary."""
         try:
-            del self.tile_maps[name]
+            del self.tilemaps[map_id]
         except KeyError:
-            print('tilemap {} does not exist'.format(name))
+            print('tilemap {} does not exist'.format(map_id))
 
     def add_layer(self, layer: str, size: tuple, data: list, grid=None):
         """Creates a layer."""
-        if grid is None:
-            self.layers[layer] = ObjTileLayer(self.game, layer, self, size, data)
-        else:
-            self.layers[layer] = ObjTileLayer(self.game, layer, self, size, data, grid)
+        self.layers[layer] = ObjTileLayer(self.game, self, layer,
+                                          size, data, grid)
 
     def remove_layer(self, layer: str):
         """Removes an existing layer."""
@@ -55,17 +62,38 @@ class ObjTileMap():
         except KeyError:
             print('layer {} does not exist'.format(layer))
 
-    def get_image(self, tile_mapid, tile_id):
+    def get_image(self, map_id: int, tile_id: int):
         """Gets tile image."""
-        return self.tile_maps[tile_mapid][tile_id]
+        try:
+            self.tilemaps[map_id]
+        except KeyError:
+            directory = listdir(self.tilemap_path)
+            for file in directory:
+                if int(file[0]) == map_id:
+                    self.add_tilemap(file)
+        return self.tilemaps[map_id][tile_id]
+
+    def add_all(self):
+        directory = listdir(self.tilemap_path)
+        for file in directory:
+            try:
+                if int(file[0]):
+                    self.add_tilemap(file)
+            except TypeError:
+                pass
+
+    def clear(self):
+        self.tilemaps = {}
+        self.tilemaps_list = []
+        self.add_tilemap('0-null.png')
 
 # Layer with tiles
 class ObjTileLayer():
     """Layer containing all of the tiles in a lookup form."""
-    def __init__(self, game, name, tile_handler, size, data, grid=None):
+    def __init__(self, game, tile_handler, name, size, data, grid=None):
         self.game = game
-        self.name = name
         self.tile = tile_handler
+        self.name = name
         self.size = size
         if grid is None:
             grid = f_make_grid(size, None)
