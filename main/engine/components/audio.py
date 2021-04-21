@@ -4,14 +4,14 @@ from os import path
 
 class ObjMixer():
     """Handles all audio."""
-    def __init__(self, game):
+    def __init__(self, game: object):
         self.game = game
         mixer.init(size=-16)
         self.sfx = ObjSFX(game)
         self.music = ObjMusic(game)
 
 class ObjMusic():
-    def __init__(self, game):
+    def __init__(self, game: object):
         self.game = game
         self.music_path = game.PATH['MUSIC']
         self.music = None
@@ -26,7 +26,7 @@ class ObjMusic():
         mixer.music.load(music)
         self.music = file
 
-    def play(self, loops=0):
+    def play(self, loops: int = 0):
         """Load music."""
         mixer.music.play(loops)
 

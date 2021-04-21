@@ -1,11 +1,8 @@
 from pygame import Surface, Rect, draw
-from ..helper_functions.tuple_functions import f_tupadd
+from ..helper_functions.tuple_functions import f_tupadd, f_tupmult
 
 def f_tupsub(tup0: tuple, tup1: tuple):
-    tup0 = list(tup0)
-    newtup = []
-    for n in range(len(tup0)):
-        tup0[n] = -tup0[n]
+    tup0 = f_tupmult(tup0, -1)
     return f_tupadd(tup0, tup1)
 
 # Camera object

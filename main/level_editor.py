@@ -1,9 +1,8 @@
 from os import path, getcwd
-from math import floor
-import numpy as np
 from ast import literal_eval
+from typing import Optional
 
-from pygame import image, event as pyevent
+from pygame import image, event as pyevent, Surface
 from pygame.time import Clock
 from pygame.locals import QUIT
 
@@ -43,8 +42,34 @@ def object_creator(**kwargs):
     key = game.obj.instantiate_key(key)
     ObjEntity(game, name, key, pos, data)
 
+class Entity():
+    """Base class for all game entities."""
+    def draw_early(self, window: object):
+        """Draw called before background."""
+        pass
+
+    def draw(self, window: object):
+        """Draw called in between back and foreground."""
+        pass
+
+    def draw_late(self, window: object):
+        """Draw called after foreground."""
+        pass
+
+    def update_early(self, dt: float):
+        """Update called first."""
+        pass
+
+    def update(self, dt: float):
+        """Update called second."""
+        pass
+
+    def update_late(self, dt: float):
+        """Update called last."""
+        pass
+
 class ObjView(ObjCamera):
-    def __init__(self, game, size):
+    def __init__(self, game: object, size: tuple):
         super().__init__(size)
         self.game = game
         self.keys = {
@@ -64,14 +89,14 @@ class ObjView(ObjCamera):
         return self._pos
 
     @pos.setter
-    def pos(self, value):
-        if value[0] < 0:
-            value = (0, value[1])
-        if value[1] < 0:
-            value = (value[0], 0)
-        self._pos = value
+    def pos(self, pos: tuple):
+        if pos[0] < 0:
+            pos = (0, pos[1])
+        if pos[1] < 0:
+            pos = (pos[0], 0)
+        self._pos = pos
 
-    def update(self, dt):
+    def update(self, dt: float):
         self.get_inputs()
         hspd = (self.key['right'] - self.key['left']) * FULLTILE
         vspd = (self.key['down'] - self.key['up']) * FULLTILE
@@ -86,8 +111,8 @@ class ObjView(ObjCamera):
                     self.key[key] = self.game.input.kb.get_key_held(
                         *self.keys[key[1:]])
 
-class ObjCursor:
-    def __init__(self, game, pos):
+class ObjCursor(Entity):
+    def __init__(self, game: object, pos: tuple):
         # Default variables
         self.game = game
         self.pos = pos
@@ -162,7 +187,7 @@ class ObjCursor:
             'remove': 0,
             'Hremove': 0}
 
-    def update(self, dt):
+    def update(self, dt: float):
         """Update cursor pos and level changes."""
         # Get inputs
         self.get_inputs()
@@ -354,7 +379,7 @@ class ObjCursor:
                 self.pos = pos
                 self.game.collider.st.remove(pos)
 
-    def get_overlaping_object(self):
+    def get_overlaping_object(self) -> Optional[object]:
         """Find if object is under cursor."""
         for key in self.game.obj.obj:
             obj = self.game.obj.obj[key]
@@ -387,13 +412,13 @@ class ObjCursor:
         layer.remove(self.pos)
         layer.generate()
 
-    def get_current_layer(self):
+    def get_current_layer(self) -> object:
         return self.game.tile.layers[list(self.game.tile.layers.keys())[self.layer]]
 
-    def get_current_tilemap(self):
+    def get_current_tilemap(self) -> list:
         return self.game.tile.tile_maps[self.tile_map]
 
-    def get_current_tile(self):
+    def get_current_tile(self) -> Surface:
         return self.get_current_tilemap()[self.tile_select]
 
     def view_object_data(self):
@@ -423,13 +448,7 @@ class ObjCursor:
                     'data: {}'.format(obj.data)]
             print('\n'.join(info))
 
-    def draw_early(self, window):
-        pass
-
-    def draw(self, window):
-        pass
-
-    def draw_late(self, window):
+    def draw_late(self, window: object):
         """Draw cursor and debug text."""
         color = (224, 128, 224)
         font = self.game.font.get('arial', 12)
@@ -456,8 +475,8 @@ class ObjCursor:
             # Wall
             window.draw_text((0, HALFTILE), 'Wall mode', font, color, gui=1)
 
-class ObjEntity():
-    def __init__(self, game, name, key, pos, data):
+class ObjEntity(Entity):
+    def __init__(self, game: object, name: str, key: int, pos: tuple, data: dict):
         self.game = game
         self.name = name
         self.key = key
@@ -466,23 +485,8 @@ class ObjEntity():
         game.obj.instantiate_object(key, self)
         self.image = image.load(path.join(PATH['DEVSPRITES'], name + '.png'))
 
-    def draw_early(self, window):
-        pass
-
     def draw(self, window):
         window.draw_image(self.pos, self.image)
-
-    def draw_late(self, window):
-        pass
-
-    def update_early(self, dt):
-        pass
-
-    def update(self, dt):
-        pass
-
-    def update_late(self, dt):
-        pass
 
 def main():
     """Main game loop."""
@@ -513,9 +517,10 @@ def main():
             GAME.end()
             return
 
-        # If in game
         # Update objects
+        GAME.obj.update_early(dt)
         GAME.obj.update(dt)
+        GAME.obj.update_late(dt)
         CUR.update(dt)
         GAME.cam.update(dt)
 

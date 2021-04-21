@@ -1,5 +1,4 @@
 ##############################################################################
-import sys
 from os import path, getcwd
 from math import floor
 import numpy as np
@@ -15,16 +14,20 @@ if __name__ == '__main__':
     from engine.components.camera import ObjCamera
     from engine.engine import ObjGameHandler, f_loop, f_limit
     from engine.helper_functions.tuple_functions import (
-        f_tupadd, f_tupgrid, f_tupmult, f_tupround)
+        f_tupadd, f_tupgrid, f_tupmult)
     from engine.helper_functions.file_system import ObjFile
+    from engine.components.menu import (
+        ObjMenu, ObjTextElement)
 
 # If being called as a module
 else:
     from .engine.components.camera import ObjCamera
     from .engine.engine import ObjGameHandler, f_loop, f_limit
     from .engine.helper_functions.tuple_functions import (
-        f_tupadd, f_tupgrid, f_tupmult, f_tupround)
+        f_tupadd, f_tupgrid, f_tupmult)
     from .engine.helper_functions.file_system import ObjFile
+    from .engine.components.menu import (
+        ObjMenu, ObjTextElement)
 
 
 print('################')
@@ -33,6 +36,7 @@ if True:
     SIZE = (1024, 768)
     FULLTILE = 32
     FPS = 60
+    DEBUG = 1
 
     PATH = {}
     PATH['MAIN'] = getcwd()
@@ -45,6 +49,15 @@ if True:
     PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
 
 def object_creator(**kwargs):
+    """Takes in a set of keywords and uses them to make an object.
+        Required kwargs:
+        name: name of the object being created.
+        game: game handler used to instantiate the objects.
+
+        Dependent kwargs:
+        key: id of the key when created
+        pos: position of the created object.
+        data: dictionary containing kwargs for __init__."""
     name = kwargs['name']
     game = kwargs['game']
     if name == 'player':
@@ -97,50 +110,56 @@ def object_creator(**kwargs):
 
 # Special classes
 class ObjView(ObjCamera):
-    def __init__(self, size):
-        super().__init__(size)
-
-    def set_level_size(self, size):
+    """Camera like object which is limited to the inside of the level."""
+    def set_level_size(self, size: tuple):
+        """Set's the bounds of the camera."""
         self.level_size = size
 
     @property
     def pos(self):
+        """Position getter."""
         return self._pos
 
     @pos.setter
-    def pos(self, value):
+    def pos(self, pos: tuple):
+        """Position setter."""
         level_size0, level_size1 = self.level_size
         size0, size1 = self._size
-        value0 = f_limit(value[0], 0, level_size0 - size0)
-        value1 = f_limit(value[1], 0, level_size1 - size1)
+        value0 = f_limit(pos[0], 0, level_size0 - size0)
+        value1 = f_limit(pos[1], 0, level_size1 - size1)
         self._pos = f_tupgrid((value0, value1), 1)
 
 
 # Entities
 class Entity():
-    def update(self, dt):
+    """Base class for all game entities."""
+    def draw_early(self, window: object):
+        """Draw called before background."""
         pass
 
-    def draw_early(self, window):
+    def draw(self, window: object):
+        """Draw called in between back and foreground."""
         pass
 
-    def draw(self, window):
+    def draw_late(self, window: object):
+        """Draw called after foreground."""
         pass
 
-    def draw_late(self, window):
+    def update_early(self, dt: float):
+        """Update called first."""
         pass
 
-    def update_early(self, dt):
+    def update(self, dt: float):
+        """Update called second."""
         pass
 
-    def update(self, dt):
-        pass
-
-    def update_late(self, dt):
+    def update_late(self, dt: float):
+        """Update called last."""
         pass
 
 class ObjJukeBox(Entity):
-    def __init__(self, game, key, name, data):
+    """Responsible for sick beats."""
+    def __init__(self, game: object, key: int, name: str, data: dict):
         game.obj.instantiate_object(key, self)
         self.game = game
         self.key = key
@@ -189,23 +208,23 @@ class GameObject(Entity):
 
     @property
     def frame(self):
-        """Get frame property."""
+        """Frame getter."""
         return self._frame
 
     @frame.setter
     def frame(self, frame: int):
-        """Set frame property."""
+        """Frame setter."""
         if frame > len(self.frames):
             frame = f_loop(frame, 0, len(self.frames))
         self._frame = frame
 
     @property
     def frames(self):
-        """Get frames property."""
+        """Franes getter."""
         return self._frames
 
     def set_frames(self, *fnames, alpha=0):
-        """Set frame property."""
+        """Frames setter."""
         self._frames = []
         for file in fnames:
             file_path = path.join(PATH['SPRITES'], file)
@@ -215,7 +234,7 @@ class GameObject(Entity):
                 self._frames.append(image.load(file_path).convert_alpha())
 
     def scollide(self, pos=None, cpoints=None):
-        """Check to see if any of the colpoints instersect with STCOL."""
+        """Check for static collisions."""
         # Match unspecified arguments
         if pos is None:
             pos = self.pos
@@ -229,7 +248,7 @@ class GameObject(Entity):
         return 0
 
     def dcollide(self, key=None):
-        """Check to see if crect intersects with any dynamic colliders.
+        """Check for dynamic collisions.
            Set key to -1 if you want to include self in collision"""
         # Match unspecified arguments
         if key is None:
@@ -241,7 +260,7 @@ class GameObject(Entity):
         return self.game.collider.dy.get_collision(pos, crect, key)
 
     def draw(self, window):
-        """Drawing at the same time as other objects."""
+        """Draw called inbetween back and foreground."""
         pos = self.pos
         window.draw_image(pos, self.frames[self.frame])
 
@@ -253,14 +272,16 @@ class GameObject(Entity):
 class ObjPlayer(GameObject):
     """Player game object."""
     def __init__(self, game, key, pos, size, name, data):
-        # GameObject initialization
+        # Game object initialization
         super().__init__(game, key, pos, size)
+        self.game = game
         self.name = name
         self.data = data
-        self.game = game
+
+        # Add dynamic collider
         game.collider.dy.add(key, self)
 
-        # Keys
+        # Controls
         self.keys = {
             'jump': (44, 26, 82),
             'left': (4, 80),
@@ -284,15 +305,17 @@ class ObjPlayer(GameObject):
         self.ground_fric_static = 0.48
         self.ground_fric_dynamic = 0.88
 
-        # Jumping
-        self.jump = 0
+        # Air
         self.air_fric_retro = 0.88
         self.air_fric_pro = 0.98
         self.air_speed = 0.4
-        self.jump_speed = 10
         self.default_grav = 1.2
         self.grav = self.default_grav
         self.fallgrav = 0.6
+
+        # Jump
+        self.jump = 0
+        self.jump_speed = 10
         self.jumpgrav = 0.35
         self.grounded = 0
         self.coyote = 8
@@ -302,14 +325,16 @@ class ObjPlayer(GameObject):
         # State Machine
         self.mode = 0
         self.campos = (0, 0)
-        self.camspeed = (1/4, 1/4)
+        self.camspeed = (0.25, 0.25)
 
         # Sprite
         self.set_frames('player.png')
-        try:
-            game.audio.sfx.tracks['boop.wav']
-        except KeyError:
-            game.audio.sfx.add('boop.wav')
+
+        # Audio
+        #try:
+        #    game.audio.sfx.tracks['boop.wav']
+        #except KeyError:
+        #    game.audio.sfx.add('boop.wav')
 
     def update(self, dt, **kwargs):
         """Called every frame for each game object."""
@@ -345,13 +370,12 @@ class ObjPlayer(GameObject):
     def draw_late(self, window):
         """Called every frame to draw each game object."""
         super().draw(window)
-        text = 'Grounded: {}'.format(self.grounded)
         color = (255, 255, 255)
         font = self.game.font.get('arial', 12)
-        window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color, gui = 1)
-        text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
-        window.draw_text((FULLTILE, 2*FULLTILE), text, font, color, gui = 1)
-
+        #text = 'Grounded: {}'.format(self.grounded)
+        #window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color, gui = 1)
+        #text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
+        #window.draw_text((FULLTILE, 2*FULLTILE), text, font, color, gui = 1)
         gui = Surface(self.game.window.size)
         gui.get_width
 
@@ -479,7 +503,8 @@ class ObjPlayer(GameObject):
 
 class ObjButton(GameObject):
     """Button game object."""
-    def __init__(self, game, key, pos, size, name, data):
+    def __init__(self, game: object, key: int, pos: tuple,
+                 size: tuple, name: str, data: dict):
         # GameObject initialization
         super().__init__(game, key, pos, size, relative=(0, FULLTILE-size[1]))
         self.game = game
@@ -489,7 +514,7 @@ class ObjButton(GameObject):
         self.door_id = data['door']
         self.set_frames('button0.png', 'button1.png', alpha=1)
 
-    def collide(self, obj):
+    def collide(self, obj: object):
         """When collided with by player, open the door."""
         if obj.name == 'player' and self.frame == 0:
             self.door = self.game.obj.obj[self.door_id]
@@ -498,7 +523,8 @@ class ObjButton(GameObject):
 
 class ObjDoor(GameObject):
     """Door game object."""
-    def __init__(self, game, key, pos, size, name, data):
+    def __init__(self, game: object, key: int, pos: tuple,
+                 size: tuple, name: str, data: dict):
         # GameObject initialization
         super().__init__(game, key, pos, size)
         self.game = game
@@ -510,7 +536,7 @@ class ObjDoor(GameObject):
         # Images
         self.set_frames('door0.png', 'door1.png')
 
-    def collide(self, obj):
+    def collide(self, obj: object) -> str:
         if obj.name == 'player':
             if self.frame == 1:
                 self.game.level.load(self.next_level)
@@ -518,7 +544,8 @@ class ObjDoor(GameObject):
 
 class ObjGravOrb(GameObject):
     """GravOrb game object."""
-    def __init__(self, game, key, pos, size, name, data):
+    def __init__(self, game: object, key: int, pos: tuple,
+                 size: tuple, name: str, data: dict):
         # GameObject initialization
         super().__init__(game, key, pos, size)
         self.game = game
@@ -535,7 +562,7 @@ class ObjGravOrb(GameObject):
         elif self.grav < 1:
             self.set_frames('grav-orb2.png', alpha=1)
 
-    def collide(self, obj):
+    def collide(self, obj: object):
         if obj.name == 'player':
             grav_mult = self.grav
 
@@ -562,7 +589,8 @@ class ObjGravOrb(GameObject):
 
 class ObjSpike(GameObject):
     """Spike game object."""
-    def __init__(self, game, key, pos, size, name, data):
+    def __init__(self, game: object, key: int, pos: tuple,
+                 size: tuple, name: str, data: dict):
         # GameObject initialization
         super().__init__(game, key, pos, size, relative=(0, FULLTILE-size[1]))
         self.game = game
@@ -573,16 +601,15 @@ class ObjSpike(GameObject):
         # Images
         self.set_frames('spike.png', alpha=1)
 
-    def update(self, dt, **kwargs):
-        pass
-
-    def collide(self, obj):
+    def collide(self, obj: object) -> str:
         if obj.name == 'player':
             self.game.level.reset()
+            return 'return'
 
 class ObjSpikeInv(GameObject):
     """Spike game object."""
-    def __init__(self, game, key, pos, size, name, data):
+    def __init__(self, game: object, key: int, pos: tuple,
+                 size: tuple, name: str, data: dict):
         # GameObject initialization
         super().__init__(game, key, pos, size, relative=(0, 0))
         self.game = game
@@ -593,12 +620,10 @@ class ObjSpikeInv(GameObject):
         # Images
         self.set_frames('spike-inv.png', alpha=1)
 
-    def update(self, dt, **kwargs):
-        pass
-
-    def collide(self, obj):
+    def collide(self, obj: object) -> str:
         if obj.name == 'player':
             self.game.level.reset()
+            return 'return'
 
 
 # Main application method
@@ -610,7 +635,6 @@ def main():
     GAME.tile.add_tilemap('1-background0.png')
     GAME.level.load('level1')
     GAME.parallax = 1
-    DEBUG = 1
 
     # Timing info
     clock = Clock()
@@ -619,8 +643,14 @@ def main():
         STARTTIME = time()
         TIME = []
 
-    # Append new line to debug file
-    if DEBUG == 1:
+        # Debug menu
+        DEBUGMENU = ObjMenu(GAME, (128, 32))
+        #box = ObjRectElement(DEBUGMENU, 'back', (128, 32))
+        #box.color = (0, 0, 0)
+        text = ObjTextElement(DEBUGMENU, 'fps', (128, 12), backdrop=1)
+        text = ObjTextElement(DEBUGMENU, 'campos', (128, 12), backdrop=1)
+        text.pos = (0, 0.5*FULLTILE)
+
         debug = ObjFile(PATH['DEBUGLOG'], 'debug.txt')
         debug.append()
         time_date = datetime.datetime.now()
@@ -630,6 +660,7 @@ def main():
         del debug
 
     while GAME.run:
+        # Reset inputs for held keys
         GAME.input.reset()
 
         # Event Handler
@@ -639,22 +670,25 @@ def main():
                 return
             else:
                 GAME.input.handle_events(event)
-
         # Quit by escape
         if GAME.input.kb.get_key_pressed(41):
             GAME.end()
             return
 
-        # Update objects
-        t = time()
+
+        # Update calls
+        if DEBUG == 1:
+            t = time()
         GAME.obj.update_early(dt)
         GAME.obj.update(dt)
         GAME.obj.update_late(dt)
         if DEBUG == 1:
             TIME.append(round((time() - t), 3))
 
-        # Draw all
-        t = time()
+
+        # Draw calls
+        if DEBUG == 1:
+            t = time()
 
         # Clear screen
         GAME.cam.blank()
@@ -671,27 +705,27 @@ def main():
         GAME.obj.draw_late(GAME.cam)
 
 
-        # FPS display
-        font = GAME.font.get('arial', 12)
-        text = 'fps: {:3f}'.format(clock.get_fps())
-        GAME.cam.draw_text((FULLTILE, FULLTILE), text,
-                           font, (255, 255, 255), gui = 1)
+        # Debug menu
+        DEBUGMENU.blank()
+        element = DEBUGMENU.get('fps')
+        element.text = 'fps: {:.1f}'.format(clock.get_fps())
+        element = DEBUGMENU.get('campos')
+        element.text = 'cam pos: ({}, {})'.format(*GAME.cam.pos)
+        DEBUGMENU.draw()
+        DEBUGMENU.render(GAME.cam)
 
-        # Camera position display
-        text = 'cam pos: ({}, {})'.format(*GAME.cam.pos)
-        GAME.cam.draw_text((FULLTILE, 2.5*FULLTILE), text,
-                           font, (255, 255, 255), gui = 1)
 
         # Render to screen
         GAME.window.render(GAME.cam)
         if DEBUG == 1:
             TIME.append(round((time() - t), 3))
 
+
         # Tick clock
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
 
-        # Write render data to disk
+        # Write debug data to disk
         if DEBUG == 1:
             if len(TIME) >= 5*2*FPS:
                 #print('writing time data to disk')

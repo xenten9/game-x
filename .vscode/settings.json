@@ -3,5 +3,11 @@
     "python.pythonPath": "C:\\Program Files\\Python39\\python.exe",
     "python.analysis.disabled": [
         "unresolved-import"
-    ]
+    ],
+    "python.analysis.extraPaths": [
+        "./main/engine/components"
+    ],
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "none"
+    }
 }
