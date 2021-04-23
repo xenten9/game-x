@@ -1,3 +1,4 @@
+"""Camera objects for getting images."""
 from pygame import Surface, Rect, draw
 from ..helper_functions.tuple_functions import f_tupadd, f_tupmult
 

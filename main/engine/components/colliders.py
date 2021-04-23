@@ -1,3 +1,4 @@
+"""Objects for handling collision detection."""
 from ..helper_functions.tuple_functions import f_tupround, f_tupmult, f_tupadd
 from ..helper_functions.number_functions import (
     f_make_grid, f_change_grid_dimensions, f_minimize_grid)

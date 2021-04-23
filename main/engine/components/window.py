@@ -1,3 +1,4 @@
+"""Object for rendering to the screen."""
 from pygame import display, Surface, Rect, draw, transform
 
 # Handles graphics

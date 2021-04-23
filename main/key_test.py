@@ -1,9 +1,10 @@
-from engine.engine import ObjGameHandler
-from pygame import event as pyevent
+"""For getting key id's."""
 from os import path
-from pygame.locals import QUIT
-from pygame.locals import (KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
-                           MOUSEBUTTONUP, MOUSEMOTION)
+
+from pygame import event as pyevent
+from pygame.locals import (QUIT, KEYDOWN)
+
+from engine.engine import ObjGameHandler
 
 PATH = {}
 PATH['DEFAULT'] = __file__[:-len(path.basename(__file__))]

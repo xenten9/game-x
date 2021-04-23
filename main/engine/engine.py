@@ -1,9 +1,8 @@
 ##############################################################################
-"""engine.py
-    engine.py is a game engine which uses pygame as a base.
-"""
+"""A game engine, for all your game engine needs."""
 
 import pygame
+from typing import Callable
 
 from .helper_functions.tuple_functions import f_tupmult, f_tupadd
 
@@ -15,6 +14,7 @@ from .components.object_handler import ObjObjectHandler
 from .components.tile import ObjTileMap
 from .components.font import ObjFont
 from .components.audio import ObjMixer
+from .components.debug import ObjDebug
 
 # Methods
 # Flip color
@@ -56,13 +56,15 @@ def f_limit(val, minval, maxval):
 class ObjGameHandler():
     """Game handler."""
     def __init__(self, screen_size: tuple, full_tile: int,
-                 path: list, object_creator):
+                 path: list, object_creator: Callable, fps: int,
+                 debug: bool = False):
         # File paths
         self.PATH = path
 
         # Constants
         self.FULLTILE = full_tile
         self.HALFTILE = int(full_tile/2)
+        self.FPS = fps
 
         # Constant Objects
         self.window = ObjWindow(self, screen_size)
@@ -73,6 +75,8 @@ class ObjGameHandler():
         self.input = ObjInput(self)
         self.font = ObjFont()
         self.audio = ObjMixer(self)
+        self.debug = ObjDebug(self)
+        self.debug.on = bool(debug)
 
         # Game loop
         self.run = 1

@@ -155,7 +155,7 @@ class ObjTileLayer():
         """Get rid of empty rows and columns."""
         self.grid = f_minimize_grid(self.grid, None)
 
-    def generate(self):
+    def cache(self):
         """Cache grid to memory and update the surface to match the current grid."""
         size = f_tupmult(self.size, self.game.HALFTILE)
         self.surface = Surface(size).convert_alpha()

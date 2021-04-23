@@ -1,3 +1,4 @@
+"""Object for handling fonts."""
 from pygame import font
 font.init()
 
@@ -8,21 +9,17 @@ class ObjFont():
     def add(self, name: str, size: int):
         """Adds a font to self."""
         try:
-            self.fonts[name + str(size)]
+            return self.fonts[name + str(size)]
         except KeyError:
             self.fonts[name + str(size)] = font.SysFont(name, size)
-            return None
-        return None
+            return self.fonts[name + str(size)]
 
     def get(self, name: str, size: int):
         """Returns a font object."""
         try:
-            self.fonts[name + str(size)]
+            return self.fonts[name + str(size)]
         except KeyError:
-            self.fonts[name + str(size)] = font.SysFont(name, size)
-            return self.fonts[name + str(size)]
-        else:
-            return self.fonts[name + str(size)]
+            return self.add(name, size)
 
     def __del__(self):
         font.quit()

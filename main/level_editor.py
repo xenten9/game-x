@@ -1,4 +1,4 @@
-##############################################################################
+"""Game-X level editor."""
 # OS import
 from os import path, getcwd, system, name as osname
 

@@ -1,4 +1,5 @@
-from pygame import Surface, draw, Rect
+"""Menu's for all manner of occasions."""
+from pygame import Surface, draw, Rect, surface
 
 class ObjMenu():
     """Object used for menus."""
@@ -29,6 +30,7 @@ class ObjMenu():
 
     def draw(self):
         """Draw all elements to menu."""
+        self.blank()
         for i in self.elements:
             self.elements[i].draw()
 
@@ -38,46 +40,64 @@ class ObjMenu():
 
 class ObjTextElement():
     """Text menu element."""
-    def __init__(self, menu, name: str, size: tuple, pos=(0, 0), **kwargs):
+    def __init__(self, menu, name: str, size: tuple = (0, 0),
+                 pos: tuple = (0, 0), color: tuple = (255, 0, 255),
+                 text: str = '', font: str = 'arial',
+                 backdrop: bool = False):
         self.menu = menu
         self.name = name
         self.size = size
         self.pos = pos
-
-        # Kwargs interpretation
-        if True:
-            try:
-                self.color = kwargs['color']
-            except KeyError:
-                self.color = (255, 0, 255)
-            try:
-                self.text = kwargs['text']
-            except KeyError:
-                self.text = ''
-            try:
-                self.font = kwargs['font']
-            except KeyError:
-                self.font = 'arial'
-            try:
-                self.backdrop = kwargs['backdrop']
-            except KeyError:
-                self.backdrop = 0
+        self.color = color
+        self.text = text
+        self.font = font
+        self.backdrop = backdrop
+        self.surface = Surface(size).convert_alpha()
 
         menu.add(self)
 
     def __del__(self):
         self.menu.remove(self.name)
 
-    def draw(self):
-        """Draw text to menu."""
+    def cache(self):
+        """Render text to surface."""
         font = self.menu.game.font.get(self.font, self.size[1])
+        self.surface.fill((0, 0, 0, 0))
         render = font.render(self.text, 0, self.color)
         if self.backdrop:
-            surf = Surface(render.get_size())
-            surf.blit(render, (0, 0))
-            self.menu.surface.blit(surf, self.pos)
-        else:
-            self.menu.surface.blit(render, self.pos)
+            self.surface = Surface(render.get_size())
+        self.surface.blit(render, (0, 0))
+
+    def set_vars(self, size: tuple = None, pos: tuple = None,
+                 color: tuple = None, text: str = None,
+                 font: str = None, backdrop: bool = None) -> bool:
+        res = 0
+        if size not in (None, self.size):
+            self.size = size
+            res = 1
+        if pos not in (None, self.pos):
+            self.pos = pos
+            res = 1
+        if color not in (None, self.color):
+            self.color = color
+            res = 1
+        if text not in (None, self.text):
+            self.text = text
+            res = 1
+        if font not in (None, self.font):
+            self.font = font
+            res = 1
+        if backdrop not in (None, self.backdrop):
+            self.backdrop = backdrop
+            res = 1
+        if res == 1:
+            self.cache()
+            return True
+        return False
+
+    def draw(self):
+        """Draw text to menu."""
+        self.menu.surface.blit(self.surface, self.pos)
 
 class ObjRectElement():
     """Rectangle menu element."""
@@ -86,6 +106,7 @@ class ObjRectElement():
         self.name = name
         self.size = size
         self.pos = pos
+        self.surface = surface(size)
 
         # Kwargs interpretation
         if True:
@@ -99,6 +120,11 @@ class ObjRectElement():
     def __del__(self):
         self.menu.remove(self.name)
 
+    def cache(self):
+        """Render rect to surface."""
+        draw.rect(self.surface, self.color, Rect(self.pos, self.size))
+
     def draw(self):
         """Draw rect to menu."""
-        draw.rect(self.menu.surface, self.color, Rect(self.pos, self.size))
+        self.menu.blit(self.surface)
+

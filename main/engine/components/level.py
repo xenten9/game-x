@@ -1,3 +1,4 @@
+"""Loads and saves levels from disk."""
 from os import path
 from ast import literal_eval
 
@@ -85,7 +86,7 @@ class ObjLevel():
 
         # Render all layers after being built
         for layer in self.game.tile.layers:
-            self.game.tile.layers[layer].generate()
+            self.game.tile.layers[layer].cache()
 
         # Say level succesful level laod if level is no reloaded
         if self.current_level != level_name:

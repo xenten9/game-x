@@ -1,4 +1,4 @@
-##############################################################################
+"""Game-X."""
 # OS import
 from os import path, getcwd, system, name as osname
 
@@ -9,14 +9,15 @@ else:
     system('clear')
 print('################') # sepperator
 
+
+
 # Base imports
 from math import floor
 import numpy as np
 from time import time
-import datetime
 
 # Library Imports
-from pygame import image, event as pyevent, Surface
+from pygame import image, event as pyevent#, Surface
 from pygame.time import Clock
 from pygame.locals import QUIT
 
@@ -27,25 +28,26 @@ if __name__ == '__main__': # If main file
     from engine.helper_functions.tuple_functions import (
         f_tupadd, f_tupgrid, f_tupmult)
     from engine.helper_functions.file_system import ObjFile
-    from engine.components.menu import (
-        ObjMenu, ObjTextElement)
+    #from engine.components.menu import (
+    #    ObjMenu, ObjTextElement)
 else: # If being called as a module
     from .engine.components.camera import ObjCamera
     from .engine.engine import ObjGameHandler, f_loop, f_limit
     from .engine.helper_functions.tuple_functions import (
         f_tupadd, f_tupgrid, f_tupmult)
     from .engine.helper_functions.file_system import ObjFile
-    from .engine.components.menu import (
-        ObjMenu, ObjTextElement)
+    #from .engine.components.menu import (
+    #   ObjMenu, ObjTextElement)
 
 print('################') # sepperator
+
+
 
 # Constants
 if True:
     SIZE = (1024, 768)
     FULLTILE = 32
     FPS = 60
-    DEBUG = 0
 
     PATH = {}
     PATH['MAIN'] = getcwd()
@@ -56,6 +58,8 @@ if True:
     PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
     PATH['MUSIC'] = path.join(PATH['ASSETS'], 'music')
     PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
+
+
 
 # Object Creation functions # NOTE # Very Hard Coded
 def object_creator(**kwargs):
@@ -103,14 +107,14 @@ def object_creator(**kwargs):
         pos = kwargs['pos']
         data = kwargs['data']
         key = game.obj.instantiate_key(key)
-        ObjSpike(game, key, pos, (FULLTILE, FULLTILE/8), name, data)
+        ObjSpike(game, key, pos, (FULLTILE, FULLTILE/4), name, data)
 
     elif name == 'spike-inv':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
         key = game.obj.instantiate_key(key)
-        ObjSpikeInv(game, key, pos, (FULLTILE, FULLTILE/8), name, data)
+        ObjSpikeInv(game, key, pos, (FULLTILE, FULLTILE/4), name, data)
 
     elif name == 'juke-box':
         key = kwargs['key']
@@ -259,13 +263,14 @@ class GameObject(Entity):
                 return 1
         return 0
 
-    def dcollide(self, key=None):
+    def dcollide(self, pos=None, key=None):
         """Check for dynamic collisions.
            Set key to -1 if you want to include self in collision"""
         # Match unspecified arguments
         if key is None:
             key = self.key
-        pos = self.pos
+        if pos is None:
+            pos = self.pos
         crect = self.crect
 
         # Check for collision
@@ -359,8 +364,6 @@ class ObjPlayer(GameObject):
             col = self.dcollide()
             for obj in col:
                 try:
-                    if obj.name in ('spike', 'spike-inv'):
-                        self.game.audio.sfx.play('boop.wav')
                     if obj.collide(self) == 'return':
                         return
                 except AttributeError:
@@ -503,6 +506,15 @@ class ObjPlayer(GameObject):
             pos = (floor(xpos + hspd), ypos)
             hspd = 0
 
+        # Dynamic collisions
+        col = self.dcollide(pos=pos)
+        for obj in col:
+            try:
+                if obj.collide(self) == 'return':
+                    return
+            except AttributeError:
+                pass
+
         # Vertical collision
         if self.scollide((xpos, ypos + vspd)):
             while self.scollide((xpos, ypos + vspd)):
@@ -510,9 +522,23 @@ class ObjPlayer(GameObject):
             pos = (xpos, floor(ypos + vspd))
             vspd = 0
 
+        # Dynamic collisions
+        col = self.dcollide(pos=pos)
+        for obj in col:
+            try:
+                if obj.collide(self) == 'return':
+                    return
+            except AttributeError:
+                pass
+
         self.pos = pos
         self.hspd = hspd
         self.vspd = vspd
+
+    def die(self):
+        self.game.audio.sfx.play('boop.wav')
+        self.game.level.reset()
+        return 'return'
 
 class ObjButton(GameObject):
     """Button game object."""
@@ -611,9 +637,12 @@ class ObjSpike(GameObject):
         self.set_frames('spike.png', alpha=1)
 
     def collide(self, obj: object) -> str:
-        if obj.name == 'player':
-            self.game.level.reset()
-            return 'return'
+        if obj.name == 'player' and obj.vspd <= 0:
+            return obj.die()
+
+    #def draw_late(self, window: object):
+    #    pos = (self.pos[0], self.pos[1] + FULLTILE-self.size[1])
+    #    window.draw_rect(pos, self.size, (64, 64, 64))
 
 class ObjSpikeInv(GameObject):
     """Spike game object."""
@@ -629,45 +658,40 @@ class ObjSpikeInv(GameObject):
         self.set_frames('spike-inv.png', alpha=1)
 
     def collide(self, obj: object) -> str:
-        if obj.name == 'player':
-            self.game.level.reset()
-            return 'return'
+        if obj.name == 'player' and obj.vspd >= 0:
+            return obj.die()
+
+    #def draw_late(self, window: object):
+    #    window.draw_rect(self.pos, self.size, (64, 64, 64))
 
 
 
 # Main application method
-def main():
+def main(debug: bool = False):
     """Main game loop."""
-    GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator)
+    GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator,
+                          fps=FPS, debug=debug)
     GAME.cam = ObjView(SIZE)
     GAME.level.load('level1')
     GAME.parallax = 1
+    GAME.debug.time_record = {
+        'Update': 0,
+        'Draw': 0,
+        'Render': 0}
 
     # Timing info
     clock = Clock()
     dt = 1
-    if DEBUG:
+    if GAME.debug:
         STARTTIME = time()
         TIME = []
 
-        # Debug menu
-        DEBUGMENU = ObjMenu(GAME, (128, 32))
-        #box = ObjRectElement(DEBUGMENU, 'back', (128, 32))
-        #box.color = (0, 0, 0)
-        text = ObjTextElement(DEBUGMENU, 'fps', (128, 12), backdrop=1)
-        text = ObjTextElement(DEBUGMENU, 'campos', (128, 12), backdrop=1)
-        text.pos = (0, 0.5*FULLTILE)
-
-        debug = ObjFile(PATH['DEBUGLOG'], 'debug.txt')
-        debug.append()
-        time_date = datetime.datetime.now()
-        time_date = time_date.strftime('%Y-%m-%d %Hh%M')
-        debug.file.write('\n\n###### {}\n'.format(time_date))
-        debug.close()
-        del debug
-
     # Gameplay loop
     while GAME.run:
+        # Start debug timing
+        if GAME.debug:
+            t = time()
+
         # Reset inputs for held keys
         GAME.input.reset()
 
@@ -684,42 +708,48 @@ def main():
 
 
         # Update calls
-        if DEBUG:
-            t = time()
         update(GAME, dt)
-        if DEBUG:
-            TIME.append(round((time() - t), 3))
-
+        if GAME.debug:
+            GAME.debug.time_record['Update'] += (time() - t)
+            t = time()
 
         # Draw calls
-        if DEBUG:
-            t = time()
         draw(GAME)
+        if GAME.debug:
+            GAME.debug.time_record['Draw'] += (time() - t)
+            t = time()
 
+        # Update debug
+        if GAME.debug:
+            res = False
 
-        # Debug menu
-        if DEBUG:
-            DEBUGMENU.blank()
-            element = DEBUGMENU.get('fps')
-            element.text = 'fps: {:.1f}'.format(clock.get_fps())
-            element = DEBUGMENU.get('campos')
-            element.text = 'cam pos: ({}, {})'.format(*GAME.cam.pos)
-            DEBUGMENU.draw()
-            DEBUGMENU.render(GAME.cam)
+            ele = GAME.debug.menu.get('fps')
+            text = 'fps: {:.0f}'.format(clock.get_fps())
+            res = res or ele.set_vars(text=text)
+
+            ele = GAME.debug.menu.get('campos')
+            text = 'cam pos: ({}, {})'.format(*GAME.cam.pos)
+            res = res or ele.set_vars(text=text)
+
+            if res:
+                GAME.debug.menu.draw()
+
+            GAME.debug.menu.render(GAME.cam)
 
 
         # Render to screen
         render(GAME)
-        if DEBUG:
-            TIME.append(round((time() - t), 3))
+        if GAME.debug:
+            GAME.debug.time_record['Render'] += (time() - t)
 
 
         # Tick clock
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
+        GAME.debug.tick()
 
         # Write debug data to disk
-        if DEBUG:
+        if GAME.debug:
             if len(TIME) >= 5*2*FPS:
                 #print('writing time data to disk')
                 debug = ObjFile(PATH['DEBUGLOG'], 'debug.txt')
@@ -753,6 +783,7 @@ def draw(game: object):
     game.obj.draw(game.cam)
     game.tile.layers['foreground'].draw(cam)
     game.obj.draw_late(game.cam)
+    game.debug.menu.draw()
 
 def render(game: object):
     """Render textures to screen."""
@@ -761,4 +792,4 @@ def render(game: object):
 
 # If main file
 if __name__ == '__main__':
-    main()
+    main(True)

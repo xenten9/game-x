@@ -1,4 +1,4 @@
-# Handles object instances
+"""Handles object instances"""
 from typing import Callable
 
 class ObjObjectHandler():
