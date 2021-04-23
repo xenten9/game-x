@@ -42,7 +42,6 @@ else: # If being called as a module
 print('################') # sepperator
 
 
-
 # Constants
 if True:
     SIZE = (1024, 768)
@@ -58,7 +57,6 @@ if True:
     PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
     PATH['MUSIC'] = path.join(PATH['ASSETS'], 'music')
     PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
-
 
 
 # Object Creation functions # NOTE # Very Hard Coded
@@ -123,7 +121,6 @@ def object_creator(**kwargs):
         ObjJukeBox(game, key, name, data)
 
 
-
 # Special classes
 class ObjView(ObjCamera):
     """Camera like object which is limited to the inside of the level."""
@@ -144,7 +141,6 @@ class ObjView(ObjCamera):
         value0 = f_limit(pos[0], 0, level_size0 - size0)
         value1 = f_limit(pos[1], 0, level_size1 - size1)
         self._pos = f_tupgrid((value0, value1), 1)
-
 
 # Entities
 class Entity():
@@ -200,7 +196,6 @@ class ObjJukeBox(Entity):
                 game.audio.music.queue(self.music, self.loops, self.volume)
         elif current_music != None:
             game.audio.music.stop(1000)
-
 
 # Gameplay objects
 class GameObject(Entity):

@@ -38,6 +38,7 @@ FPS = 60
 
 PATH = {}
 PATH['MAIN'] = getcwd()
+PATH['DEBUGLOG'] = path.join(PATH['MAIN'], 'debug')
 PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
 PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
 PATH['DEVSPRITES'] = path.join(PATH['ASSETS'], 'dev_sprites')
@@ -426,13 +427,13 @@ class ObjCursor(Entity):
         layer = self.get_current_layer()
         tile_map = self.tilemap_id
         layer.place(self.pos, tile_map, self.tile_select)
-        layer.generate()
+        layer.cache_partial(self.pos)
 
     def remove_tile(self):
         """Removes tile under cursor."""
         layer = self.get_current_layer()
         layer.remove(self.pos)
-        layer.generate()
+        layer.cache_partial(self.pos)
 
     def get_current_layer(self) -> object:
         return self.game.tile.layers[list(self.game.tile.layers.keys())[self.layer]]
@@ -513,9 +514,10 @@ class ObjEntity(Entity):
     def draw(self, window):
         window.draw_image(self.pos, self.image)
 
-def main():
+def main(debug: bool = False):
     """Main game loop."""
-    GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator)
+    GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator,
+                          fps=FPS, debug=debug)
     GAME.cam = ObjView(GAME, SIZE)
     GAME.level.load('default')
     GAME.tile.add_all()
@@ -598,5 +600,5 @@ def render(game: object):
 
 
 if __name__ == '__main__':
-    main()
+    main(True)
 

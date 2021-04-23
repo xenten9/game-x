@@ -1,5 +1,5 @@
 from pygame.image import load
-from pygame import Surface, Rect
+from pygame import Surface, Rect, draw
 from os import path, listdir
 
 from ..helper_functions.tuple_functions import (
@@ -160,12 +160,29 @@ class ObjTileLayer():
         size = f_tupmult(self.size, self.game.HALFTILE)
         self.surface = Surface(size).convert_alpha()
         self.surface.fill([0, 0, 0, 0])
+        half_tile = self.game.HALFTILE
+
+        # Iterate through grid
         for column in enumerate(self.grid):
-                for row in enumerate(self.grid[column[0]]):
-                    tile_info = self.grid[column[0]][row[0]]
-                    if tile_info is not None:
-                        self.half_tile = self.game.HALFTILE
-                        tile = self.tile.get_image(*tile_info)
-                        pos = f_tupmult((column[0], row[0]),
-                                        self.half_tile)
-                        self.surface.blit(tile, pos)
+            for row in enumerate(self.grid[column[0]]):
+                tile_info = self.grid[column[0]][row[0]]
+                if tile_info is not None:
+                    tile = self.tile.get_image(*tile_info)
+                    pos = f_tupmult((column[0], row[0]),
+                                    half_tile)
+                    self.surface.blit(tile, pos)
+
+    def cache_partial(self, pos):
+        """Cache tile to memory and update the surface to match the current grid."""
+        half_tile = self.game.HALFTILE
+        grid_pos = f_tupround(f_tupmult(pos, 1 / half_tile), -1)
+        tile_info = self.grid[grid_pos[0]][grid_pos[1]]
+
+        # Replace singular tile
+        if tile_info is None:
+            color = (0, 0, 0, 0)
+            rect = Rect(pos, (half_tile, half_tile))
+            draw.rect(self.surface, color, rect)
+        else:
+            tile = self.tile.get_image(*tile_info)
+            self.surface.blit(tile, pos)
