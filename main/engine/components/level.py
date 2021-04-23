@@ -74,9 +74,9 @@ class ObjLevel():
                     (len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
                 # Update camera level size to bind camera position
                 try:
-                    self.game.cam.set_level_size(self.size)
+                    self.game.cam.level_size = self.size
                 except AttributeError:
-                    print('camera has no method: set_leveL_size')
+                    print('camera has no variable: level_size')
 
             # OBJECT
             else:

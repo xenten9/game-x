@@ -124,10 +124,6 @@ def object_creator(**kwargs):
 # Special classes
 class ObjView(ObjCamera):
     """Camera like object which is limited to the inside of the level."""
-    def set_level_size(self, size: tuple):
-        """Set's the bounds of the camera."""
-        self.level_size = size
-
     @property
     def pos(self):
         """Position getter."""
@@ -142,21 +138,10 @@ class ObjView(ObjCamera):
         value1 = f_limit(pos[1], 0, level_size1 - size1)
         self._pos = f_tupgrid((value0, value1), 1)
 
+
 # Entities
 class Entity():
     """Base class for all game entities."""
-    def draw_early(self, window: object):
-        """Draw called before background."""
-        pass
-
-    def draw(self, window: object):
-        """Draw called in between back and foreground."""
-        pass
-
-    def draw_late(self, window: object):
-        """Draw called after foreground."""
-        pass
-
     def update_early(self, dt: float):
         """Update called first."""
         pass
@@ -169,6 +154,19 @@ class Entity():
         """Update called last."""
         pass
 
+    def draw_early(self, window: object):
+        """Draw called before background."""
+        pass
+
+    def draw(self, window: object):
+        """Draw called in between back and foreground."""
+        pass
+
+    def draw_late(self, window: object):
+        """Draw called after foreground."""
+        pass
+
+
 class ObjJukeBox(Entity):
     """Responsible for sick beats."""
     def __init__(self, game: object, key: int, name: str, data: dict):
@@ -178,24 +176,25 @@ class ObjJukeBox(Entity):
         self.name = name
         self.data = data
 
+        # Music vars
         current_music = game.audio.music.get_current()
         self.music = data['name']
         self.loops = data['loops']
         self.volume = data['volume']
 
-        if self.music is not None:
-            if current_music is None:
-                # No current music
+        if self.music is not None: # Add new music
+            if current_music is None: # Start playing music
                 game.audio.music.load(self.music)
                 game.audio.music.set_volume(self.volume)
                 game.audio.music.play(self.loops)
 
-            elif current_music != self.music:
-                # Fade current music.
+            elif current_music != self.music: # Queue up music
                 game.audio.music.stop(1500)
                 game.audio.music.queue(self.music, self.loops, self.volume)
-        elif current_music != None:
+
+        elif current_music is not None: # Fade music
             game.audio.music.stop(1000)
+
 
 # Gameplay objects
 class GameObject(Entity):
@@ -215,7 +214,7 @@ class GameObject(Entity):
         self.crect = ((origin[0], origin[0]+width),
                       (origin[1], origin[1]+height))
         self._frame = 0
-        self._frames = []
+        self.frames = []
 
     @property
     def frame(self):
@@ -229,21 +228,18 @@ class GameObject(Entity):
             frame = f_loop(frame, 0, len(self.frames))
         self._frame = frame
 
-    @property
-    def frames(self):
-        """Franes getter."""
-        return self._frames
-
+    # Set current frames
     def set_frames(self, *fnames, alpha=0):
         """Frames setter."""
-        self._frames = []
+        self.frames = []
         for file in fnames:
             file_path = path.join(PATH['SPRITES'], file)
             if alpha == 0:
-                self._frames.append(image.load(file_path).convert())
+                self.frames.append(image.load(file_path).convert())
             elif alpha == 1:
-                self._frames.append(image.load(file_path).convert_alpha())
+                self.frames.append(image.load(file_path).convert_alpha())
 
+    # Collision
     def scollide(self, pos=None, cpoints=None):
         """Check for static collisions."""
         # Match unspecified arguments
@@ -271,11 +267,13 @@ class GameObject(Entity):
         # Check for collision
         return self.game.collider.dy.get_collision(pos, crect, key)
 
+    # Drawing sprites
     def draw(self, window):
         """Draw called inbetween back and foreground."""
         pos = self.pos
         window.draw_image(pos, self.frames[self.frame])
 
+    # Removing index in object handler
     def delete(self):
         """Called when object is deleted from Objects dictionary."""
         self.game.obj.delete(self.key)
@@ -340,6 +338,7 @@ class ObjPlayer(GameObject):
 
         # Sprite
         self.set_frames('player.png')
+        self.trail = []
 
         # Audio
         try:
@@ -367,12 +366,12 @@ class ObjPlayer(GameObject):
             # Move player
             self.movement()
 
+            self.trail.insert(0, self.pos)
+            if len(self.trail) > 4:
+                self.trail = self.trail[0:3]
+
             # Update camera position
-            cam_center = f_tupmult(self.game.cam._size, -1/2)
-            self.campos = f_tupadd(self.pos, cam_center)
-            dcam = f_tupadd(self.campos, f_tupmult(self.game.cam.pos, -1))
-            dcam = f_tupmult(dcam, self.camspeed)
-            self.game.cam.pos = f_tupadd(self.game.cam.pos, dcam)
+            self.move_cam()
 
     def draw(self, window):
         """Drawing at the same time as other objects."""
@@ -380,15 +379,15 @@ class ObjPlayer(GameObject):
 
     def draw_late(self, window):
         """Called every frame to draw each game object."""
-        super().draw(window)
-        # color = (255, 255, 255)
-        # font = self.game.font.get('arial', 12)
-        # text = 'Grounded: {}'.format(self.grounded)
-        # window.draw_text((FULLTILE, 1.5*FULLTILE), text, font, color, gui = 1)
-        # text = 'speed: ({:.3f}, {:.3f})'.format(self.hspd, self.vspd)
-        # window.draw_text((FULLTILE, 2*FULLTILE), text, font, color, gui = 1)
-        # gui = Surface(self.game.window.size)
-        # gui.get_width
+        #super().draw(window)
+        image = self.frames[self.frame]
+        image.set_alpha(127)
+        window.draw_image(self.pos, image)
+        for item in range(1, len(self.trail)):
+            window.draw_image(self.trail[item], image)
+            image.set_alpha(((image.get_alpha() + 1) // 2) -1)
+        image.set_alpha(255)
+        window.draw_image(self.pos, image)
 
     def get_inputs(self):
         for key in self.key:
@@ -426,8 +425,8 @@ class ObjPlayer(GameObject):
                 self.grounded = -1 # Zero Gravity
 
         # Horizontal and vertical movement
-        self.hmove()
-        self.vmove()
+        self.horizontal_move()
+        self.vertical_move()
 
         # Collision
         self.main_collision()
@@ -435,7 +434,8 @@ class ObjPlayer(GameObject):
         # Update position
         self.pos = f_tupadd(self.pos, (self.hspd, self.vspd))
 
-    def hmove(self):
+    def horizontal_move(self):
+        """Horizontal movement."""
         # Horizontal speed
         move = (self.key['Hright'] - self.key['Hleft'])
         if self.grounded and self.grav != 0:
@@ -461,8 +461,8 @@ class ObjPlayer(GameObject):
                 self.hspd += move * self.air_speed / 2
                 self.hspd *= self.air_fric_pro
 
-    def vmove(self):
-        # Vertical speed
+    def vertical_move(self):
+        """Vertical movement."""
         # Jumping
         if (self.grounded != 0 and self.key['jump'] > 0
             and self.jump_delay == 0):
@@ -529,6 +529,14 @@ class ObjPlayer(GameObject):
         self.pos = pos
         self.hspd = hspd
         self.vspd = vspd
+
+    def move_cam(self):
+        """Move Camera."""
+        cam_center = f_tupmult(self.game.cam._size, -1/2)
+        self.campos = f_tupadd(self.pos, cam_center)
+        dcam = f_tupadd(self.campos, f_tupmult(self.game.cam.pos, -1))
+        dcam = f_tupmult(dcam, self.camspeed)
+        self.game.cam.pos = f_tupadd(self.game.cam.pos, dcam)
 
     def die(self):
         self.game.audio.sfx.play('boop.wav')

@@ -47,7 +47,14 @@ class ObjDebug():
         self.file.append()
         file = self.file.file
         file.write('###\n')
+        size = 0
         for item in self.time_record:
-            text = '{}: {:.3f}\n'.format(item, self.time_record[item])
+            size = max(size, len(item))
+
+        for item in self.time_record:
+            text = item
+            while len(text) < size:
+                text += ' '
+            text = '{}: {:.3f}\n'.format(text, self.time_record[item])
             file.write(text)
             self.time_record[item] = 0
