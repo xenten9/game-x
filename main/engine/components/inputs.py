@@ -2,6 +2,7 @@
 from pygame.locals import (KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
                            MOUSEBUTTONUP, MOUSEMOTION)
 from ..helper_functions.tuple_functions import f_tupadd
+from .vector import vec2d
 
 class ObjInput():
     def __init__(self, game):
@@ -21,8 +22,8 @@ class ObjInput():
 
         # Mouse movement
         elif event.type == MOUSEMOTION:
-            self.ms.pos = event.pos
-            self.ms.rel = f_tupadd(self.ms.rel, event.rel)
+            self.ms.pos = vec2d(*event.pos)
+            self.ms.rel = self.ms.rel + vec2d(*event.rel)
 
         # Mouse pressed
         elif event.type == MOUSEBUTTONDOWN:
@@ -98,8 +99,8 @@ class ObjMouse():
         self.button_pressed = {}
         self.button_pressed_pos = {}
         self.button_held = {}
-        self.pos = (0, 0)
-        self.rel = (0, 0)
+        self.pos = vec2d(0, 0)
+        self.rel = vec2d(0, 0)
 
     def get_pos(self):
         """Returns the current mouse position."""

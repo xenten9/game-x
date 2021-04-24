@@ -5,9 +5,9 @@ from .vector import vec2d
 # Camera object
 class ObjCamera():
     """Camera object for defining viewframe."""
-    def __init__(self, size):
+    def __init__(self, size: vec2d):
         self.size = size
-        self._pos = (0, 0)
+        self._pos = vec2d(0, 0)
         self._surface = Surface(size)
 
     @property
@@ -26,7 +26,7 @@ class ObjCamera():
         if gui:
             draw.rect(self._surface, color, Rect(pos, size))
         else:
-            draw.rect(self._surface, color, Rect(self.pos-pos, size))
+            draw.rect(self._surface, color, Rect(pos - self.pos, size))
 
     def draw_image(self, pos: vec2d, image: Surface,
                    gui: bool = False, special_flags=0):

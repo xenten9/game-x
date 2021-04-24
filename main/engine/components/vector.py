@@ -58,5 +58,10 @@ class vec2d(tuple):
     def floor(self):
         return self.__new__(type(self), floor(self.x), floor(self.y))
 
+    def grid(self, cell_size):
+        x = (self.x // cell_size) * cell_size
+        y = (self.y // cell_size) * cell_size
+        return self.__new__(type(self), x, y)
+
     def __str__(self):
         return '<{}, {}>'.format(self.x, self.y)

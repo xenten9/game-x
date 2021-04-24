@@ -24,29 +24,36 @@ if __name__ != '__main__': # If main file
     from .engine.engine import ObjGameHandler, f_loop
     from .engine.helper_functions.tuple_functions import (
         f_tupadd, f_tupgrid, f_tupmult)
+    from .engine.components.vector import vec2d
 else: # If being called as a module
     from engine.components.camera import ObjCamera
     from engine.engine import ObjGameHandler, f_loop
     from engine.helper_functions.tuple_functions import (
         f_tupadd, f_tupgrid, f_tupmult)
+    from engine.components.vector import vec2d
 
 print('################')
-SIZE = (1024, 768)
-FULLTILE = 32
-HALFTILE = 16
-FPS = 60
 
-PATH = {}
-PATH['MAIN'] = getcwd()
-PATH['DEBUGLOG'] = path.join(PATH['MAIN'], 'debug')
-PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
-PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
-PATH['DEVSPRITES'] = path.join(PATH['ASSETS'], 'dev_sprites')
-PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
-PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
-PATH['MUSIC'] = path.join(PATH['ASSETS'], 'music')
-PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
 
+if True:
+    SIZE = vec2d(1024, 768)
+    FULLTILE = 32
+    HALFTILE = 16
+    FPS = 60
+
+    PATH = {}
+    PATH['MAIN'] = getcwd()
+    PATH['DEBUGLOG'] = path.join(PATH['MAIN'], 'debug')
+    PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
+    PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
+    PATH['DEVSPRITES'] = path.join(PATH['ASSETS'], 'dev_sprites')
+    PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
+    PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
+    PATH['MUSIC'] = path.join(PATH['ASSETS'], 'music')
+    PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
+
+
+# Object Creation functions # NOTE # Slightly hard coded
 def object_creator(**kwargs):
     name = kwargs['name']
     game = kwargs['game']
@@ -56,20 +63,54 @@ def object_creator(**kwargs):
     key = game.obj.instantiate_key(key)
     ObjEntity(game, name, key, pos, data)
 
+
+# Special classes
+class ObjView(ObjCamera):
+    def __init__(self, game: object, size: vec2d):
+        super().__init__(size)
+        self.game = game
+        self.keys = {
+            'left': (4, 80),
+            'right': (7, 79),
+            'up': (26, 82),
+            'down': (22, 81)}
+        self.key = {
+            'left': 0,
+            'right': 0,
+            'up': 0,
+            'down': 0}
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, pos: vec2d):
+        if pos.x < 0:
+            pos = vec2d(0, pos.y)
+        if pos.y < 0:
+            pos = vec2d(pos.x, 0)
+        self._pos = pos
+
+    def update(self, dt: float):
+        self.get_inputs()
+        hspd = (self.key['right'] - self.key['left']) * FULLTILE
+        vspd = (self.key['down'] - self.key['up']) * FULLTILE
+        self.pos = self.pos + vec2d(hspd, vspd)
+
+    def get_inputs(self):
+        for key in self.key:
+                if key[0] != 'H':
+                    self.key[key] = self.game.input.kb.get_key_pressed(
+                        *self.keys[key])
+                else:
+                    self.key[key] = self.game.input.kb.get_key_held(
+                        *self.keys[key[1:]])
+
+
+# Entities
 class Entity():
     """Base class for all game entities."""
-    def draw_early(self, window: object):
-        """Draw called before background."""
-        pass
-
-    def draw(self, window: object):
-        """Draw called in between back and foreground."""
-        pass
-
-    def draw_late(self, window: object):
-        """Draw called after foreground."""
-        pass
-
     def update_early(self, dt: float):
         """Update called first."""
         pass
@@ -82,51 +123,20 @@ class Entity():
         """Update called last."""
         pass
 
-class ObjView(ObjCamera):
-    def __init__(self, game: object, size: tuple):
-        super().__init__(size)
-        self.game = game
-        self.keys = {
-            'left': (4, 80),
-            'right': (7, 79),
-            'up': (26, 82),
-            'down': (22, 81)}
+    def draw_early(self, window: object):
+        """Draw called before background."""
+        pass
 
-        self.key = {
-            'left': 0,
-            'right': 0,
-            'up': 0,
-            'down': 0}
+    def draw(self, window: object):
+        """Draw called in between back and foreground."""
+        pass
 
-    @property
-    def pos(self):
-        return self._pos
-
-    @pos.setter
-    def pos(self, pos: tuple):
-        if pos[0] < 0:
-            pos = (0, pos[1])
-        if pos[1] < 0:
-            pos = (pos[0], 0)
-        self._pos = pos
-
-    def update(self, dt: float):
-        self.get_inputs()
-        hspd = (self.key['right'] - self.key['left']) * FULLTILE
-        vspd = (self.key['down'] - self.key['up']) * FULLTILE
-        self.pos = f_tupadd(self.pos, (hspd, vspd))
-
-    def get_inputs(self):
-        for key in self.key:
-                if key[0] != 'H':
-                    self.key[key] = self.game.input.kb.get_key_pressed(
-                        *self.keys[key])
-                else:
-                    self.key[key] = self.game.input.kb.get_key_held(
-                        *self.keys[key[1:]])
+    def draw_late(self, window: object):
+        """Draw called after foreground."""
+        pass
 
 class ObjCursor(Entity):
-    def __init__(self, game: object, pos: tuple):
+    def __init__(self, game: object, pos: vec2d):
         # Default variables
         self.game = game
         self.pos = pos
@@ -211,7 +221,7 @@ class ObjCursor(Entity):
         # Change modes
         if self.key['modeup'] or self.key['modedown']:
             self.mode += self.key['modeup'] - self.key['modedown']
-            self.pos = f_tupgrid(self.pos, FULLTILE)
+            self.pos = self.pos.grid(FULLTILE)
         self.mode = f_loop(self.mode, 0, 2)
 
         # Reload # NOTE # use before saving level in order to shrink grids
@@ -279,15 +289,15 @@ class ObjCursor(Entity):
 
         # Place object
         if self.mkey['Hplace'] and self.key['Hcontrol']:
-            pos = f_tupadd(self.game.input.ms.get_pos(), self.game.cam.pos)
-            pos = f_tupgrid(pos, FULLTILE)
+            pos = self.game.input.ms.get_pos() + self.game.cam.pos
+            pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey['place']:
                 self.pos = pos
                 self.place_object()
         # Select and move object
         elif self.mkey['Hplace']:
-            pos = f_tupadd(self.game.input.ms.get_pos(), self.game.cam.pos)
-            pos = f_tupgrid(pos, FULLTILE)
+            pos = self.game.input.ms.get_pos() + self.game.cam.pos
+            pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey['place']:
                 self.pos = pos
                 obj = self.selected_object
@@ -299,8 +309,8 @@ class ObjCursor(Entity):
 
         # Remove object
         elif self.mkey['Hremove'] and self.key['Hcontrol']:
-            pos = f_tupadd(self.game.input.ms.get_pos(), self.game.cam.pos)
-            pos = f_tupgrid(pos, FULLTILE)
+            pos = self.game.input.ms.get_pos() + self.game.cam.pos
+            pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey['remove']:
                 self.pos = pos
                 self.remove_object()
@@ -365,8 +375,8 @@ class ObjCursor(Entity):
         # Place tile
         if self.mkey['Hplace'] and self.key['Hcontrol']:
             # Update position
-            pos = f_tupadd(self.game.input.ms.get_pos(), self.game.cam.pos)
-            pos = f_tupgrid(pos, HALFTILE)
+            pos = self.game.input.ms.get_pos() + self.game.cam.pos
+            pos = pos.grid(HALFTILE)
             if self.pos != pos or self.mkey['place']:
                 self.pos = pos
                 self.place_tile()
@@ -374,8 +384,8 @@ class ObjCursor(Entity):
         # Remove tile
         elif self.mkey['Hremove'] and self.key['Hcontrol']:
             # Update position
-            pos = f_tupadd(self.game.input.ms.get_pos(), self.game.cam.pos)
-            pos = f_tupgrid(pos, HALFTILE)
+            pos = self.game.input.ms.get_pos() + self.game.cam.pos
+            pos = pos.grid(HALFTILE)
             if self.pos != pos or self.mkey['remove']:
                 self.pos = pos
                 self.remove_tile()
@@ -387,16 +397,16 @@ class ObjCursor(Entity):
 
         # Place object
         if self.mkey['Hplace']:
-            pos = f_tupadd(self.game.input.ms.get_pos(), self.game.cam.pos)
-            pos = f_tupgrid(pos, FULLTILE)
+            pos = self.game.input.ms.get_pos() + self.game.cam.pos
+            pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey['place']:
                 self.pos = pos
                 self.game.collider.st.add(pos)
 
         # Remove object
         elif self.mkey['Hremove']:
-            pos = f_tupadd(self.game.input.ms.get_pos(), self.game.cam.pos)
-            pos = f_tupgrid(pos, FULLTILE)
+            pos = self.game.input.ms.get_pos() + self.game.cam.pos
+            pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey['remove']:
                 self.pos = pos
                 self.game.collider.st.remove(pos)
@@ -502,7 +512,7 @@ class ObjCursor(Entity):
             window.draw_text((0, HALFTILE), 'Wall mode', font, color, gui=1)
 
 class ObjEntity(Entity):
-    def __init__(self, game: object, name: str, key: int, pos: tuple, data: dict):
+    def __init__(self, game: object, name: str, key: int, pos: vec2d, data: dict):
         self.game = game
         self.name = name
         self.key = key
@@ -514,6 +524,8 @@ class ObjEntity(Entity):
     def draw(self, window):
         window.draw_image(self.pos, self.image)
 
+
+
 def main(debug: bool = False):
     """Main game loop."""
     GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator,
@@ -522,7 +534,7 @@ def main(debug: bool = False):
     GAME.level.load('default')
     GAME.tile.add_all()
     GAME.parallax = 0
-    CUR = ObjCursor(GAME, (0, 0))
+    CUR = ObjCursor(GAME, vec2d(0, 0))
 
     clock = Clock()
     dt = 1
@@ -551,7 +563,7 @@ def main(debug: bool = False):
         # FPS display
         fps = 'fps: {:3f}'.format(clock.get_fps())
         font = GAME.font.get('arial', 12)
-        GAME.cam.draw_text((0, FULLTILE), fps, font, (255, 0, 255), gui=1)
+        GAME.cam.draw_text(vec2d(0, FULLTILE), fps, font, (255, 0, 255), gui=1)
 
         # Render to screen
         render(GAME)
@@ -585,6 +597,7 @@ def draw(game: object, **kwargs):
     game.collider.st.debug_draw(cam)
     game.tile.layers['foreground'].draw(cam)
     game.obj.draw_late(cam)
+
 
     # Draw cursor if provided
     if kwargs != {}:

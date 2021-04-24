@@ -767,9 +767,9 @@ def draw(game: object):
     cam.blank()
     game.obj.draw_early(cam)
     game.tile.layers['background'].draw(cam)
-    game.obj.draw(game.cam)
+    game.obj.draw(cam)
     game.tile.layers['foreground'].draw(cam)
-    game.obj.draw_late(game.cam)
+    game.obj.draw_late(cam)
     game.debug.menu.draw()
 
 def render(game: object):

@@ -64,14 +64,14 @@ class ObjStaticCollider():
     def toggle_visibility(self):
         self.visible = not self.visible
 
-    def debug_draw(self, window):
+    def debug_draw(self, window: object):
+        size = vec2d(1, 1) * self.tile_size
         if self.visible:
-            for row, _ in enumerate(self.grid):
-                for column, cell in enumerate(self.grid[row]):
+            for row, slice in enumerate(self.grid):
+                for column, cell in enumerate(slice):
                     if cell:
                         pos = vec2d(row, column) * self.tile_size
-                        tile = (self.tile_size, self.tile_size)
-                        window.draw_rect(pos, tile)
+                        window.draw_rect(pos, size)
 
     def minimize(self):
         self.grid = f_minimize_grid(self.grid, 0)
