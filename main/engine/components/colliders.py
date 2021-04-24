@@ -1,8 +1,9 @@
 """Objects for handling collision detection."""
-from ..helper_functions.tuple_functions import f_tupround, f_tupmult, f_tupadd
 from ..helper_functions.number_functions import (
     f_make_grid, f_change_grid_dimensions, f_minimize_grid)
 from ..helper_functions.collisions import f_col_rects
+
+from .vector import vec2d
 
 class ObjCollider():
     def __init__(self, game):
@@ -15,27 +16,27 @@ class ObjStaticCollider():
     """Handles static collisions aligned to a grid."""
     def __init__(self, tile_size):
         self.tile_size = tile_size
-        self.size = (16, 16)
+        self.size = vec2d(16, 16)
         self.grid = f_make_grid(self.size, 0)
         self.visible = True
 
-    def add(self, pos: tuple):
+    def add(self, pos: vec2d):
         """Add a wall at a given position."""
-        pos = f_tupround(f_tupmult(pos, 1/self.tile_size), 0)
+        pos //= self.tile_size
         try:
             self.grid[pos[0]][pos[1]] = 1
         except IndexError:
             if len(self.grid) == 0:
-                size = (f_tupadd(pos, (1, 1)))
+                size = pos + vec2d(1, 1)
             else:
                 size = (max(pos[0] + 1, len(self.grid)),
                         max(pos[1] + 1, len(self.grid[0])))
             self.expand(size)
             self.grid[pos[0]][pos[1]] = 1
 
-    def remove(self, pos: tuple):
+    def remove(self, pos: vec2d):
         """Remove a wall at a given position."""
-        pos = f_tupround(f_tupmult(pos, 1/self.tile_size), -1)
+        pos //= self.tile_size
         try:
             self.grid[pos[0]][pos[1]] = 0
         except IndexError:
@@ -43,7 +44,8 @@ class ObjStaticCollider():
 
     def get(self, pos):
         """Check for a collision at a given position."""
-        pos = f_tupround(f_tupmult(pos, 1/self.tile_size), -1)
+        pos //= self.tile_size
+        pos = pos.floor()
         try:
             return self.grid[pos[0]][pos[1]]
         except IndexError:
@@ -67,7 +69,7 @@ class ObjStaticCollider():
             for row, _ in enumerate(self.grid):
                 for column, cell in enumerate(self.grid[row]):
                     if cell:
-                        pos = f_tupmult((row, column), self.tile_size)
+                        pos = vec2d(row, column) * self.tile_size
                         tile = (self.tile_size, self.tile_size)
                         window.draw_rect(pos, tile)
 
@@ -94,15 +96,15 @@ class ObjDynamicCollider():
     def get_collision(self, pos, rect, key=-1) -> list:
         """Checks each collider to see if they overlap a rectangle."""
         collide = []
-        dom = f_tupadd(rect[0], pos[0])
-        ran = f_tupadd(rect[1], pos[1])
+        dom = rect[0] + pos[0]
+        ran = rect[1] + pos[1]
         for col in self.colliders:
             if col != key:
                 cobj = self.colliders[col]
                 crect = cobj.crect
                 cpos = cobj.pos
-                cdom = f_tupadd(crect[0], cpos[0])
-                cran = f_tupadd(crect[1], cpos[1])
+                cdom = crect[0] + cpos[0]
+                cran = crect[1] + cpos[1]
                 if f_col_rects(dom, ran, cdom, cran):
                     collide.append(cobj)
         return collide

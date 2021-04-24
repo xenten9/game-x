@@ -3,7 +3,7 @@ from os import path
 from ast import literal_eval
 
 from ..helper_functions.file_system import ObjFile
-from ..helper_functions.tuple_functions import f_tupmult
+from .vector import vec2d
 
 # Handles level loading
 class ObjLevel():
@@ -64,14 +64,16 @@ class ObjLevel():
             # TILE LAYER
             if name == 'tile-layer':
                 layer_name, grid, data = arg[1:4]
-                size = (len(grid), len(grid[0]))
+                size = vec2d(len(grid), len(grid[0]))
                 self.game.tile.add_layer(layer_name, size, data, grid)
 
             # STATIC COLLIDER
             elif name == 'static-collider':
+                self.size = (vec2d(len(arg[1]), len(arg[1][0]))
+                             * self.game.FULLTILE)
                 self.game.collider.st.grid = arg[1]
-                self.size = f_tupmult(
-                    (len(arg[1]), len(arg[1][0])), self.game.FULLTILE)
+                self.game.collider.st.size = self.size
+
                 # Update camera level size to bind camera position
                 try:
                     self.game.cam.level_size = self.size
@@ -81,6 +83,7 @@ class ObjLevel():
             # OBJECT
             else:
                 pos, key, data = arg[1:4]
+                pos = vec2d(*pos)
                 self.game.obj.create_object(
                     game=self.game, name=name,pos=pos, data=data, key=key)
 

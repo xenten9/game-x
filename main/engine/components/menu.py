@@ -1,9 +1,11 @@
 """Menu's for all manner of occasions."""
 from pygame import Surface, draw, Rect, surface
 
+from .vector import vec2d
+
 class ObjMenu():
     """Object used for menus."""
-    def __init__(self, game: object, size: tuple, pos: tuple = (0, 0)):
+    def __init__(self, game: object, size: vec2d, pos: vec2d = vec2d(0, 0)):
         self.game = game
         self.size = size
         self.pos = pos
@@ -40,8 +42,8 @@ class ObjMenu():
 
 class ObjTextElement():
     """Text menu element."""
-    def __init__(self, menu, name: str, size: tuple = (0, 0),
-                 pos: tuple = (0, 0), color: tuple = (255, 0, 255),
+    def __init__(self, menu, name: str, size: vec2d = vec2d(0, 0),
+                 pos: vec2d = vec2d(0, 0), color: tuple = (255, 0, 255),
                  text: str = '', font: str = 'arial',
                  backdrop: bool = False):
         self.menu = menu
@@ -101,7 +103,8 @@ class ObjTextElement():
 
 class ObjRectElement():
     """Rectangle menu element."""
-    def __init__(self, menu, name: str, size: tuple, pos=(0, 0), **kwargs):
+    def __init__(self, menu, name: str, size: vec2d,
+                 pos: vec2d = vec2d(0, 0), **kwargs):
         self.menu = menu
         self.name = name
         self.size = size

@@ -2,10 +2,9 @@ from pygame.image import load
 from pygame import Surface, Rect, draw
 from os import path, listdir
 
-from ..helper_functions.tuple_functions import (
-    f_tupmult, f_tupgrid, f_tupround, f_tupadd)
 from ..helper_functions.number_functions import (
     f_make_grid, f_change_grid_dimensions, f_minimize_grid)
+from .vector import vec2d
 
 # Tile map
 class ObjTileMap():
@@ -50,7 +49,7 @@ class ObjTileMap():
         except KeyError:
             print('tilemap {} does not exist'.format(map_id))
 
-    def add_layer(self, layer: str, size: tuple, data: list, grid=None):
+    def add_layer(self, layer: str, size: vec2d, data: list, grid=None):
         """Creates a layer."""
         self.layers[layer] = ObjTileLayer(self.game, self, layer,
                                           size, data, grid)
@@ -102,9 +101,9 @@ class ObjTileLayer():
         self.visible = True
         self.data = data
         try:
-            self.parallax = f_tupadd((1, 1), f_tupmult(data['parallax'], -1))
+            self.parallax = vec2d(1, 1) - vec2d(data['parallax'])
         except KeyError:
-            self.parallax = (0, 0)
+            self.parallax = vec2d(0, 0)
 
     def update(self, dt):
         """Implement parallax."""
@@ -112,21 +111,21 @@ class ObjTileLayer():
 
     def place(self, pos: tuple, tilemap_id: int, tile_id: int):
         """Add tiles to grid on the layer."""
-        pos = f_tupround(f_tupmult(pos, 1/self.game.HALFTILE), -1)
+        pos //= self.game.HALFTILE
         try:
             self.grid[pos[0]][pos[1]] = (tilemap_id, tile_id)
         except IndexError:
             if len(self.grid) == 0:
-                size = (pos[0]+1, pos[1]+1)
+                size = vec2d(pos[0]+1, pos[1]+1)
             else:
-                size = (max(pos[0] + 1, len(self.grid)),
+                size = vec2d(max(pos[0] + 1, len(self.grid)),
                         max(pos[1] + 1, len(self.grid[0])))
             self.dialate(size)
             self.grid[pos[0]][pos[1]] = (tilemap_id, tile_id)
 
     def remove(self, pos):
         """Remove tiles from the grid on the grid."""
-        pos = f_tupround(f_tupmult(pos, 1/self.game.HALFTILE), -1)
+        pos //= self.game.HALFTILE
         try:
             self.grid[pos[0]][pos[1]] = None
         except IndexError:
@@ -136,17 +135,16 @@ class ObjTileLayer():
         """Draw tiles."""
         if self.visible:
             if self.game.parallax == 1 and self.parallax != (0, 0):
-                pos = f_tupmult(window.pos, self.parallax)
-                pos = f_tupgrid(pos, 1)
+                pos = (window.pos * self.parallax).floor()
                 window.draw_image(pos, self.surface)
             else:
-                window.draw_image((0, 0), self.surface)
+                window.draw_image(vec2d(0, 0), self.surface)
 
     def toggle_visibility(self):
         """Turn layer invisible."""
         self.visible = not self.visible
 
-    def dialate(self, size):
+    def dialate(self, size: vec2d):
         """Change the size of the grid."""
         self.size = size
         self.grid = f_change_grid_dimensions(self.grid, size, None)
@@ -157,7 +155,7 @@ class ObjTileLayer():
 
     def cache(self):
         """Cache grid to memory and update the surface to match the current grid."""
-        size = f_tupmult(self.size, self.game.HALFTILE)
+        size = self.size * self.game.HALFTILE
         self.surface = Surface(size).convert_alpha()
         self.surface.fill([0, 0, 0, 0])
         half_tile = self.game.HALFTILE
@@ -168,14 +166,13 @@ class ObjTileLayer():
                 tile_info = self.grid[column[0]][row[0]]
                 if tile_info is not None:
                     tile = self.tile.get_image(*tile_info)
-                    pos = f_tupmult((column[0], row[0]),
-                                    half_tile)
+                    pos = vec2d(column[0], row[0]) * half_tile
                     self.surface.blit(tile, pos)
 
     def cache_partial(self, pos):
         """Cache tile to memory and update the surface to match the current grid."""
         half_tile = self.game.HALFTILE
-        grid_pos = f_tupround(f_tupmult(pos, 1 / half_tile), -1)
+        grid_pos = pos // half_tile
         tile_info = self.grid[grid_pos[0]][grid_pos[1]]
 
         # Replace singular tile
