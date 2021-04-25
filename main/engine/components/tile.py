@@ -15,7 +15,7 @@ class ObjTileMap():
         self.tilemaps = {}
         self.tilemaps_list = []
         self.tilemap_path = game.PATH['TILEMAPS']
-        self.clear()
+        self.clear_cache()
 
     def add_tilemap(self, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
@@ -49,17 +49,17 @@ class ObjTileMap():
         except KeyError:
             print('tilemap {} does not exist'.format(map_id))
 
-    def add_layer(self, layer: str, size: vec2d, data: list, grid=None):
+    def add_layer(self, name: str, size: vec2d, data: list, grid=None):
         """Creates a layer."""
-        self.layers[layer] = ObjTileLayer(self.game, self, layer,
+        self.layers[name] = ObjTileLayer(self.game, self, name,
                                           size, data, grid)
 
-    def remove_layer(self, layer: str):
+    def remove_layer(self, name: str):
         """Removes an existing layer."""
         try:
-            del self.layers[layer]
+            del self.layers[name]
         except KeyError:
-            print('layer {} does not exist'.format(layer))
+            print('layer {} does not exist'.format(name))
 
     def get_image(self, map_id: int, tile_id: int):
         """Gets tile image."""
@@ -81,10 +81,13 @@ class ObjTileMap():
             except TypeError:
                 pass
 
-    def clear(self):
+    def clear_cache(self):
         self.tilemaps = {}
         self.tilemaps_list = []
         self.add_tilemap('0-null.png')
+
+    def clear_ent(self):
+        self.layers = {}
 
 # Layer with tiles
 class ObjTileLayer():
@@ -104,10 +107,16 @@ class ObjTileLayer():
             self.parallax = vec2d(1, 1) - vec2d(data['parallax'])
         except KeyError:
             self.parallax = vec2d(0, 0)
+        try:
+            self.depth = data['depth']
+        except KeyError:
+            self.depth = 0
 
     def update(self, dt):
-        """Implement parallax."""
-        pass
+        try:
+            self.depth = self.data['depth']
+        except KeyError:
+            self.depth = 0
 
     def place(self, pos: tuple, tilemap_id: int, tile_id: int):
         """Add tiles to grid on the layer."""
@@ -131,14 +140,17 @@ class ObjTileLayer():
         except IndexError:
             pass
 
-    def draw(self, window):
+    def draw(self):
         """Draw tiles."""
         if self.visible:
+            surface = self.surface
+            depth = self.depth
             if self.game.parallax == 1 and self.parallax != (0, 0):
-                pos = (window.pos * self.parallax).floor()
-                window.draw_image(pos, self.surface)
+                pos = (self.game.cam.pos * self.parallax).floor()
+                self.game.draw.add(depth, pos=pos, surface=surface)
             else:
-                window.draw_image(vec2d(0, 0), self.surface)
+                pos = vec2d(0, 0)
+                self.game.draw.add(depth, pos=pos, surface=surface)
 
     def toggle_visibility(self):
         """Turn layer invisible."""
@@ -148,6 +160,10 @@ class ObjTileLayer():
         """Change the size of the grid."""
         self.size = size
         self.grid = f_change_grid_dimensions(self.grid, size, None)
+        surface = Surface(size * self.game.FULLTILE).convert_alpha()
+        surface.fill((0, 0, 0, 0))
+        surface.blit(self.surface, vec2d(0, 0))
+        self.surface = surface
 
     def minimize(self):
         """Get rid of empty rows and columns."""
@@ -157,7 +173,7 @@ class ObjTileLayer():
         """Cache grid to memory and update the surface to match the current grid."""
         size = self.size * self.game.HALFTILE
         self.surface = Surface(size).convert_alpha()
-        self.surface.fill([0, 0, 0, 0])
+        self.surface.fill((0, 0, 0, 0))
         half_tile = self.game.HALFTILE
 
         # Iterate through grid
@@ -173,13 +189,16 @@ class ObjTileLayer():
         """Cache tile to memory and update the surface to match the current grid."""
         half_tile = self.game.HALFTILE
         grid_pos = pos // half_tile
-        tile_info = self.grid[grid_pos[0]][grid_pos[1]]
-
-        # Replace singular tile
-        if tile_info is None:
-            color = (0, 0, 0, 0)
-            rect = Rect(pos, (half_tile, half_tile))
-            draw.rect(self.surface, color, rect)
+        try:
+            tile_info = self.grid[grid_pos[0]][grid_pos[1]]
+        except IndexError:
+            pass
         else:
-            tile = self.tile.get_image(*tile_info)
-            self.surface.blit(tile, pos)
+            # Replace singular tile
+            if tile_info is None:
+                color = (0, 0, 0, 0)
+                rect = Rect(pos, (half_tile, half_tile))
+                draw.rect(self.surface, color, rect)
+            else:
+                tile = self.tile.get_image(*tile_info)
+                self.surface.blit(tile, pos)

@@ -10,16 +10,21 @@ class ObjDebug():
         self.game = game
 
         # Menu vars
-        self.menu = ObjMenu(game, (160, 36))
+        self.menu = ObjMenu(game, (160, 60))
         self.menu.blank()
-        text = ObjTextElement(self.menu, 'fps')
-        text.set_vars(size=vec2d(128, 12), font='consolas', backdrop=1)
-        text = ObjTextElement(self.menu, 'campos')
-        text.set_vars(size=vec2d(128, 12), font='consolas', backdrop=1,
-                      pos=vec2d(0, 12))
+        fps = ObjTextElement(self.menu, 'fps')
+        size = 12
+        font = 'consolas'
+        backdrop = 1
+        fps.set_vars(size=size, font=font, backdrop=backdrop)
+
+        campos = ObjTextElement(self.menu, 'campos')
+        pos = vec2d(0, 12)
+        campos.set_vars(size=size, font=font, backdrop=backdrop, pos=pos)
+
         text = ObjTextElement(self.menu, 'memory')
-        text.set_vars(size=vec2d(128, 12), font='consolas', backdrop=1,
-                      pos=vec2d(0, 24))
+        pos = vec2d(0, 24)
+        text.set_vars(size=size, font=font, backdrop=backdrop, pos=pos)
 
         # Debug file vars
         self.debug_path = game.PATH['DEBUGLOG']
@@ -50,10 +55,14 @@ class ObjDebug():
         """Record time data to file."""
         self.file.append()
         file = self.file.file
-        file.write('###\n')
         size = 0
+        total = 0
         for item in self.time_record:
+            total += self.time_record[item]
             size = max(size, len(item))
+
+        file.write('###\n')
+        file.write('Total: {:.1f}%\n'.format(total * (100 / time)))
 
         for item in self.time_record:
             text = item
@@ -62,3 +71,4 @@ class ObjDebug():
             text = '{}: {:.1f}%\n'.format(text, 100 * (self.time_record[item] / time))
             file.write(text)
             self.time_record[item] = 0
+        file.close()

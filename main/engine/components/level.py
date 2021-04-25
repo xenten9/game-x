@@ -72,7 +72,7 @@ class ObjLevel():
                 self.size = (vec2d(len(arg[1]), len(arg[1][0]))
                              * self.game.FULLTILE)
                 self.game.collider.st.grid = arg[1]
-                self.game.collider.st.size = self.size
+                self.game.collider.st.size = self.size // self.game.FULLTILE
 
                 # Update camera level size to bind camera position
                 try:

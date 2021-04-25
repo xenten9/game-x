@@ -1,7 +1,7 @@
 """Objects for handling collision detection."""
+from pygame import Rect, Surface, draw
 from ..helper_functions.number_functions import (
     f_make_grid, f_change_grid_dimensions, f_minimize_grid)
-from ..helper_functions.collisions import f_col_rects
 
 from .vector import vec2d
 
@@ -24,21 +24,21 @@ class ObjStaticCollider():
         """Add a wall at a given position."""
         pos //= self.tile_size
         try:
-            self.grid[pos[0]][pos[1]] = 1
+            self.grid[pos.x][pos.y] = 1
         except IndexError:
             if len(self.grid) == 0:
                 size = pos + vec2d(1, 1)
             else:
-                size = (max(pos[0] + 1, len(self.grid)),
-                        max(pos[1] + 1, len(self.grid[0])))
+                size = vec2d(max(pos[0] + 1, len(self.grid)),
+                             max(pos[1] + 1, len(self.grid[0])))
             self.expand(size)
-            self.grid[pos[0]][pos[1]] = 1
+            self.grid[pos.x][pos.y] = 1
 
     def remove(self, pos: vec2d):
         """Remove a wall at a given position."""
         pos //= self.tile_size
         try:
-            self.grid[pos[0]][pos[1]] = 0
+            self.grid[pos.x][pos.y] = 0
         except IndexError:
             pass
 
@@ -47,7 +47,7 @@ class ObjStaticCollider():
         pos //= self.tile_size
         pos = pos.floor()
         try:
-            return self.grid[pos[0]][pos[1]]
+            return self.grid[pos.x][pos.y]
         except IndexError:
             print('outside of static collider')
             return 0
@@ -66,12 +66,15 @@ class ObjStaticCollider():
 
     def debug_draw(self, window: object):
         size = vec2d(1, 1) * self.tile_size
+        surface = Surface(self.size * self.tile_size).convert_alpha()
+        surface.fill((0, 0, 0, 0))
         if self.visible:
             for row, slice in enumerate(self.grid):
                 for column, cell in enumerate(slice):
                     if cell:
                         pos = vec2d(row, column) * self.tile_size
-                        window.draw_rect(pos, size)
+                        draw.rect(surface, (0, 0, 0), Rect(pos, size))
+            window.add(0, pos=vec2d(0, 0), surface=surface)
 
     def minimize(self):
         self.grid = f_minimize_grid(self.grid, 0)
@@ -93,19 +96,15 @@ class ObjDynamicCollider():
         except KeyError:
             pass
 
-    def get_collision(self, pos, rect, key=-1) -> list:
+    def get_collision(self, pos, size, origin, key=-1) -> list:
         """Checks each collider to see if they overlap a rectangle."""
         collide = []
-        dom = rect[0] + pos[0]
-        ran = rect[1] + pos[1]
+        rect0 = Rect(pos + origin, size)
         for col in self.colliders:
             if col != key:
                 cobj = self.colliders[col]
-                crect = cobj.crect
-                cpos = cobj.pos
-                cdom = crect[0] + cpos[0]
-                cran = crect[1] + cpos[1]
-                if f_col_rects(dom, ran, cdom, cran):
+                rect1 = Rect(cobj.pos + cobj.origin, cobj.size)
+                if rect0.colliderect(rect1):
                     collide.append(cobj)
         return collide
 

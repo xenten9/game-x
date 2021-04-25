@@ -50,25 +50,6 @@ class ObjObjectHandler():
             else:
                 self.obj[key].update_late(dt, **kwargs)
 
-    # Draw calls
-    def draw_early(self, window: object):
-        """Draw that occurs before the background."""
-        if self.visible:
-            for key in self.obj:
-                self.obj[key].draw_early(window)
-
-    def draw(self, window: object):
-        """Draw that occurs between background and foreground."""
-        if self.visible:
-            for key in self.obj:
-                self.obj[key].draw(window)
-
-    def draw_late(self, window: object):
-        """Draw that occurs after the foreground."""
-        if self.visible:
-            for key in self.obj:
-                self.obj[key].draw_late(window)
-
     # Object creation
     def instantiate_key(self, key: int = None):
         """Add a ref. to a game object in the self.obj dictionary."""

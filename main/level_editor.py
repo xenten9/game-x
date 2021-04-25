@@ -1,6 +1,7 @@
 """Game-X level editor."""
 # OS import
-from os import path, getcwd, system, name as osname
+from os import path, getcwd, system, name as osname, getpid
+from psutil import Process
 
 # Clear terminal
 if osname == 'nt':
@@ -12,6 +13,7 @@ print('################') # sepperator
 # Base imports
 from ast import literal_eval
 from typing import Optional
+import numpy as np
 
 # Library imports
 from pygame import image, event as pyevent, Surface
@@ -22,15 +24,13 @@ from pygame.locals import QUIT
 if __name__ != '__main__': # If main file
     from .engine.components.camera import ObjCamera
     from .engine.engine import ObjGameHandler, f_loop
-    from .engine.helper_functions.tuple_functions import (
-        f_tupadd, f_tupgrid, f_tupmult)
     from .engine.components.vector import vec2d
+    from .engine.components.menu import ObjTextElement
 else: # If being called as a module
     from engine.components.camera import ObjCamera
     from engine.engine import ObjGameHandler, f_loop
-    from engine.helper_functions.tuple_functions import (
-        f_tupadd, f_tupgrid, f_tupmult)
     from engine.components.vector import vec2d
+    from engine.components.menu import ObjTextElement
 
 print('################')
 
@@ -40,6 +40,7 @@ if True:
     FULLTILE = 32
     HALFTILE = 16
     FPS = 60
+    PROCESS = Process(getpid())
 
     PATH = {}
     PATH['MAIN'] = getcwd()
@@ -66,6 +67,7 @@ def object_creator(**kwargs):
 
 # Special classes
 class ObjView(ObjCamera):
+    """Movable camera like object."""
     def __init__(self, game: object, size: vec2d):
         super().__init__(size)
         self.game = game
@@ -79,13 +81,16 @@ class ObjView(ObjCamera):
             'right': 0,
             'up': 0,
             'down': 0}
+        self.rel = vec2d(0, 0)
 
     @property
     def pos(self):
+        """Pos getter."""
         return self._pos
 
     @pos.setter
     def pos(self, pos: vec2d):
+        """Pos setter."""
         if pos.x < 0:
             pos = vec2d(0, pos.y)
         if pos.y < 0:
@@ -93,12 +98,31 @@ class ObjView(ObjCamera):
         self._pos = pos
 
     def update(self, dt: float):
+        """Move the camera."""
         self.get_inputs()
+        # Keyboard movement
         hspd = (self.key['right'] - self.key['left']) * FULLTILE
         vspd = (self.key['down'] - self.key['up']) * FULLTILE
+
+        # Mouse movement
+        if self.game.input.ms.get_button_held(2):
+            self.rel += self.game.input.ms.get_delta()
+            dx = abs(self.rel.x) // FULLTILE * np.sign(self.rel.x) * FULLTILE
+            dy = abs(self.rel.y) // FULLTILE * np.sign(self.rel.y) * FULLTILE
+            if dx != 0:
+                hspd -= dx
+                self.rel -= vec2d(dx, 0)
+            if dy != 0:
+                vspd -= dy
+                self.rel -= vec2d(0, dy)
+        else:
+            self.rel = vec2d(0, 0)
+
+        # Move camera
         self.pos = self.pos + vec2d(hspd, vspd)
 
     def get_inputs(self):
+        """Get inputs."""
         for key in self.key:
                 if key[0] != 'H':
                     self.key[key] = self.game.input.kb.get_key_pressed(
@@ -123,16 +147,8 @@ class Entity():
         """Update called last."""
         pass
 
-    def draw_early(self, window: object):
-        """Draw called before background."""
-        pass
-
     def draw(self, window: object):
         """Draw called in between back and foreground."""
-        pass
-
-    def draw_late(self, window: object):
-        """Draw called after foreground."""
         pass
 
 class ObjCursor(Entity):
@@ -149,7 +165,7 @@ class ObjCursor(Entity):
         self.tile_select = 0
         self.tilemap_select = 0
         self.tilemap_id = game.tile.tilemaps_list[self.tilemap_select]
-        self.tilemap = self.get_current_tilemap()
+        self.tilemap = self._get_current_tilemap()
         self.layer = 0
         self.selected_object = None
 
@@ -161,7 +177,8 @@ class ObjCursor(Entity):
             'grav-orb',
             'spike',
             'spike-inv',
-            'juke-box']
+            'juke-box',
+            'main-menu']
 
         # Input keys
         self.keys = {
@@ -176,6 +193,7 @@ class ObjCursor(Entity):
             'tab': (43,),
             'shift': (225,),
             'control': (224,),
+            'delete': (76,),
             'nextset': (27,),
             'prevset': (29,),
             'nextlayer': (25,),
@@ -201,6 +219,7 @@ class ObjCursor(Entity):
             'control': 0,
             'Hcontrol': 0,
             'Hshift': 0,
+            'delete': 0,
             'nextset': 0,
             'prevset': 0,
             'nextlayer': 0,
@@ -232,12 +251,14 @@ class ObjCursor(Entity):
                 layer.minimize()
 
         # Saving and loading
-        if self.key['save'] and self.key['Hcontrol']:
+        if (self.key['save'] and self.key['Hcontrol']
+            and not self.mkey['Hplace']):
             self.game.level.save()
-            self.game.tile.add_all()
             return
-        elif self.key['load'] and self.key['Hcontrol']:
+        elif (self.key['load'] and self.key['Hcontrol']
+              and not self.mkey['Hplace']):
             self.game.level.load()
+            self.game.tile.add_all()
             return
 
         # State machine
@@ -320,6 +341,27 @@ class ObjCursor(Entity):
         # Layer selection
         self.layer += self.key['nextlayer'] - self.key['prevlayer']
         length = len(self.game.tile.layers)-1
+
+        # Layer creation
+        if self.layer > length or self.layer < 0:
+            if self.key['Hshift'] and self.key['Hcontrol']:
+                name = self._get_data(
+                    'Enter layer name: ', 'Name must be string',
+                    '', str)
+                depth = self._get_data(
+                    'Enter layer depth: ', 'Depth must be an int',
+                    'Layer Successfully Created!', int)
+                self.game.tile.add_layer(name, vec2d(6, 6), {'depth': depth})
+                self.game.tile.layers[name].cache()
+                length += 1
+
+        # Layer deletion
+        if self.key['delete'] and length > 0:
+            if self.key['Hshift'] and self.key['Hcontrol']:
+                layer = self._get_current_layer()
+                self.game.tile.remove_layer(layer.name)
+                length -= 1
+
         self.layer = f_loop(self.layer, 0, length)
 
         # Tilemap selection
@@ -331,7 +373,7 @@ class ObjCursor(Entity):
 
             self.tilemap_select = f_loop(self.tilemap_select, 0, length)
             self.tilemap_id = self.game.tile.tilemaps_list[self.tilemap_select]
-            self.tilemap = self.get_current_tilemap()
+            self.tilemap = self._get_current_tilemap()
 
         # Changing selection
         dtile = (self.key['next'] - self.key['prev'])
@@ -347,28 +389,15 @@ class ObjCursor(Entity):
 
         # View/Edit data
         if self.key['tab']:
+            layer = self._get_current_layer()
             if self.key['Hshift']:
-                text = ''
-                while True:
-                    text = input('Edit data? ')
-                    try:
-                        text = literal_eval(text)
-                    except (SyntaxError, ValueError):
-                        if text == 'exit':
-                            break
-                        print('input must be dictionary')
-                        continue
-                    if text == 'exit':
-                            break
-                    if not isinstance(text, dict):
-                        print('input must be dictionary')
-                    else:
-                        break
-                if text != 'exit':
-                    layer = self.get_current_layer().data = text
-                    print('data succesfully written.')
+                text = self._get_data(
+                    'Enter Data Dict: ', 'Input must be Dict',
+                    'Data Successfully Written', dict)
+                if text is not None:
+                    layer.data = text
+                    layer.update(1)
             else:
-                layer = self.get_current_layer()
                 print(layer.data)
 
         # Mouse
@@ -434,25 +463,16 @@ class ObjCursor(Entity):
 
     def place_tile(self):
         """Places tile under cursor."""
-        layer = self.get_current_layer()
+        layer = self._get_current_layer()
         tile_map = self.tilemap_id
         layer.place(self.pos, tile_map, self.tile_select)
         layer.cache_partial(self.pos)
 
     def remove_tile(self):
         """Removes tile under cursor."""
-        layer = self.get_current_layer()
+        layer = self._get_current_layer()
         layer.remove(self.pos)
         layer.cache_partial(self.pos)
-
-    def get_current_layer(self) -> object:
-        return self.game.tile.layers[list(self.game.tile.layers.keys())[self.layer]]
-
-    def get_current_tilemap(self) -> list:
-        return self.game.tile.tilemaps[self.tilemap_id]
-
-    def get_current_tile(self) -> Surface:
-        return self.tilemap[self.tile_select]
 
     def view_object_data(self):
         """Print object data or edit it if shift is held."""
@@ -484,32 +504,73 @@ class ObjCursor(Entity):
                     'data: {}'.format(obj.data)]
             print('\n'.join(info))
 
-    def draw_late(self, window: object):
+    def draw(self):
         """Draw cursor and debug text."""
-        color = (224, 128, 224)
-        font = self.game.font.get('arial', 12)
+        #color = (224, 128, 224)
 
         text = 'pos: ({:.0f}, {:.0f})'.format(*self.pos)
-        window.draw_text((0, 0), text, font, color, gui=1)
+        element = self.game.debug.menu.get('curpos')
+        res = element.set_vars(text=text)
 
         if self.mode == 0:
-            obj = self.object_names[self.obj_select]
-            size = font.size(obj)
-            window.draw_text((0, HALFTILE), obj, font, color, gui=1)
+            # Object name
+            text = self.object_names[self.obj_select]
+            text = 'Object: {}'.format(text)
+            element = self.game.debug.menu.get('mode')
+            res = element.set_vars(text=text)
+
 
         elif self.mode == 1:
-            # Tile
-            tile = self.get_current_tile()
-            pos = f_tupadd(f_tupmult(self.game.cam.pos, -1), self.pos)
-            window.draw_image(pos, tile, gui=1)
+            # Tile image
+            surface = self._get_current_tile()
+            pos = self.pos
+            self.game.draw.add(4, pos=pos, surface=surface)
 
             # Layer name
-            layer = self.get_current_layer()
-            window.draw_text((0, HALFTILE), layer.name, font, color, gui=1)
+            text = self._get_current_layer().name
+            text = 'Layer: {}'.format(text)
+            element = self.game.debug.menu.get('mode')
+            res = element.set_vars(text=text)
 
         elif self.mode == 2:
             # Wall
-            window.draw_text((0, HALFTILE), 'Wall mode', font, color, gui=1)
+            text = 'Wall mode'
+            element = self.game.debug.menu.get('mode')
+            res = element.set_vars(text=text)
+
+        if res:
+            self.game.debug.menu.draw()
+
+    def _get_current_layer(self) -> object:
+        return self.game.tile.layers[list(self.game.tile.layers.keys())[self.layer]]
+
+    def _get_current_tilemap(self) -> list:
+        return self.game.tile.tilemaps[self.tilemap_id]
+
+    def _get_current_tile(self) -> Surface:
+        return self.tilemap[self.tile_select]
+
+    def _get_data(self, prompt: str, error: str, success: str, datatype: type):
+        text = ''
+        while True:
+            text = input(prompt)
+            try:
+                text = literal_eval(text)
+            except (SyntaxError, ValueError):
+                if text == 'exit':
+                    break
+                print(error)
+                continue
+            if text == 'exit':
+                    break
+            if not isinstance(text, datatype):
+                print(error)
+            else:
+                break
+        if text != 'exit':
+            print(success)
+            return text
+        return None
 
 class ObjEntity(Entity):
     def __init__(self, game: object, name: str, key: int, pos: vec2d, data: dict):
@@ -521,11 +582,12 @@ class ObjEntity(Entity):
         game.obj.instantiate_object(key, self)
         self.image = image.load(path.join(PATH['DEVSPRITES'], name + '.png'))
 
-    def draw(self, window):
-        window.draw_image(self.pos, self.image)
+    def draw(self):
+        self.game.draw.add(0, pos=self.pos, surface=self.image)
 
 
 
+# Main application method
 def main(debug: bool = False):
     """Main game loop."""
     GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator,
@@ -535,6 +597,18 @@ def main(debug: bool = False):
     GAME.tile.add_all()
     GAME.parallax = 0
     CUR = ObjCursor(GAME, vec2d(0, 0))
+    if GAME.debug:
+        GAME.debug.menu.get('fps').set_vars(backdrop=0)
+        GAME.debug.menu.get('campos').set_vars(backdrop=0)
+        GAME.debug.menu.get('memory').set_vars(backdrop=0)
+        size = 12
+        font = 'consolas'
+        pos = vec2d(0, 12*3)
+        element = ObjTextElement(GAME.debug.menu, 'curpos')
+        element.set_vars(size=size, font=font, pos=pos)
+        pos += vec2d(0, 12)
+        element = ObjTextElement(GAME.debug.menu, 'mode')
+        element.set_vars(size=size, font=font, pos=pos)
 
     clock = Clock()
     dt = 1
@@ -555,15 +629,29 @@ def main(debug: bool = False):
             return
 
         # Update objects
-        update(GAME, dt, cursor=CUR)
+        update(GAME, dt)
+        CUR.update(dt)
 
         # Draw objects and tile layers
-        draw(GAME, cursor=CUR)
+        CUR.draw()
+        draw(GAME)
 
-        # FPS display
-        fps = 'fps: {:3f}'.format(clock.get_fps())
-        font = GAME.font.get('arial', 12)
-        GAME.cam.draw_text(vec2d(0, FULLTILE), fps, font, (255, 0, 255), gui=1)
+        # Debug display
+        if GAME.debug:
+            fps = GAME.debug.menu.get('fps')
+            text = 'fps: {:.0f}'.format(clock.get_fps())
+            fps.set_vars(text=text)
+
+            campos = GAME.debug.menu.get('campos')
+            text = 'cam pos: {}'.format(GAME.cam.pos)
+            campos.set_vars(text=text)
+
+            memory = GAME.debug.menu.get('memory')
+            mem = PROCESS.memory_info().rss
+            mb = mem // (10**6)
+            kb = (mem - (mb * 10**6)) // 10**3
+            text = 'memory: {} MB, {} KB'.format(mb, kb)
+            memory.set_vars(text=text)
 
         # Render to screen
         render(GAME)
@@ -572,46 +660,26 @@ def main(debug: bool = False):
         dt = clock.tick(FPS)
         dt *= (FPS / 1000)
 
-def update(game: object, dt: float, **kwargs):
+def update(game: object, dt: float):
     game.obj.update_early(dt)
     game.obj.update(dt)
     game.obj.update_late(dt)
     game.cam.update(dt)
 
-    # Update cursor if provided
-    if kwargs != {}:
-        try:
-            kwargs['cursor']
-        except KeyError:
-            pass
-        else:
-            kwargs['cursor'].update(dt)
-
-def draw(game: object, **kwargs):
+def draw(game: object):
     cam = game.cam
 
     cam.blank()
-    game.obj.draw_early(cam)
-    game.tile.layers['background'].draw(cam)
-    game.obj.draw(cam)
-    game.collider.st.debug_draw(cam)
-    game.tile.layers['foreground'].draw(cam)
-    game.obj.draw_late(cam)
-
-
-    # Draw cursor if provided
-    if kwargs != {}:
-        try:
-            kwargs['cursor']
-        except KeyError:
-            pass
-        else:
-            kwargs['cursor'].draw_late(cam)
+    game.collider.st.debug_draw(game.draw)
+    game.draw.draw()
+    game.debug.menu.draw()
+    game.draw.render(cam)
 
 def render(game: object):
     game.window.render(game.cam)
 
 
+# If main file
 if __name__ == '__main__':
     main(True)
 

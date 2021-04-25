@@ -12,7 +12,6 @@ else:
 print('################') # sepperator
 
 
-
 # Base imports
 from math import floor
 import numpy as np
@@ -23,19 +22,22 @@ from pygame import image, event as pyevent#, Surface
 from pygame.time import Clock
 from pygame.locals import QUIT
 
-import objgraph
-
 # Custom imports
 if __name__ == '__main__': # If main file
     from engine.components.camera import ObjCamera
     from engine.engine import ObjGameHandler, f_loop, f_limit
     from engine.components.vector import vec2d
+    from engine.components.menu import (
+        ObjMenu, ObjTextElement, ObjButtonElement)
 else: # If being called as a module
     from .engine.components.camera import ObjCamera
     from .engine.engine import ObjGameHandler, f_loop, f_limit
     from .engine.components.vector import vec2d
+    from .engine.components.menu import (
+        ObjMenu, ObjTextElement, ObjButtonElement)
 
 print('################') # sepperator
+
 
 
 # Constants
@@ -123,6 +125,12 @@ def object_creator(**kwargs):
         key = game.obj.instantiate_key(key)
         ObjJukeBox(game, key, name, data)
 
+    elif name == 'main-menu':
+        key = kwargs['key']
+        data = kwargs['data']
+        key = game.obj.instantiate_key(key)
+        ObjMainMenu(game, key, name, data)
+
 
 # Special classes
 class ObjView(ObjCamera):
@@ -157,16 +165,8 @@ class Entity():
         """Update called last."""
         pass
 
-    def draw_early(self, window: object):
-        """Draw called before background."""
-        pass
-
-    def draw(self, window: object):
+    def draw(self):
         """Draw called in between back and foreground."""
-        pass
-
-    def draw_late(self, window: object):
-        """Draw called after foreground."""
         pass
 
 class ObjJukeBox(Entity):
@@ -197,25 +197,71 @@ class ObjJukeBox(Entity):
         elif current_music is not None: # Fade music
             game.audio.music.stop(1000)
 
+class ObjMainMenu(Entity):
+    def __init__(self, game, key, name, data):
+        game.obj.instantiate_object(key, self)
+        self.game = game
+        self.key = key
+        self.name = name
+        self.data = data
+
+        self.menu = ObjMenu(game, SIZE)
+        # TITLE
+        title = ObjTextElement(self.menu, 'title')
+        size = 36
+        color = (144, 240, 240)
+        text = 'Game-X: The Musical'
+        pos = SIZE / 2
+        font = 'consolas'
+        title.set_vars(size=size, color=color, text=text,
+                       pos=pos, font=font, center=True)
+
+        # CAPTION
+        caption = ObjTextElement(self.menu, 'caption')
+        size = 16
+        color = (128, 200, 200)
+        text = 'Press enter to continue...'
+        pos = SIZE / 2 + vec2d(0, 18 + 8)
+        font = 'consolas'
+        caption.set_vars(size=size, color=color, text=text,
+                         pos=pos, font=font, center=True)
+
+        # Button
+        button = ObjButtonElement(self.menu, 'button')
+        size = vec2d(128, 16)
+        button.set_vars(size=size, pos=pos, call=self.pressed, center=True)
+
+    def draw(self):
+        self.menu.draw()
+
+    def update(self, dt: float):
+        if self.game.input.kb.get_key_pressed(40):
+            self.game.level.load('level1')
+        self.menu.get('button').update()
+
+    def pressed(self, name: str):
+        if name == 'button':
+            self.game.level.load('level-1')
+
 
 # Gameplay objects
 class GameObject(Entity):
     """Class which all game objects inherit from."""
     def __init__(self, game: object, key: int, pos: vec2d,
-                 size: vec2d, relative: vec2d = vec2d(0, 0)):
+                 size: vec2d, origin: vec2d = vec2d(0, 0)):
         self.game = game
         self.key = key
         self.pos = pos
         self.size = size
+        self.origin = origin
+        self.depth = 8
         game.obj.instantiate_object(key, self)
-        rel = relative
+        rel = origin
         w, h = size - vec2d(1, 1)
         self.cpoints = (vec2d(rel.x, rel.y),
                         vec2d(rel.x+w, rel.y),
                         vec2d(rel.x+w, rel.y+h),
                         vec2d(rel.x, rel.y+h))
-        self.crect = (vec2d(rel.x, rel.x+w),
-                      vec2d(rel.y, rel.y+h))
         self._frame = 0
         self.frames = []
 
@@ -266,16 +312,18 @@ class GameObject(Entity):
             key = self.key
         if pos is None:
             pos = self.pos
-        crect = self.crect
+        size = self.size
+        origin = self.origin
 
         # Check for collision
-        return self.game.collider.dy.get_collision(pos, crect, key)
+        return self.game.collider.dy.get_collision(pos, size, origin, key)
 
     # Drawing sprites
-    def draw(self, window):
+    def draw(self):
         """Draw called inbetween back and foreground."""
         pos = self.pos
-        window.draw_image(pos, self.frames[self.frame])
+        surface = self.frames[self.frame]
+        self.game.draw.add(depth=self.depth, pos=pos, surface=surface)
 
     # Removing index in object handler
     def delete(self):
@@ -377,21 +425,14 @@ class ObjPlayer(GameObject):
             # Update camera position
             self._move_cam()
 
-    def draw(self, window):
-        """Drawing at the same time as other objects."""
-        pass
-
-    def draw_late(self, window):
+    def draw(self):
         """Called every frame to draw each game object."""
-        #super().draw(window)
         image = self.frames[self.frame]
-        image.set_alpha(127)
-        window.draw_image(self.pos, image)
-        for item in range(1, len(self.trail)):
-            window.draw_image(self.trail[item], image)
-            image.set_alpha(((image.get_alpha() + 1) // 2) -1)
         image.set_alpha(255)
-        window.draw_image(self.pos, image)
+        self.game.draw.add(16, pos=self.pos, surface=image.copy())
+        for item in range(1, len(self.trail)):
+            image.set_alpha(((image.get_alpha() + 1) // 2) - 1)
+            self.game.draw.add(15, pos=self.trail[item], surface=image.copy())
 
     def die(self):
         self.game.audio.sfx.play('boop.wav')
@@ -550,7 +591,7 @@ class ObjButton(GameObject):
                  size: tuple, name: str, data: dict):
         # GameObject initialization
         super().__init__(game, key, pos, size,
-                         relative=vec2d(0, FULLTILE-size[1]))
+                         origin=vec2d(0, FULLTILE-size[1]))
         game.collider.dy.add(key, self)
         self.name = name
         self.data = data
@@ -633,7 +674,7 @@ class ObjSpike(GameObject):
                  size: tuple, name: str, data: dict):
         # GameObject initialization
         super().__init__(game, key, pos, size,
-                         relative=vec2d(0, FULLTILE-size[1]))
+                         origin=vec2d(0, FULLTILE-size[1]))
         self.name = name
         self.data = data
         game.collider.dy.add(key, self)
@@ -650,8 +691,7 @@ class ObjSpikeInv(GameObject):
     def __init__(self, game: object, key: int, pos: tuple,
                  size: tuple, name: str, data: dict):
         # GameObject initialization
-        super().__init__(game, key, pos, size,
-                         relative=vec2d(0, 0))
+        super().__init__(game, key, pos, size)
         self.name = name
         self.data = data
         game.collider.dy.add(key, self)
@@ -671,12 +711,13 @@ def main(debug: bool = False):
     GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator,
                           fps=FPS, debug=debug)
     GAME.cam = ObjView(SIZE)
-    GAME.level.load('level1')
+    GAME.level.load('mainmenu')
     GAME.parallax = 1
     if GAME.debug:
         GAME.debug.time_record = {
             'Update': 0,
-            'Draw': 0,
+            'DrawAdd': 0,
+            'DrawParse': 0,
             'Render': 0}
 
     # Timing info
@@ -710,44 +751,39 @@ def main(debug: bool = False):
             GAME.debug.time_record['Update'] += (time() - t)
             t = time()
 
-        gc.collect()
-
         # Draw calls
         if dt > 0.9:
-            draw(GAME)
+            # Debug Display
             if GAME.debug:
-                GAME.debug.time_record['Draw'] += (time() - t)
+                fps = GAME.debug.menu.get('fps')
+                text = 'fps: {:.0f}'.format(clock.get_fps())
+                fps.set_vars(text=text)
+
+                campos = GAME.debug.menu.get('campos')
+                text = 'cam pos: {}'.format(GAME.cam.pos)
+                campos.set_vars(text=text)
+
+                memory = GAME.debug.menu.get('memory')
+                mem = PROCESS.memory_info().rss
+                mb = mem // (10**6)
+                kb = (mem - (mb * 10**6)) // 10**3
+                text = 'memory: {} MB, {} KB'.format(mb, kb)
+                memory.set_vars(text=text)
+
+            drawadd(GAME)
+            if GAME.debug:
+                GAME.debug.time_record['DrawAdd'] += time() - t
                 t = time()
 
-            # Update debug
+            drawparse(GAME)
             if GAME.debug:
-                res = False
-
-                ele = GAME.debug.menu.get('fps')
-                text = 'fps: {:.0f}'.format(clock.get_fps())
-                res = res or ele.set_vars(text=text)
-
-                ele = GAME.debug.menu.get('campos')
-                text = 'cam pos: {}'.format(GAME.cam.pos)
-                res = res or ele.set_vars(text=text)
-
-                ele = GAME.debug.menu.get('memory')
-                memory = PROCESS.memory_info().rss
-                mb = memory // (10**6)
-                kb = (memory - (mb * 10**6)) // 10**3
-                text = 'memory: {} MB, {} KB'.format(mb, kb)
-                res = res or ele.set_vars(text=text)
-
-                if res:
-                    GAME.debug.menu.draw()
-
-                GAME.debug.menu.render(GAME.cam)
+                GAME.debug.time_record['DrawParse'] += time() - t
+                t = time()
 
             # Render to screen
             render(GAME)
             if GAME.debug:
                 GAME.debug.time_record['Render'] += (time() - t)
-
 
         # Tick clock
         dt = clock.tick(FPS) * (FPS/1000)
@@ -759,18 +795,15 @@ def update(game: object, dt: float):
     game.obj.update(dt)
     game.obj.update_late(dt)
 
-def draw(game: object):
+def drawadd(game: object):
     """Draw call."""
-    cam = game.cam
-
-    # Blank screen
-    cam.blank()
-    game.obj.draw_early(cam)
-    game.tile.layers['background'].draw(cam)
-    game.obj.draw(cam)
-    game.tile.layers['foreground'].draw(cam)
-    game.obj.draw_late(cam)
+    game.draw.draw()
     game.debug.menu.draw()
+
+def drawparse(game: object):
+    # Blank screen
+    game.cam.blank()
+    game.draw.render(game.cam)
 
 def render(game: object):
     """Render textures to screen."""

@@ -1,5 +1,5 @@
 """For getting key id's."""
-from os import path
+from os import getcwd, path
 
 from pygame import event as pyevent
 from pygame.locals import (QUIT, KEYDOWN)
@@ -7,17 +7,19 @@ from pygame.locals import (QUIT, KEYDOWN)
 from engine.engine import ObjGameHandler
 
 PATH = {}
-PATH['DEFAULT'] = __file__[:-len(path.basename(__file__))]
+PATH['DEFAULT'] = getcwd()
 PATH['ASSETS'] = path.join(PATH['DEFAULT'], 'assets')
 PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
 PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
 PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
 PATH['MUSIC'] = path.join(PATH['ASSETS'], 'music')
 PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
+PATH['DEBUGLOG'] = path.join(PATH['DEFAULT'], 'debug')
 
 SIZE = (480, 320)
+FPS = 60
 
-GAME = ObjGameHandler(SIZE, 32, PATH, None)
+GAME = ObjGameHandler(SIZE, 32, PATH, None, fps=FPS)
 
 def main():
     """Main game loop."""

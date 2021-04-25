@@ -4,8 +4,6 @@
 import pygame
 from typing import Callable
 
-from .helper_functions.tuple_functions import f_tupmult, f_tupadd
-
 from .components.level import ObjLevel
 from .components.inputs import ObjInput
 from .components.window import ObjWindow
@@ -15,12 +13,17 @@ from .components.tile import ObjTileMap
 from .components.font import ObjFont
 from .components.audio import ObjMixer
 from .components.debug import ObjDebug
+from .components.draw import ObjDraw
+from .components.vector import vec2d
 
 # Methods
 # Flip color
 def f_cinverse(rgb=(0, 0, 0)) -> tuple:
     """Converts 16 bit tuple to its 16 bit inverse(RGB)."""
-    return f_tupmult(f_tupadd((-255, -255, -255), rgb), -1)
+    rgb = list(rgb)
+    for i in range(2):
+        rgb[i] = 255 - rgb[i]
+    return tuple(rgb)
 
 # Return a value following pacman logic
 def f_loop(val, minval, maxval):
@@ -55,7 +58,7 @@ def f_limit(val, minval, maxval):
 # Game handling object
 class ObjGameHandler():
     """Game handler."""
-    def __init__(self, screen_size: tuple, full_tile: int,
+    def __init__(self, screen_size: vec2d, full_tile: int,
                  path: list, object_creator: Callable, fps: int,
                  debug: bool = False):
         # File paths
@@ -75,6 +78,7 @@ class ObjGameHandler():
         self.input = ObjInput(self)
         self.font = ObjFont()
         self.audio = ObjMixer(self)
+        self.draw = ObjDraw(self)
         self.debug = ObjDebug(self)
         self.debug.on = bool(debug)
 
@@ -84,13 +88,14 @@ class ObjGameHandler():
     def clear_cache(self):
         """Clears out all objects and colliders."""
         self.audio.sfx.clear()
-        self.tile.clear()
+        self.tile.clear_cache()
 
     def clear_ent(self):
         """Clears out all objects and colliders."""
         self.obj.clear()
         self.collider.st.clear()
         self.collider.dy.clear()
+        self.tile.clear_ent()
 
     def end(self):
         """Ends the game."""

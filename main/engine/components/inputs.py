@@ -1,7 +1,6 @@
 """Objects used for event handling related to inputs of a keyboard or mouse."""
 from pygame.locals import (KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
                            MOUSEBUTTONUP, MOUSEMOTION)
-from ..helper_functions.tuple_functions import f_tupadd
 from .vector import vec2d
 
 class ObjInput():
@@ -102,44 +101,44 @@ class ObjMouse():
         self.pos = vec2d(0, 0)
         self.rel = vec2d(0, 0)
 
-    def get_pos(self):
+    def get_pos(self) -> vec2d:
         """Returns the current mouse position."""
         return self.pos
 
-    def get_delta(self):
+    def get_delta(self) -> vec2d:
         """Returns the mouse position relative to last cycle."""
         return self.rel
 
-    def get_button_pressed(self, *button):
-        """Returns whether or not a mouse button was just pressed."""
-        for b in button:
-            try:
-                if self.button_pressed[b]:
-                    return 1
-            except KeyError:
-                pass
-        return 0
-
-    def get_button_pressed_pos(self, button) -> tuple:
+    def get_button_pressed_pos(self, button) -> vec2d:
         """Returns the position of where a mouse clicked with a button."""
         try:
             return self.button_pressed_pos[button]
         except KeyError:
-            return 0
+            return None
 
-    def get_button_held(self, *button):
+    def get_button_pressed(self, *button) -> bool:
+        """Returns whether or not a mouse button was just pressed."""
+        for b in button:
+            try:
+                if self.button_pressed[b]:
+                    return True
+            except KeyError:
+                pass
+        return False
+
+    def get_button_held(self, *button) -> bool:
         """Returns whether or not a mouse button is currently being held."""
         for b in button:
             try:
                 if self.button_held[b]:
-                    return 1
+                    return True
             except KeyError:
                 pass
-        return 0
+        return False
 
     def reset(self):
         """Resets the button_pressed and button_pressed_pos dictionary
         so that the inputs only last for the loop where in they were recorded"""
         self.button_pressed = {}
         self.button_pressed_pos = {}
-        self.rel = (0, 0)
+        self.rel = vec2d(0, 0)
