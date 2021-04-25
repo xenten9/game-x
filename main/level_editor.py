@@ -1,6 +1,7 @@
 """Game-X level editor."""
 # OS import
 from os import path, getcwd, system, name as osname, getpid
+import sys
 from psutil import Process
 
 # Clear terminal
@@ -43,7 +44,10 @@ if True:
     PROCESS = Process(getpid())
 
     PATH = {}
-    PATH['MAIN'] = getcwd()
+    if getattr(sys, 'frozen', False):
+        PATH['MAIN'] = path.dirname(sys.executable)
+    else:
+        PATH['MAIN'] = getcwd()
     PATH['DEBUGLOG'] = path.join(PATH['MAIN'], 'debug')
     PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
     PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')

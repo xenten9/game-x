@@ -79,8 +79,7 @@ class ObjGameHandler():
         self.font = ObjFont()
         self.audio = ObjMixer(self)
         self.draw = ObjDraw(self)
-        self.debug = ObjDebug(self)
-        self.debug.on = bool(debug)
+        self.debug = ObjDebug(self, debug)
 
         # Game loop
         self.run = 1

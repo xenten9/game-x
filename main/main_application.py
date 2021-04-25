@@ -1,8 +1,8 @@
 """Game-X."""
 # OS import
-from os import path, getcwd, system, name as osname, getpid
+from os import path, system, name as osname, getpid, getcwd
+import sys
 from psutil import Process
-import gc
 
 # Clear terminal
 if osname == 'nt':
@@ -48,7 +48,10 @@ if True:
     PROCESS = Process(getpid())
 
     PATH = {}
-    PATH['MAIN'] = getcwd()
+    if getattr(sys, 'frozen', False):
+        PATH['MAIN'] = path.dirname(sys.executable)
+    else:
+        PATH['MAIN'] = getcwd()
     PATH['DEBUGLOG'] = path.join(PATH['MAIN'], 'debug')
     PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
     PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
@@ -787,7 +790,8 @@ def main(debug: bool = False):
 
         # Tick clock
         dt = clock.tick(FPS) * (FPS/1000)
-        GAME.debug.tick()
+        if GAME.debug:
+            GAME.debug.tick()
 
 def update(game: object, dt: float):
     """Update call."""
@@ -798,7 +802,8 @@ def update(game: object, dt: float):
 def drawadd(game: object):
     """Draw call."""
     game.draw.draw()
-    game.debug.menu.draw()
+    if game.debug:
+        game.debug.menu.draw()
 
 def drawparse(game: object):
     # Blank screen
