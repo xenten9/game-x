@@ -210,7 +210,7 @@ class ObjMainMenu(Entity):
         title = ObjTextElement(self.menu, 'title')
         size = 36
         color = (144, 240, 240)
-        text = 'Game-X: The Musical'
+        text = 'Game-X: Now with depth!'
         pos = SIZE / 2
         font = 'consolas'
         title.set_vars(size=size, color=color, text=text,
