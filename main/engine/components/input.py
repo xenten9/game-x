@@ -1,23 +1,26 @@
-"""Objects used for event handling related to inputs of a keyboard or mouse."""
-from pygame.locals import (KEYUP, KEYDOWN, MOUSEBUTTONDOWN,
-                           MOUSEBUTTONUP, MOUSEMOTION)
-from .vector import vec2d
+from typing import Union
+from pygame.constants import (KEYDOWN, KEYUP, MOUSEMOTION,
+                              MOUSEBUTTONUP, MOUSEBUTTONDOWN)
+from pygame.event import Event
+from ..types.component import Component
+from ..types.vector import vec2d
 
-class ObjInput():
-    def __init__(self, game):
-        self.game = game
-        self.kb = ObjKeyboard()
-        self.ms = ObjMouse()
 
-    def handle_events(self, event):
+class Input(Component):
+    def __init__(self, engine: object):
+        super().__init__(engine)
+        self.kb = Keyboard()
+        self.ms = Mouse()
+
+    def handle_events(self, event: Event):
         """Handles inputs and events."""
         # Key pressed
         if event.type == KEYDOWN:
-            self.kb.set_key(event.scancode, 1)
+            self.kb.set_key(event.scancode, True)
 
         # Key released
         elif event.type == KEYUP:
-            self.kb.set_key(event.scancode, 0)
+            self.kb.set_key(event.scancode, False)
 
         # Mouse movement
         elif event.type == MOUSEMOTION:
@@ -28,7 +31,7 @@ class ObjInput():
         elif event.type == MOUSEBUTTONDOWN:
             self.ms.button_pressed[event.button] = 1
             self.ms.button_held[event.button] = 1
-            self.ms.button_pressed_pos[event.button] = event.pos
+            self.ms.button_pressed_pos[event.button] = vec2d(*event.pos)
 
         # Mouse released
         elif event.type == MOUSEBUTTONUP:
@@ -37,14 +40,15 @@ class ObjInput():
 
         # Music end
         elif event.type == 56709:
-            self.game.audio.music.end()
+            self.engine.aud.music.end()
 
     def reset(self):
+        """Resets keyboard and mouse."""
         self.kb.reset()
         self.ms.reset()
 
 # keyboard inputs
-class ObjKeyboard():
+class Keyboard():
     """Record all of the keyoard inputs whether pressed or held."""
     def __init__(self):
         # define dictionarys for keyboard lookup and storage
@@ -56,20 +60,20 @@ class ObjKeyboard():
         for k in keys:
             try:
                 if self.key_held[k]:
-                    return 1
+                    return True
             except KeyError:
                 pass
-        return 0
+        return False
 
-    def get_key_pressed(self, *keys):
+    def get_key_pressed(self, *keys) -> bool:
         """Returns bool for if a key just got pressed."""
         for k in keys:
             try:
                 if self.key_pressed[k]:
-                    return 1
+                    return True
             except KeyError:
                 pass
-        return 0
+        return False
 
     def get_key_combo(self, kpress, *kheld) -> bool:
         """Returns bool for a series of keys if any are being held."""
@@ -78,21 +82,20 @@ class ObjKeyboard():
             for k in kheld:
                 held.append(self.get_key_held(k))
             if min(held) == 1:
-                return 1
-        return 0
+                return True
+        return False
 
-    def set_key(self, key, value):
+    def set_key(self, key: int, value: bool):
         """Used to set a key within key_pressed and key_held."""
         self.key_held[key] = value
         self.key_pressed[key] = value
 
     def reset(self):
-        """Resets the key_pressed dictionary
-        so that the inputs only last for the loop where in they were recorded"""
+        """Resets inputs."""
         self.key_pressed = {}
 
 # mouse inputs
-class ObjMouse():
+class Mouse():
     """Used to get mouse inputs and movement."""
     def __init__(self):
         self.button_pressed = {}
@@ -109,7 +112,7 @@ class ObjMouse():
         """Returns the mouse position relative to last cycle."""
         return self.rel
 
-    def get_button_pressed_pos(self, button) -> vec2d:
+    def get_button_pressed_pos(self, button) -> Union[vec2d, None]:
         """Returns the position of where a mouse clicked with a button."""
         try:
             return self.button_pressed_pos[button]
@@ -137,8 +140,7 @@ class ObjMouse():
         return False
 
     def reset(self):
-        """Resets the button_pressed and button_pressed_pos dictionary
-        so that the inputs only last for the loop where in they were recorded"""
+        """Resets inputs."""
         self.button_pressed = {}
         self.button_pressed_pos = {}
         self.rel = vec2d(0, 0)

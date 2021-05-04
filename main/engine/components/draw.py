@@ -1,18 +1,19 @@
-from time import time
+from ..types.component import Component
+from .camera import Camera
 
-class ObjDraw():
-    def __init__(self, game):
-        self.game = game
+class Draw(Component):
+    def __init__(self, engine: object):
+        super().__init__(engine)
         self.depths = {}
 
     def draw(self):
         """Tell each object to add to the draw roster."""
-        obj = self.game.obj.obj
+        obj = self.engine.obj.obj
         for key in obj:
-            obj[key].draw()
-        tile = self.game.tile.layers
+            obj[key].draw(self)
+        tile = self.engine.til.layers
         for layer in tile:
-            tile[layer].draw()
+            tile[layer].draw(self)
 
     def add(self, depth: int, **kwargs):
         """Add an element to be drawn when called."""
@@ -24,7 +25,7 @@ class ObjDraw():
             self.depths[depth] = []
         self.depths[depth].append(kwargs)
 
-    def render(self, window: object):
+    def render(self, window: Camera):
         depths = sorted(self.depths)
         for i in depths:
             depth = self.depths[i]
@@ -32,7 +33,7 @@ class ObjDraw():
                 try:
                     gui = kwargs['gui']
                 except KeyError:
-                    gui = 0
+                    gui = False
                 try:
                     special = kwargs['special']
                 except KeyError:

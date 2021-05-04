@@ -1,20 +1,25 @@
 """Object for rendering to the screen."""
-from pygame import display, Surface, Rect, draw, transform
+from pygame import display
+from ..types.component import Component
+from ..types.vector import vec2d
+from .camera import Camera
 
 # Handles graphics
-class ObjWindow():
+class Window(Component):
     """Handles graphics."""
-    def __init__(self, game, screen_size: tuple):
-        self.game = game
-        self.display = display.set_mode(screen_size)
-        self.size = screen_size
+    def __init__(self, engine, size: vec2d):
+        super().__init__(engine)
+        size = size.floor()
+        self.display = display.set_mode(size)
+        self.size = size
 
-    def render(self, camera):
-        """Called when self.surface needs to be rendered to the screen."""
+    def render(self, camera: Camera):
+        """Renders camera surface to screen."""
         surface = camera.surface
-        if surface.get_size() != self.size:
-            surface = transform.scale(surface, self.size)
         self.display.blit(surface, (0, 0))
+
+    def update(self):
+        """Update screen."""
         display.update()
 
     def blank(self):

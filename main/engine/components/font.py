@@ -1,9 +1,11 @@
 """Object for handling fonts."""
 from pygame import font
+from ..types.component import Component
 font.init()
 
-class ObjFont():
-    def __init__(self):
+class Font(Component):
+    def __init__(self, engine):
+        super().__init__(engine)
         self.fonts = {'arial12': font.SysFont('arial', 12)}
 
     def add(self, name: str, size: int):

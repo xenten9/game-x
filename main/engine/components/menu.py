@@ -1,19 +1,23 @@
 """Menu's for all manner of occasions."""
-from typing import Callable
-from pygame import Surface, draw, Rect, surface
+from __future__ import annotations
+from typing import Callable, Tuple
+from pygame import Surface, draw, Rect
 
-from .vector import vec2d
+from ..types.vector import vec2d
+from ..types.component import Component
+from .draw import Draw
 
-class ObjMenu():
+class Menu(Component):
     """Object used for menus."""
-    def __init__(self, game: object, size: vec2d, pos: vec2d = vec2d(0, 0)):
-        self.game = game
+    def __init__(self, engine: object, size: vec2d, pos: vec2d = vec2d(0, 0)):
+        super().__init__(engine)
         self.size = size
         self.pos = pos
+        self.visible = True
         self.elements = {}
-        self.surface = Surface(self.size).convert_alpha()
+        self.surface = Surface(self.size.ftup()).convert_alpha()
 
-    def add(self, element: object):
+    def add(self, element: MenuElement):
         """Add element to menu."""
         self.elements[element.name] = element
 
@@ -26,168 +30,319 @@ class ObjMenu():
         for i in self.elements:
             if self.elements[i].name == name:
                 return self.elements[i]
+        return None
 
     def blank(self):
         """Blank menu to be empty."""
         self.surface.fill((0, 0, 0, 0))
 
-    def draw(self):
+    def draw(self, draw: Draw):
         """Draw all elements to menu."""
         self.blank()
-        for i in self.elements:
-            try:
-                self.elements[i].draw()
-            except AttributeError:
-                pass
+        if self.visible:
+            for i in self.elements:
+                try:
+                    self.elements[i].draw(draw)
+                except AttributeError:
+                    pass
 
-class ObjTextElement():
-    """Text menu element."""
-    def __init__(self, menu, name: str):
-        self.menu = menu
-        self.name = name
-        self.size = 12
-        self.pos = vec2d(0, 0)
-        self.color = (255, 0, 255)
-        self.text = ''
-        self.font = 'arial'
-        self.backdrop = False
-        self.center = False
-        self.depth = 16
-        self.surface = Surface(vec2d(12, 12)).convert_alpha()
+class MenuElement():
+    def __init__(self, engine, menu: Menu, name: str):
+        self._engine = engine
+        self._menu = menu
+        self._name = name
+        self._pos = vec2d(0, 0)
+        self._depth = 8
+        self._center = 7
+        self._surface = Surface((0, 0))
+        self._cache = True
+        self._menu.add(self)
 
-        menu.add(self)
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def depth(self):
+        return self._depth
+
+    @depth.setter
+    def depth(self, depth):
+        self._depth = depth
+
+    @property
+    def center(self):
+        return self._center
+
+    @center.setter
+    def center(self, center: int):
+        if 1 <= center <= 9:
+            self._center = center
+            self._cache = True
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, pos: vec2d):
+        self._pos = pos
+
+    def get_cpos(self, size: vec2d):
+        if self.center == 1:
+            return self.pos - vec2d(0, size.y)
+        if self.center == 2:
+            return self.pos - vec2d(size.x/2, size.y)
+        if self.center == 3:
+            return self.pos - size
+        if self.center == 4:
+            return self.pos - vec2d(0, size.y/2)
+        if self.center == 5:
+            return self.pos - size/2
+        if self.center == 6:
+            return self.pos - vec2d(size.x, size.y/2)
+        if self.center == 7:
+            return self.pos
+        if self.center == 8:
+            return self.pos - vec2d(size.x/2, 0)
+        if self.center == 9:
+            return self.pos - vec2d(size.x, 0)
 
     def __del__(self):
-        self.menu.remove(self.name)
+        self._menu.remove(self._name)
 
-    def set_vars(self, size: tuple = None, pos: tuple = None,
-                 color: tuple = None, text: str = None, font: str = None,
-                 backdrop: bool = None, center: bool = None,
-                 depth: int = None):
-        res = False
-        if size not in (None, self.size):
-            self.size = size
-            res = True
-        if pos not in (None, self.pos):
-            self.pos = pos
-            res = True
-        if color not in (None, self.color):
-            self.color = color
-            res = True
-        if text not in (None, self.text):
-            self.text = text
-            res = True
-        if font not in (None, self.font):
-            self.font = font
-            res = True
-        if backdrop not in (None, self.backdrop):
-            self.backdrop = backdrop
-            res = True
-        if center not in (None, self.center):
-            self.center = center
-            res = True
-        if depth not in (None, self.depth):
-            self.depth = depth
-            res = True
-        if res:
+class MenuElementVisible(MenuElement):
+    def __init__(self, engine, menu: Menu, name: str):
+        super().__init__(engine, menu, name)
+        self._surface = Surface((0, 0))
+
+    @property
+    def surface(self):
+        return self._surface
+
+    @surface.setter
+    def surface(self, surface: Surface):
+        self._surface = surface
+
+    def cache(self):
+        self.surface = Surface((0, 0))
+
+    def draw(self, draw: Draw):
+        surface = self.surface
+        pos = self.get_cpos(vec2d(*surface.get_size()))
+        if self._cache:
             self.cache()
+        draw.add(self.depth, pos=pos, surface=surface, gui=1)
+
+class SubMenu(MenuElement, Menu):
+    def __init__(self, engine, menu: Menu, name: str):
+        super().__init__(engine, menu, name)
+
+class MenuText(MenuElementVisible):
+    """Text menu element."""
+    def __init__(self, engine, menu: Menu, name: str):
+        super().__init__(engine, menu, name)
+        self._size = 12
+        self._font = 'arial'
+        self._text = name
+        self._color = (255, 0, 255)
+        self._menu.add(self)
+
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, size: int):
+        self._size = size
+        self._cache = True
+
+    @property
+    def font(self):
+        return self._font
+
+    @font.setter
+    def font(self, font: str):
+        self._font = font
+        self._cache = True
+
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, text: str):
+        self._text = text
+        self._cache = True
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, color: Tuple[int, int, int]):
+        for value in color:
+            if value < 0 or value > 255:
+                raise ValueError('color values must be bounded by 0-255')
+        self._color = color
+        self._cache = True
 
     def cache(self):
         """Render text to surface."""
-        font = self.menu.game.font.get(self.font, self.size)
+        font = self._engine.fnt.get(self.font, self.size)
         render = font.render(self.text, 0, self.color)
-        self.surface = Surface(render.get_size())
-        if not self.backdrop:
-            self.surface.set_colorkey((0, 0, 0))
-        self.surface.blit(render, vec2d(0, 0))
+        self.surface = render
 
-    def draw(self):
-        """Draw text to menu."""
-        if not self.center:
-            pos = self.pos
-        else:
-            pos = self.pos - (vec2d(*self.surface.get_size()) / 2)
-        surface = self.surface
-        self.menu.game.draw.add(self.depth, pos=pos, surface=surface, gui=1)
-
-class ObjRectElement():
+class MenuRect(MenuElementVisible):
     """Rectangle menu element."""
-    def __init__(self, menu, name: str):
-        self.menu = menu
-        self.name = name
-        self.size = vec2d(0, 0)
-        self.pos = vec2d(0, 0)
-        self.color = (255, 0, 255)
-        self.depth = 16
-        self.surface = Surface(vec2d(12, 12)).convert_alpha()
-
+    def __init__(self, engine, menu: Menu, name: str):
+        super().__init__(engine, menu, name)
+        self._size = vec2d(0, 0)
+        self._color = (255, 0, 255)
         menu.add(self)
 
-    def __del__(self):
-        self.menu.remove(self.name)
+    @property
+    def size(self):
+        return self._size
 
-    def set_vars(self, size: tuple = None, pos: tuple = None,
-                 color: tuple = None, depth: int = None):
-        res = False
-        if size not in (None, self.size):
-            self.size = size
-            res = True
-        if pos not in (None, self.pos):
-            self.pos = pos
-            res = True
-        if color not in (None, self.color):
-            self.color = color
-            res = True
-        if depth not in (None, self.depth):
-            self.depth = depth
-            res = True
-        if res:
-            self.cache()
+    @size.setter
+    def size(self, size: vec2d):
+        self._size = size.floor()
+        self._cache = True
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, color: Tuple[int, int, int]):
+        for value in color:
+            if value < 0 or value > 255:
+                raise ValueError('color values must be bounded by 0-255')
+        self._color = color
+        self._cache = True
 
     def cache(self):
         """Render rect to surface."""
-        self.surface = Surface(self.size)
-        draw.rect(self.surface, self.color, Rect(self.pos, self.size))
+        self.surface = Surface(self.size.ftup())
+        draw.rect(self.surface, self.color, Rect(self.pos.tup(), self.size.tup()))
 
-    def draw(self):
-        """Draw rect to menu."""
-        surface = self.surface
-        pos = self.pos
-        self.menu.game.draw.add(self.depth, pos=pos, surface=surface, gui=1)
-
-class ObjButtonElement():
+class MenuButton(MenuElement):
     """Button menu element."""
-    def __init__(self, menu, name: str):
-        self.menu = menu
-        self.name = name
-        self.size = vec2d(0, 0)
-        self.pos = vec2d(0, 0)
-        self.mkey = 1
-        self.call = None
-        self.center = 0
-        self.surface = Surface(vec2d(12, 12)).convert_alpha()
-
+    def __init__(self, engine, menu: Menu, name: str):
+        super().__init__(engine, menu, name)
+        self._size = vec2d(0, 0)
+        self._mkey = 1
+        self._call = None
+        self._held = False
+        self._focus = False
         menu.add(self)
 
-    def __del__(self):
-        self.menu.remove(self.name)
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, size: vec2d):
+        self._size = size
+
+    @property
+    def mkey(self):
+        return self._mkey
+
+    @mkey.setter
+    def mkey(self, mkey: int):
+        if 1 <= mkey <= 3:
+            self._mkey = mkey
+
+    @property
+    def call(self):
+        return self._call
+
+    @call.setter
+    def call(self, call: Callable):
+        self._call = call
+
+    @property
+    def held(self):
+        return self._held
+
+    @held.setter
+    def held(self, held: bool):
+        self._held = held
 
     def update(self):
-        pos = self.menu.game.input.ms.get_button_pressed_pos(self.mkey)
-        if pos != None:
-            if Rect(self.pos - self.size / 2, self.size).collidepoint(pos):
-                self.call(self.name)
+        if self._menu.visible:
+            pos = self._engine.inp.ms.get_button_pressed_pos(self.mkey)
+            if pos is not None:
+                if self.collide(pos):
+                    if self.held:
+                        self.focus = True
+                    else:
+                        self.call(self, pos - self.pos)
+            if self._focus:
+                if self._engine.inp.ms.get_button_held(self.mkey):
+                    pos = self._engine.inp.ms.get_pos()
+                    self.call(self, pos - self.pos)
+                else:
+                    self._focus = False
 
-    def set_vars(self, size: tuple = None, pos: tuple = None,
-                 mkey: int = None, call: Callable = None,
-                 center: bool = False):
-        if size not in (None, self.size):
-            self.size = size
-        if pos not in (None, self.pos):
-            self.pos = pos
-        if mkey not in (None, self.mkey):
-            self.mkey = mkey
-        if call not in (None, self.call):
-            self.call = call
-        if center not in (None, self.center):
-            self.center = center
+    def collide(self, pos) -> bool:
+        pos -= self.get_cpos(self.size)
+        if Rect((0, 0), self.size.tup()).collidepoint(pos):
+            return True
+        return False
+
+class MenuButtonFull(SubMenu):
+    def __init__(self, engine, menu: Menu, name: str):
+        super().__init__(engine, menu, name)
+        self.elements = {}
+        self.text = MenuText(self._engine, self, name + '-text')
+        self.rect = MenuRect(self._engine, self, name + '-rect')
+        self.button = MenuButton(self._engine, self, name + '-button')
+        self._size = vec2d(0, 0)
+
+    @property
+    def visible(self):
+        return self._menu.visible
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, pos: vec2d):
+        self._pos = pos
+        self.text.pos = pos
+        self.rect.pos = pos
+        self.button.pos = pos
+
+    @property
+    def center(self):
+        return self._center
+
+    @center.setter
+    def center(self, center: int):
+        if 1 <= center <= 9:
+            self._center = center
+            self.text.center = self.center
+            self.rect.center = self.center
+            self.button.center = self.center
+
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, size: vec2d):
+        self._size = size.floor()
+        self.text.size = self.size.y
+        self.rect.size = self.size
+        self.button.size = self.size
+
+    def update(self):
+        self.button.update()
+
+    def draw(self, draw: Draw):
+        self.text.draw(draw)
+        self.rect.draw(draw)

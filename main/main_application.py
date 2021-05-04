@@ -1,264 +1,320 @@
-"""Game-X."""
-# OS import
-from os import path, system, name as osname, getpid, getcwd
-import sys
-from psutil import Process
-
-# Clear terminal
-if osname == 'nt':
-    system('cls')
-else:
-    system('clear')
-print('################') # sepperator
-
-
-# Base imports
+# Standard library
+from os import path, system, name as osname, getpid
+from typing import Optional, Tuple
 from math import floor
-import numpy as np
 from time import time
 
-# Library Imports
-from pygame import image, event as pyevent#, Surface
+# External libraries
+from psutil import Process
+import numpy as np
+from pygame.constants import KEYDOWN, QUIT
 from pygame.time import Clock
-from pygame.locals import QUIT
+from pygame.event import get as get_events
+from pygame import image
 
-# Custom imports
-if __name__ == '__main__': # If main file
-    from engine.components.camera import ObjCamera
-    from engine.engine import ObjGameHandler, f_loop, f_limit
-    from engine.components.vector import vec2d
+# Package imports
+if __name__ == '__main__':
+    # If ran directly
+    from engine.types.vector import vec2d
+    from engine.engine import Engine
+    from engine.components.grid import f_loop, f_limit
+    from engine.components.camera import Camera
+    from engine.components.draw import Draw
     from engine.components.menu import (
-        ObjMenu, ObjTextElement, ObjButtonElement)
-else: # If being called as a module
-    from .engine.components.camera import ObjCamera
-    from .engine.engine import ObjGameHandler, f_loop, f_limit
-    from .engine.components.vector import vec2d
+        Menu, MenuText, MenuButtonFull, MenuElement)
+else:
+    # If imported as module
+    from .engine.types.vector import vec2d
+    from .engine.engine import Engine
+    from .engine.components.grid import f_loop, f_limit
+    from .engine.components.camera import Camera
+    from .engine.components.draw import Draw
     from .engine.components.menu import (
-        ObjMenu, ObjTextElement, ObjButtonElement)
+        Menu, MenuText, MenuButtonFull, MenuElement)
 
-print('################') # sepperator
 
+
+# Clear the terminal
+def clear_terminal():
+    if osname == 'nt':
+        system('cls')
+    else:
+        system('clear')
+
+clear_terminal()
+print('All imports finished.')
 
 
 # Constants
 if True:
-    SIZE = vec2d(1024, 768)
     FULLTILE = 32
     FPS = 60
+    SIZE = vec2d(1024, 768)
     PROCESS = Process(getpid())
 
-    PATH = {}
-    if getattr(sys, 'frozen', False):
-        PATH['MAIN'] = path.dirname(sys.executable)
-    else:
-        PATH['MAIN'] = getcwd()
-    PATH['DEBUGLOG'] = path.join(PATH['MAIN'], 'debug')
-    PATH['ASSETS'] = path.join(PATH['MAIN'], 'assets')
-    PATH['SPRITES'] = path.join(PATH['ASSETS'], 'sprites')
-    PATH['LEVELS'] = path.join(PATH['ASSETS'], 'levels')
-    PATH['TILEMAPS'] = path.join(PATH['ASSETS'], 'tilemaps')
-    PATH['MUSIC'] = path.join(PATH['ASSETS'], 'music')
-    PATH['SFX'] = path.join(PATH['ASSETS'], 'sfx')
-
-
-# Object Creation functions # NOTE # Very Hard Coded
-def object_creator(**kwargs):
+# Object creation function
+def create_objects(engine: Engine, **kwargs):
     """Takes in a set of keywords and uses them to make an object.
         Required kwargs:
         name: name of the object being created.
-        game: game handler used to instantiate the objects.
+        engine: engine which contains game components.
 
         Dependent kwargs:
         key: id of the key when created
         pos: position of the created object.
         data: dictionary containing kwargs for __init__."""
     name = kwargs['name']
-    game = kwargs['game']
     if name == 'player':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjPlayer(game, key, pos, vec2d(FULLTILE, FULLTILE),
-                  name, data)
+        key = engine.obj.instantiate_key(key)
+        size = vec2d(FULLTILE, FULLTILE)
+        ObjPlayer(engine, key, pos, size, name, data)
 
     elif name == 'grav-orb':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjGravOrb(game, key, pos, vec2d(FULLTILE, FULLTILE),
-                   name, data)
+        key = engine.obj.instantiate_key(key)
+        size = vec2d(FULLTILE, FULLTILE)
+        ObjGravOrb(engine, key, pos, size, name, data)
 
     elif name == 'door':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjDoor(game, key, pos, vec2d(FULLTILE, FULLTILE),
-                name, data)
+        key = engine.obj.instantiate_key(key)
+        size = vec2d(FULLTILE, FULLTILE)
+        ObjDoor(engine, key, pos, size, name, data)
 
     elif name == 'button':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjButton(game, key, pos, vec2d(FULLTILE, FULLTILE/8),
-                  name, data)
+        key = engine.obj.instantiate_key(key)
+        size = vec2d(FULLTILE, FULLTILE//8)
+        ObjButton(engine, key, pos, size, name, data)
 
     elif name == 'spike':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjSpike(game, key, pos, vec2d(FULLTILE, FULLTILE/4),
-                 name, data)
+        key = engine.obj.instantiate_key(key)
+        size = vec2d(FULLTILE, FULLTILE//4)
+        ObjSpike(engine, key, pos, size, name, data)
 
     elif name == 'spike-inv':
         key = kwargs['key']
         pos = kwargs['pos']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjSpikeInv(game, key, pos, vec2d(FULLTILE, FULLTILE/4),
-                    name, data)
+        key = engine.obj.instantiate_key(key)
+        size = vec2d(FULLTILE, FULLTILE//4)
+        ObjSpikeInv(engine, key, pos, size, name, data)
 
     elif name == 'juke-box':
         key = kwargs['key']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjJukeBox(game, key, name, data)
+        key = engine.obj.instantiate_key(key)
+        ObjJukeBox(engine, key, name, data)
 
     elif name == 'main-menu':
         key = kwargs['key']
         data = kwargs['data']
-        key = game.obj.instantiate_key(key)
-        ObjMainMenu(game, key, name, data)
+        key = engine.obj.instantiate_key(key)
+        ObjMainMenu(engine, key, name, data)
 
 
-# Special classes
-class ObjView(ObjCamera):
+
+# Special
+class View(Camera):# type: ignore
     """Camera like object which is limited to the inside of the level."""
-    @property
-    def pos(self):
-        """Position getter."""
+    def __init__(self, size: vec2d):
+        super().__init__(size)
+        self.level_size = size
+
+    def pos_get(self) -> vec2d:
         return self._pos
 
-    @pos.setter
-    def pos(self, pos: tuple):
+    def pos_set(self, pos: vec2d):
         """Position setter."""
-        level_size0, level_size1 = self.level_size
-        size0, size1 = self.size
-        value0 = f_limit(pos[0], 0, level_size0 - size0)
-        value1 = f_limit(pos[1], 0, level_size1 - size1)
-        self._pos = vec2d(value0, value1).floor()
+        size0 = self.size
+        size1 = self.level_size
+        x = f_limit(pos.x, 0, size1.x - size0.x)
+        y = f_limit(pos.y, 0, size1.y - size0.y)
+        self._pos = vec2d(x, y).floor()
+
+    pos = property(pos_get, pos_set)
 
 
 # Entities
 class Entity():
     """Base class for all game entities."""
-    def update_early(self, dt: float):
+    def __init__(self, engine: Engine):
+        self.engine = engine
+
+    def update_early(self):
         """Update called first."""
         pass
 
-    def update(self, dt: float):
+    def update(self):
         """Update called second."""
         pass
 
-    def update_late(self, dt: float):
+    def update_late(self):
         """Update called last."""
         pass
 
-    def draw(self):
+    def draw(self, draw: Draw):
         """Draw called in between back and foreground."""
         pass
 
 class ObjJukeBox(Entity):
     """Responsible for sick beats."""
-    def __init__(self, game: object, key: int, name: str, data: dict):
-        game.obj.instantiate_object(key, self)
-        self.game = game
+    def __init__(self, engine: Engine, key: int, name: str, data: dict):
+        super().__init__(engine)
+        engine.obj.instantiate_object(key, self)
         self.key = key
         self.name = name
         self.data = data
 
         # Music vars
-        current_music = game.audio.music.get_current()
+        current_music = engine.aud.music.get_current()
         self.music = data['name']
         self.loops = data['loops']
         self.volume = data['volume']
 
         if self.music is not None: # Add new music
             if current_music is None: # Start playing music
-                game.audio.music.load(self.music)
-                game.audio.music.set_volume(self.volume)
-                game.audio.music.play(self.loops)
+                engine.aud.music.load(self.music)
+                engine.aud.music.set_volume(self.volume)
+                engine.aud.music.play(self.loops)
 
             elif current_music != self.music: # Queue up music
-                game.audio.music.stop(1500)
-                game.audio.music.queue(self.music, self.loops, self.volume)
+                engine.aud.music.stop(1500)
+                engine.aud.music.queue(self.music, self.loops, self.volume)
 
         elif current_music is not None: # Fade music
-            game.audio.music.stop(1000)
+            engine.aud.music.stop(1000)
 
 class ObjMainMenu(Entity):
-    def __init__(self, game, key, name, data):
-        game.obj.instantiate_object(key, self)
-        self.game = game
+    def __init__(self, engine: Engine, key: int, name: str, data: dict):
+        engine.obj.instantiate_object(key, self)
+        super().__init__(engine)
         self.key = key
         self.name = name
         self.data = data
 
-        self.menu = ObjMenu(game, SIZE)
+        # Title menu
+        self.title_menu = Menu(engine, SIZE)
+
         # TITLE
-        title = ObjTextElement(self.menu, 'title')
-        size = 36
-        color = (144, 240, 240)
-        text = 'Game-X: Now with depth!'
-        pos = SIZE / 2
-        font = 'consolas'
-        title.set_vars(size=size, color=color, text=text,
-                       pos=pos, font=font, center=True)
+        title = MenuText(engine, self.title_menu, 'title')
+        title.size = 36
+        title.color = (144, 240, 240)
+        title.text = 'Game-X: Now with depth!'
+        title.pos = SIZE / 2
+        title.font = 'consolas'
+        title.center = 5
 
-        # CAPTION
-        caption = ObjTextElement(self.menu, 'caption')
-        size = 16
-        color = (128, 200, 200)
-        text = 'Press enter to continue...'
-        pos = SIZE / 2 + vec2d(0, 18 + 8)
-        font = 'consolas'
-        caption.set_vars(size=size, color=color, text=text,
-                         pos=pos, font=font, center=True)
+        # START BUTTON
+        start_button = MenuButtonFull(engine, self.title_menu, 'start-button')
+        start_button.size = vec2d(128, 32)
+        start_button.pos = SIZE / 2 + vec2d(0, 32)
+        start_button.center = 5
 
-        # Button
-        button = ObjButtonElement(self.menu, 'button')
-        size = vec2d(128, 16)
-        button.set_vars(size=size, pos=pos, call=self.pressed, center=True)
+        start_button.text.color = (128, 200, 200)
+        start_button.text.text = 'Start'
+        start_button.text.font = 'consolas'
+        start_button.text.depth = 16
 
-    def draw(self):
-        self.menu.draw()
+        start_button.button.call = self.pressed
 
-    def update(self, dt: float):
-        if self.game.input.kb.get_key_pressed(40):
-            self.game.level.load('level1')
-        self.menu.get('button').update()
+        # OPTION BUTTON
+        option_button = MenuButtonFull(engine, self.title_menu, 'option-button')
+        option_button.size = vec2d(128, 32)
+        option_button.pos = SIZE/2 + vec2d(0, 64)
+        option_button.center = 5
 
-    def pressed(self, name: str):
-        if name == 'button':
-            self.game.level.load('level-1')
+        option_button.text.color = (128, 200, 200)
+        option_button.text.text = 'Options'
+        start_button.text.font = 'consolas'
+        option_button.text.depth = 16
+
+        option_button.button.call = self.pressed
+
+        # Option menu
+        self.option_menu = Menu(self.engine, SIZE)
+        self.option_menu.visible = False
+
+        # TITLE
+        title = MenuText(engine, self.option_menu, 'title')
+        title.size = 24
+        title.pos = SIZE / 2
+        title.text = 'Options:'
+        title.center = 5
+
+        # VOLUME SLIDER
+        #slider_rect = MenuRect(self.option_menu, 'slider-rect')
+        #size = vec2d(100, 24)
+        #pos += vec2d(-50, 12)
+        #color = (64, 64, 64)
+        #slider_rect.set_vars(size=size, pos=pos, color=color)
+
+        #slider_button = MenuButton(self.option_menu, 'slider-button')
+        #slider_button.set_vars(size=size, pos=pos, call=call, held=True)
+
+        # RETURN Button
+        return_button = MenuButtonFull(engine, self.option_menu, 'return-button')
+        return_button.pos = SIZE/2 + vec2d(0, 128)
+        return_button.center = 5
+        return_button.size = vec2d(128, 24)
+
+        return_button.text.text = 'Return'
+        return_button.text.color = (128, 128, 128)
+        return_button.text.depth = 16
+
+        return_button.button.call = self.pressed
+
+    def draw(self, draw: Draw):
+        self.title_menu.draw(draw)
+        self.option_menu.draw(draw)
+
+    def update(self):
+        self.title_menu.get('start-button').update()
+        self.title_menu.get('option-button').update()
+        #self.option_menu.get('slider-button').update()
+        self.option_menu.get('return-button').update()
+
+    def pressed(self, element: MenuElement, pos: vec2d):
+        if element.name == 'start-button-button':
+            self.engine.lvl.load('level1')
+        if element.name == 'option-button-button':
+            self.title_menu.visible = False
+            self.option_menu.visible = True
+        if element.name == 'return-button-button':
+            self.title_menu.visible = True
+            self.option_menu.visible = False
+        #if name == 'slider-button':
+        #    x = floor(pos.x)
+        #    x = f_limit(x, 0, 100)
+        #    size = vec2d(x, 24)
+        #    self.option_menu.get('slider-rect').set_vars(size=size)
 
 
-# Gameplay objects
+# Game objects
 class GameObject(Entity):
     """Class which all game objects inherit from."""
-    def __init__(self, game: object, key: int, pos: vec2d,
-                 size: vec2d, origin: vec2d = vec2d(0, 0)):
-        self.game = game
+    def __init__(self, engine: Engine, key: int, pos: vec2d,
+                 size: vec2d, name: str, origin: vec2d = vec2d(0, 0)):
+        super().__init__(engine)
         self.key = key
         self.pos = pos
         self.size = size
+        self.name = name
         self.origin = origin
         self.depth = 8
-        game.obj.instantiate_object(key, self)
+        engine.obj.instantiate_object(key, self)
         rel = origin
         w, h = size - vec2d(1, 1)
         self.cpoints = (vec2d(rel.x, rel.y),
@@ -267,6 +323,17 @@ class GameObject(Entity):
                         vec2d(rel.x, rel.y+h))
         self._frame = 0
         self.frames = []
+
+    # Set current frames
+    def set_frames(self, *fnames, alpha=0):
+        """Frames setter."""
+        self.frames = []
+        for file in fnames:
+            file_path = path.join(self.engine.paths['sprites'], file)
+            if alpha == 0:
+                self.frames.append(image.load(file_path).convert())
+            elif alpha == 1:
+                self.frames.append(image.load(file_path).convert_alpha())
 
     @property
     def frame(self):
@@ -280,19 +347,9 @@ class GameObject(Entity):
             frame = f_loop(frame, 0, len(self.frames))
         self._frame = frame
 
-    # Set current frames
-    def set_frames(self, *fnames, alpha=0):
-        """Frames setter."""
-        self.frames = []
-        for file in fnames:
-            file_path = path.join(PATH['SPRITES'], file)
-            if alpha == 0:
-                self.frames.append(image.load(file_path).convert())
-            elif alpha == 1:
-                self.frames.append(image.load(file_path).convert_alpha())
-
     # Collision
-    def scollide(self, pos=None, cpoints=None):
+    def scollide(self, pos: vec2d = None,
+                 cpoints: Tuple[vec2d, vec2d, vec2d, vec2d] = None) -> bool:
         """Check for static collisions."""
         # Match unspecified arguments
         if pos is None:
@@ -303,11 +360,11 @@ class GameObject(Entity):
         # Check for collisions
         for point in cpoints:
             point += pos
-            if self.game.collider.st.get(point):
-                return 1
-        return 0
+            if self.engine.col.st.get(point):
+                return True
+        return False
 
-    def dcollide(self, pos=None, key=None):
+    def dcollide(self, pos: vec2d = None, key: int = None) -> list:
         """Check for dynamic collisions.
            Set key to -1 if you want to include self in collision"""
         # Match unspecified arguments
@@ -319,31 +376,31 @@ class GameObject(Entity):
         origin = self.origin
 
         # Check for collision
-        return self.game.collider.dy.get_collision(pos, size, origin, key)
+        return self.engine.col.dy.get_collision(pos, size, origin, key)
 
     # Drawing sprites
-    def draw(self):
+    def draw(self, draw: Draw):
         """Draw called inbetween back and foreground."""
         pos = self.pos
         surface = self.frames[self.frame]
-        self.game.draw.add(depth=self.depth, pos=pos, surface=surface)
+        draw.add(depth=self.depth, pos=pos, surface=surface)
 
     # Removing index in object handler
     def delete(self):
         """Called when object is deleted from Objects dictionary."""
-        self.game.obj.delete(self.key)
-        self.game.collider.dy.remove(self.key)
+        self.engine.obj.delete(self.key)
+        self.engine.col.dy.remove(self.key)
 
 class ObjPlayer(GameObject):
     """Player game object."""
-    def __init__(self, game, key, pos, size, name, data):
+    def __init__(self, game: Engine, key: int, pos: vec2d,
+                 size: vec2d, name: str, data: dict):
         # Game object initialization
-        super().__init__(game, key, pos, size)
-        self.name = name
+        super().__init__(game, key, pos, size, name)
         self.data = data
 
         # Add dynamic collider
-        game.collider.dy.add(key, self)
+        game.col.dy.add(key, self)
 
         # Controls
         self.keys = {
@@ -397,17 +454,18 @@ class ObjPlayer(GameObject):
 
         # Audio
         try:
-            game.audio.sfx.tracks['boop.wav']
+            game.aud.sfx.tracks['boop.wav']
         except KeyError:
-            game.audio.sfx.add('boop.wav')
+            game.aud.sfx.add('boop.wav')
 
-    def update(self, dt):
+    def update(self):
         """Called every frame for each game object."""
         self._get_inputs()
         if self.mode == 0:
             # Reset room
             if self.key['reset'] == 1:
-                self.game.level.reset()
+                self.engine.lvl.reset()
+                return
 
             # Dynamic collisions
             col = self.dcollide()
@@ -428,27 +486,27 @@ class ObjPlayer(GameObject):
             # Update camera position
             self._move_cam()
 
-    def draw(self):
+    def draw(self, draw: Draw):
         """Called every frame to draw each game object."""
         image = self.frames[self.frame]
         image.set_alpha(255)
-        self.game.draw.add(16, pos=self.pos, surface=image.copy())
+        draw.add(16, pos=self.pos, surface=image.copy())
         for item in range(1, len(self.trail)):
             image.set_alpha(((image.get_alpha() + 1) // 2) - 1)
-            self.game.draw.add(15, pos=self.trail[item], surface=image.copy())
+            draw.add(15, pos=self.trail[item], surface=image.copy())
 
     def die(self):
-        self.game.audio.sfx.play('boop.wav')
-        self.game.level.reset()
+        self.engine.aud.sfx.play('boop.wav')
+        self.engine.lvl.reset()
         return 'return'
 
     def _get_inputs(self):
         for key in self.key:
             if key[0] != 'H':
-                self.key[key] = self.game.input.kb.get_key_pressed(
+                self.key[key] = self.engine.inp.kb.get_key_pressed(
                     *self.keys[key])
             else:
-                self.key[key] = self.game.input.kb.get_key_held(
+                self.key[key] = self.engine.inp.kb.get_key_held(
                     *self.keys[key[1:]])
 
     def _movement(self):
@@ -547,8 +605,8 @@ class ObjPlayer(GameObject):
         svspd, shspd = np.sign(vspd), np.sign(hspd)
 
         # Horizontal collision
-        if self.scollide((pos.x + hspd, pos.y)):
-            while self.scollide((pos.x + hspd, pos.y)):
+        if self.scollide(vec2d(pos.x + hspd, pos.y)):
+            while self.scollide(vec2d(pos.x + hspd, pos.y)):
                 hspd -= shspd
             pos = vec2d(floor(pos.x + hspd), pos.y)
             hspd = 0
@@ -563,8 +621,8 @@ class ObjPlayer(GameObject):
                 pass
 
         # Vertical collision
-        if self.scollide((pos.x, pos.y + vspd)):
-            while self.scollide((pos.x, pos.y + vspd)):
+        if self.scollide(vec2d(pos.x, pos.y + vspd)):
+            while self.scollide(vec2d(pos.x, pos.y + vspd)):
                 vspd -= svspd
             pos = vec2d(pos.x, floor(pos.y + vspd))
             vspd = 0
@@ -584,57 +642,55 @@ class ObjPlayer(GameObject):
 
     def _move_cam(self):
         """Move Camera."""
-        self.campos = self.pos + self.game.cam.size * -1/2
-        dcam = (self.campos - self.game.cam.pos) * self.camspeed
-        self.game.cam.pos = self.game.cam.pos + dcam
+        self.campos = self.pos + self.engine.cam.size * -1/2
+        dcam = (self.campos - self.engine.cam.pos) * self.camspeed
+        self.engine.cam.pos = self.engine.cam.pos + dcam
 
 class ObjButton(GameObject):
     """Button game object."""
-    def __init__(self, game: object, key: int, pos: tuple,
-                 size: tuple, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int, pos: vec2d,
+                 size: vec2d, name: str, data: dict):
         # GameObject initialization
-        super().__init__(game, key, pos, size,
+        super().__init__(engine, key, pos, size, name,
                          origin=vec2d(0, FULLTILE-size[1]))
-        game.collider.dy.add(key, self)
-        self.name = name
+        engine.col.dy.add(key, self)
         self.data = data
         self.door_id = data['door']
         self.set_frames('button0.png', 'button1.png', alpha=1)
 
-    def collide(self, obj: object):
+    def collide(self, obj: GameObject):
         """When collided with by player, open the door."""
-        if obj.name == 'player' and self.frame == 0:
-            self.game.obj.obj[self.door_id].frame = 1
-            self.frame = 1
+        if isinstance(obj, ObjPlayer):
+            if self.frame == 0:
+                self.engine.obj.obj[self.door_id].frame = 1
+                self.frame = 1
 
 class ObjDoor(GameObject):
     """Door game object."""
-    def __init__(self, game: object, key: int, pos: tuple,
-                 size: tuple, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int, pos: vec2d,
+                 size: vec2d, name: str, data: dict):
         # GameObject initialization
-        super().__init__(game, key, pos, size)
-        game.collider.dy.add(key, self)
-        self.name = name
+        super().__init__(engine, key, pos, size, name)
+        engine.col.dy.add(key, self)
         self.data = data
         self.next_level = data['level']
 
         # Images
         self.set_frames('door0.png', 'door1.png')
 
-    def collide(self, obj: object) -> str:
-        if obj.name == 'player':
+    def collide(self, obj: GameObject) -> Optional[str]:
+        if isinstance(obj, ObjPlayer):
             if self.frame == 1:
-                self.game.level.load(self.next_level)
+                self.engine.lvl.load(self.next_level)
                 return 'return'
 
 class ObjGravOrb(GameObject):
     """GravOrb game object."""
-    def __init__(self, game: object, key: int, pos: tuple,
-                 size: tuple, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int, pos: vec2d,
+                 size: vec2d, name: str, data: dict):
         # GameObject initialization
-        super().__init__(game, key, pos, size)
-        game.collider.dy.add(key, self)
-        self.name = name
+        super().__init__(engine, key, pos, size, name)
+        engine.col.dy.add(key, self)
         self.data = data
         self.grav = data['grav']
 
@@ -646,8 +702,8 @@ class ObjGravOrb(GameObject):
         elif self.grav < 1:
             self.set_frames('grav-orb2.png', alpha=1)
 
-    def collide(self, obj: object):
-        if obj.name == 'player':
+    def collide(self, obj: GameObject):
+        if isinstance(obj, ObjPlayer):
             grav_mult = self.grav
 
             # Toggle zero grav
@@ -673,148 +729,140 @@ class ObjGravOrb(GameObject):
 
 class ObjSpike(GameObject):
     """Spike game object."""
-    def __init__(self, game: object, key: int, pos: tuple,
-                 size: tuple, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int, pos: vec2d,
+                 size: vec2d, name: str, data: dict):
         # GameObject initialization
-        super().__init__(game, key, pos, size,
+        super().__init__(engine, key, pos, size, name,
                          origin=vec2d(0, FULLTILE-size[1]))
         self.name = name
         self.data = data
-        game.collider.dy.add(key, self)
+        engine.col.dy.add(key, self)
 
         # Images
         self.set_frames('spike.png', alpha=1)
 
-    def collide(self, obj: object) -> str:
-        if obj.name == 'player' and obj.vspd <= 0:
-            return obj.die()
+    def collide(self, obj: ObjPlayer) -> Optional[str]:
+        if isinstance(obj, ObjPlayer):
+            if obj.vspd <= 0:
+                return obj.die()
 
 class ObjSpikeInv(GameObject):
-    """Spike game object."""
-    def __init__(self, game: object, key: int, pos: tuple,
-                 size: tuple, name: str, data: dict):
+    """Spike game object, but upside down."""
+    def __init__(self, engine: Engine, key: int, pos: vec2d,
+                 size: vec2d, name: str, data: dict):
         # GameObject initialization
-        super().__init__(game, key, pos, size)
+        super().__init__(engine, key, pos, size, name)
         self.name = name
         self.data = data
-        game.collider.dy.add(key, self)
+        engine.col.dy.add(key, self)
 
         # Images
         self.set_frames('spike-inv.png', alpha=1)
 
-    def collide(self, obj: object) -> str:
-        if obj.name == 'player' and obj.vspd >= 0:
-            return obj.die()
+    def collide(self, obj: GameObject) -> Optional[str]:
+        if isinstance(obj, ObjPlayer):
+            if obj.vspd >= 0:
+                return obj.die()
 
 
 
-# Main application method
-def main(debug: bool = False):
-    """Main game loop."""
-    GAME = ObjGameHandler(SIZE, FULLTILE, PATH, object_creator,
-                          fps=FPS, debug=debug)
-    GAME.cam = ObjView(SIZE)
-    GAME.level.load('mainmenu')
-    GAME.parallax = 1
-    if GAME.debug:
-        GAME.debug.time_record = {
-            'Update': 0,
-            'DrawAdd': 0,
-            'DrawParse': 0,
-            'Render': 0}
-
-    # Timing info
+# Main application functions
+def main():
     clock = Clock()
-    dt = 1
+    engine = Engine(FULLTILE, FPS, SIZE, True)
+    engine.init_obj(create_objects)
+    cam = View(SIZE)
+    engine.set_cam(cam)
+    engine.lvl.load('mainmenu')
+    if engine.debug:
+        engine.debug.time_record = {
+            'Update': 0.0,
+            'Draw': 0.0,
+            'Render': 0.0}
 
-    # Gameplay loop
-    while GAME.run:
-        # Start debug timing
-        if GAME.debug:
-            t = time()
+    while engine.run:
+        # Event handler
+        event_handle(engine)
 
+        # Updating
+        update(engine)
+        update_debug(engine, clock)
 
-        # Reset inputs for held keys
-        GAME.input.reset()
+        # Drawing
+        draw(engine)
 
-        # Event Handler
-        for event in pyevent.get():
-            # Exit GAME
-            if event.type == QUIT:
-                return
-            else:
-                GAME.input.handle_events(event)
-        if GAME.input.kb.get_key_pressed(41):
-            GAME.end()
+        # Rendering
+        render(engine)
+
+        # Maintain FPS
+        clock.tick(FPS)
+        if engine.debug:
+            engine.debug.tick()
+
+def event_handle(engine: Engine):
+    """Handles events."""
+    engine.inp.reset()
+    events = get_events()
+    for event in events:
+        if event.type == KEYDOWN:
+            #print(event.scancode)
+            pass
+        engine.inp.handle_events(event)
+        if event.type == QUIT:
+            engine.end()
             return
+    if engine.inp.kb.get_key_pressed(41):
+        engine.end()
+        return
 
-        # Update calls
-        update(GAME, dt)
-        if GAME.debug:
-            GAME.debug.time_record['Update'] += (time() - t)
-            t = time()
+def update(engine: Engine):
+    t = 0
+    if engine.debug:
+        t = time()
+    engine.obj.update_early()
+    engine.obj.update()
+    engine.obj.update_late()
+    if engine.debug:
+        engine.debug.time_record['Update'] += (time() - t)
 
-        # Draw calls
-        if dt > 0.9:
-            # Debug Display
-            if GAME.debug:
-                fps = GAME.debug.menu.get('fps')
-                text = 'fps: {:.0f}'.format(clock.get_fps())
-                fps.set_vars(text=text)
+def update_debug(engine: Engine, clock: Clock):
+    debug = engine.debug
+    if debug:
+            fps = debug.menu.get('fps')
+            fps.text = 'fps: {:.0f}'.format(clock.get_fps())
 
-                campos = GAME.debug.menu.get('campos')
-                text = 'cam pos: {}'.format(GAME.cam.pos)
-                campos.set_vars(text=text)
+            campos = debug.menu.get('campos')
+            campos.text = 'cam pos: {}'.format(engine.cam.pos)
 
-                memory = GAME.debug.menu.get('memory')
-                mem = PROCESS.memory_info().rss
-                mb = mem // (10**6)
-                kb = (mem - (mb * 10**6)) // 10**3
-                text = 'memory: {} MB, {} KB'.format(mb, kb)
-                memory.set_vars(text=text)
+            memory = debug.menu.get('memory')
+            mem = PROCESS.memory_info().rss
+            mb = mem // (10**6)
+            kb = (mem - (mb * 10**6)) // 10**3
+            memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
 
-            drawadd(GAME)
-            if GAME.debug:
-                GAME.debug.time_record['DrawAdd'] += time() - t
-                t = time()
+def draw(engine: Engine):
+    t = 0
+    if engine.debug:
+        t = time()
+    engine.draw.draw()
+    engine.debug.menu.draw(engine.draw)
+    if engine.debug:
+        engine.debug.time_record['Draw'] += (time() - t)
 
-            drawparse(GAME)
-            if GAME.debug:
-                GAME.debug.time_record['DrawParse'] += time() - t
-                t = time()
-
-            # Render to screen
-            render(GAME)
-            if GAME.debug:
-                GAME.debug.time_record['Render'] += (time() - t)
-
-        # Tick clock
-        dt = clock.tick(FPS) * (FPS/1000)
-        if GAME.debug:
-            GAME.debug.tick()
-
-def update(game: object, dt: float):
-    """Update call."""
-    game.obj.update_early(dt)
-    game.obj.update(dt)
-    game.obj.update_late(dt)
-
-def drawadd(game: object):
-    """Draw call."""
-    game.draw.draw()
-    if game.debug:
-        game.debug.menu.draw()
-
-def drawparse(game: object):
-    # Blank screen
-    game.cam.blank()
-    game.draw.render(game.cam)
-
-def render(game: object):
-    """Render textures to screen."""
-    game.window.render(game.cam)
+def render(engine: Engine):
+    t = 0
+    if engine.debug:
+        t = time()
+    engine.win.blank()
+    engine.cam.blank()
+    engine.draw.render(engine.cam)
+    engine.win.render(engine.cam)
+    engine.win.update()
+    if engine.debug:
+        engine.debug.time_record['Render'] += (time() - t)
 
 
-# If main file
+
+# Run main
 if __name__ == '__main__':
-    main(True)
+    main()

@@ -1,10 +1,11 @@
 """Handles object instances"""
 from typing import Callable
+from ..types.component import Component
 
-class ObjObjectHandler():
+class ObjectHandler(Component):
     """Handles game objects."""
-    def __init__(self, game: object, object_creator: Callable, max_objects: int = 2**14-1):
-        self.game = game
+    def __init__(self, engine: object, object_creator: Callable, max_objects: int = 2**14-1):
+        super().__init__(engine)
         self.object_creator = object_creator
         self.pool_size = max_objects
         self.pool = set()
@@ -14,7 +15,7 @@ class ObjObjectHandler():
         self.visible = True
 
     # Update calls
-    def update_early(self, dt: float, **kwargs):
+    def update_early(self):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
@@ -24,9 +25,9 @@ class ObjObjectHandler():
                 #print('key {} does not exist'.format(key))
                 pass
             else:
-                self.obj[key].update_early(dt, **kwargs)
+                self.obj[key].update_early()
 
-    def update(self, dt: float, **kwargs):
+    def update(self):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
@@ -36,9 +37,9 @@ class ObjObjectHandler():
                 #print('key {} does not exist'.format(key))
                 pass
             else:
-                self.obj[key].update(dt, **kwargs)
+                self.obj[key].update()
 
-    def update_late(self, dt: float, **kwargs):
+    def update_late(self):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
@@ -48,7 +49,7 @@ class ObjObjectHandler():
                 #print('key {} does not exist'.format(key))
                 pass
             else:
-                self.obj[key].update_late(dt, **kwargs)
+                self.obj[key].update_late()
 
     # Object creation
     def instantiate_key(self, key: int = None):
@@ -72,7 +73,7 @@ class ObjObjectHandler():
 
     def create_object(self, **kwargs):
         """Creates instances of objects and instantiates them."""
-        self.object_creator(**kwargs)
+        self.object_creator(self.engine, **kwargs)
 
     # Object deletion
     def delete(self, key: int):

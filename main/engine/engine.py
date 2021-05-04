@@ -1,104 +1,88 @@
-##############################################################################
-"""A game engine, for all your game engine needs."""
-
-import pygame
+# Imports
+from os import path, getcwd
+import sys
 from typing import Callable
 
-from .components.level import ObjLevel
-from .components.inputs import ObjInput
-from .components.window import ObjWindow
-from .components.colliders import ObjCollider
-from .components.object_handler import ObjObjectHandler
-from .components.tile import ObjTileMap
-from .components.font import ObjFont
-from .components.audio import ObjMixer
-from .components.debug import ObjDebug
-from .components.draw import ObjDraw
-from .components.vector import vec2d
-
-# Methods
-# Flip color
-def f_cinverse(rgb=(0, 0, 0)) -> tuple:
-    """Converts 16 bit tuple to its 16 bit inverse(RGB)."""
-    rgb = list(rgb)
-    for i in range(2):
-        rgb[i] = 255 - rgb[i]
-    return tuple(rgb)
-
-# Return a value following pacman logic
-def f_loop(val, minval, maxval):
-    """Returns a number that loops between the min and max
-    Ex. n = 8, minval = 3, maxval = 5;
-        8 is 3 more then 5
-        minval + 3 = 6
-        6 is 1 more then 5
-        minval + 1 = 4
-        minval < 4 < maxval
-        return 4
-    """
-    if minval <= val <= maxval:
-        return val
-    if val <= minval:
-        return maxval - (minval - val) + 1
-    return minval + (val - maxval) - 1
-
-# Return the value closest to the range min to max
-def f_limit(val, minval, maxval):
-    """Reutrns value n
-    limits/clamps the value n between the min and max
-    """
-    if val < minval:
-        return minval
-    if val > maxval:
-        return maxval
-    return val
+from .types.vector import vec2d
+from .components.window import Window
+from .components.input import Input
+from .components.audio import Mixer
+from .components.font import Font
+from .components.object import ObjectHandler
+from .components.collision import Collider
+from .components.draw import Draw
+from .components.level import Level
+from .components.camera import Camera
+from .components.tile import TileMap
+from .components.debug import Debug
 
 
-# Classes
-# Game handling object
-class ObjGameHandler():
-    """Game handler."""
-    def __init__(self, screen_size: vec2d, full_tile: int,
-                 path: list, object_creator: Callable, fps: int,
-                 debug: bool = False):
-        # File paths
-        self.PATH = path
-
-        # Constants
-        self.FULLTILE = full_tile
-        self.HALFTILE = int(full_tile/2)
+class Engine():
+    def __init__(self, fulltile: int, fps: int, size: vec2d, debug: bool = False, maindir: str = None):
+        # Define constants
+        self.FULLTILE = fulltile
         self.FPS = fps
 
-        # Constant Objects
-        self.window = ObjWindow(self, screen_size)
-        self.obj = ObjObjectHandler(self, object_creator)
-        self.collider = ObjCollider(self)
-        self.level = ObjLevel(self)
-        self.tile = ObjTileMap(self)
-        self.input = ObjInput(self)
-        self.font = ObjFont()
-        self.audio = ObjMixer(self)
-        self.draw = ObjDraw(self)
-        self.debug = ObjDebug(self, debug)
+        # File paths
+        self.paths = {}
+        if maindir is None:
+            if getattr(sys, 'frozen', False):
+                self.paths['main'] = path.dirname(sys.executable)
+            else:
+                self.paths['main'] = getcwd()
+        else:
+            self.paths['main'] = maindir
+        self.paths['debug'] = path.join(self.paths['main'], 'debug')
+        self.paths['assets'] = path.join(self.paths['main'], 'assets')
+        self.paths['sprites'] = path.join(self.paths['assets'], 'sprites')
+        self.paths['devsprites'] = path.join(self.paths['assets'], 'devsprites')
+        self.paths['levels'] = path.join(self.paths['assets'], 'levels')
+        self.paths['tilemaps'] = path.join(self.paths['assets'], 'tilemaps')
+        self.paths['music'] = path.join(self.paths['assets'], 'music')
+        self.paths['sfx'] = path.join(self.paths['assets'], 'sfx')
 
-        # Game loop
-        self.run = 1
+        # Parameters
+        self.run = True
+        self.parallax = False
 
-    def clear_cache(self):
-        """Clears out all objects and colliders."""
-        self.audio.sfx.clear()
-        self.tile.clear_cache()
+        # Define components
+        self.win = Window(self, size)
+        self.aud = Mixer(self)
+        self.inp = Input(self)
+        self.fnt = Font(self)
+        self.col = Collider(self)
+        self.draw = Draw(self)
+        self.lvl = Level(self)
+        self.til = TileMap(self)
+        self.cam = Camera(size)
+        self.debug = Debug(self, debug)
+        self.obj = None
+
+
+    def init_obj(self, object_creator: Callable, max_object: int = None):
+        if max_object is None:
+            self.obj = ObjectHandler(self, object_creator)
+        else:
+            self.obj = ObjectHandler(self, object_creator, max_object)
+
+    def init_cam(self, size: vec2d):
+        self.cam = Camera(size)
+
+    def set_cam(self, cam):
+        if issubclass(type(cam), Camera):
+            self.cam = cam
 
     def clear_ent(self):
         """Clears out all objects and colliders."""
         self.obj.clear()
-        self.collider.st.clear()
-        self.collider.dy.clear()
-        self.tile.clear_ent()
+        self.col.st.clear()
+        self.col.dy.clear()
+        self.til.clear_ent()
+
+    def clear_cache(self):
+        """Clears out all objects and colliders."""
+        self.aud.sfx.clear()
+        self.til.clear_cache()
 
     def end(self):
-        """Ends the game."""
-        self.clear_ent()
-        self.clear_cache()
-        self.run = 0
-        pygame.quit()
+        self.run = False
