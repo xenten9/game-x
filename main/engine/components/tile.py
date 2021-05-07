@@ -74,7 +74,13 @@ class TileMap(Component):
             for file in directory:
                 if int(file[0]) == map_id:
                     self.add_tilemap(file)
+                    return self.tilemaps[map_id][tile_id]
+            code = ['Tilemap not found.',
+                    'Tilemap dir: {}'.format(self.paths['tilemaps']),
+                    'Tilemap id: {}'.format(map_id)]
+            raise FileNotFoundError('\n  ' + '\n  '.join(code))
         return self.tilemaps[map_id][tile_id]
+
 
     def add_all(self):
         directory = listdir(self.paths['tilemaps'])
@@ -88,7 +94,13 @@ class TileMap(Component):
     def clear_cache(self):
         self.tilemaps = {}
         self.tilemaps_list = []
-        self.add_tilemap('0-null.png')
+        try:
+            self.add_tilemap('0-null.png')
+        except FileNotFoundError:
+            code = ['Tilemap not found.',
+                    'Tilemap dir: {}'.format(self.paths['tilemaps']),
+                    'Tilemap name: {}'.format('0-null.png')]
+            raise FileNotFoundError('\n  ' + '\n  '.join(code))
 
     def clear_ent(self):
         self.layers = {}

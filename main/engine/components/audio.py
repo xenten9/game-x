@@ -19,6 +19,7 @@ class Music(Component):
         self.music = None
         self.music_queue = []
         self.fading = False
+        self.paused = False
         self.volume = 1
         self.music_volume = 1
         mixer.music.set_endevent(56709)
@@ -44,10 +45,12 @@ class Music(Component):
     def pause(self):
         """Load music."""
         mixer.music.pause()
+        self.paused = True
 
     def resume(self):
         """Load music."""
         mixer.music.unpause()
+        self.paused = False
 
     def queue(self, file: str, loops: int, volume: float):
         """Queue up a song."""

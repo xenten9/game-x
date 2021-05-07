@@ -86,7 +86,7 @@ class Level(Component):
             if name == 'tile-layer':
                 layer_name, grid, data = arg[1:4]
                 size = vec2d(len(grid), len(grid[0]))
-                self.engine.til.add_layer(layer_name, size, data, grid)
+                self.engine.tile.add_layer(layer_name, size, data, grid)
 
             # STATIC COLLIDER
             elif name == 'static-collider':
@@ -99,7 +99,7 @@ class Level(Component):
                 try:
                     self.engine.cam.level_size
                 except AttributeError:
-                    print('camera has no variable: level_size')
+                    print('Camera has no variable: level_size')
                 else:
                     self.engine.cam.level_size = self.size
 
@@ -116,8 +116,8 @@ class Level(Component):
                 self.engine.obj.create_object(**args)
 
         # Render all layers after being built
-        for layer in self.engine.til.layers:
-            self.engine.til.layers[layer].cache()
+        for layer in self.engine.tile.layers:
+            self.engine.tile.layers[layer].cache()
 
         # Say level succesful level laod if level is no reloaded
         if self.current_level != level_name:

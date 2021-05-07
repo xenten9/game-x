@@ -117,8 +117,15 @@ class Object(Entity):
         self.pos = pos
         self.data = data
         engine.obj.instantiate_object(key, self)
-        file = path.join(engine.paths['devsprites'], name + '.png')
-        self.image = image.load(file)
+        devsprite_path = engine.paths['devsprites']
+        file_path = path.join(devsprite_path, name + '.png')
+        try:
+            self.image = image.load(file_path)
+        except FileNotFoundError as error:
+            code = ['Sprite image not found.',
+                    'Images path: {}'.format(file_path),
+                    'Engine sprite path: {}'.format(devsprite_path)]
+            raise FileNotFoundError('\n  ' + '\n  '.join(code)) from error
 
     def draw(self, draw):
         draw.add(0, pos=self.pos, surface=self.image)
@@ -136,7 +143,7 @@ class ObjCursor(Entity):
         self.obj_select = 0
         self.tile_select = 0
         self.tilemap_select = 0
-        self.tilemap_id = engine.til.tilemaps_list[self.tilemap_select]
+        self.tilemap_id = engine.tile.tilemaps_list[self.tilemap_select]
         self.tilemap = self._get_current_tilemap()
         self.layer = 0
         self.selected_object = None
@@ -218,8 +225,8 @@ class ObjCursor(Entity):
         # Reload # NOTE # use before saving level in order to shrink grids
         if self.key['reload'] and self.key['Hcontrol']:
             self.engine.col.st.minimize()
-            for layer in self.engine.til.layers:
-                layer = self.engine.til.layers[layer]
+            for layer in self.engine.tile.layers:
+                layer = self.engine.tile.layers[layer]
                 layer.minimize()
 
         # Saving and loading
@@ -230,7 +237,7 @@ class ObjCursor(Entity):
         elif (self.key['load'] and self.key['Hcontrol']
               and not self.mkey['Hplace']):
             self.engine.lvl.load()
-            self.engine.til.add_all()
+            self.engine.tile.add_all()
             return
 
         # State machine
@@ -312,7 +319,7 @@ class ObjCursor(Entity):
         """Tile mode."""
         # Layer selection
         self.layer += self.key['nextlayer'] - self.key['prevlayer']
-        length = len(self.engine.til.layers)-1
+        length = len(self.engine.tile.layers)-1
 
         # Layer creation
         if self.layer > length or self.layer < 0:
@@ -324,8 +331,8 @@ class ObjCursor(Entity):
                     'Enter layer depth: ', 'Depth must be an int',
                     'Layer Successfully Created!', int)
                 if name is not None and depth is not None:
-                    self.engine.til.add_layer(name, vec2d(6, 6), {'depth': depth})
-                    self.engine.til.layers[name].cache()
+                    self.engine.tile.add_layer(name, vec2d(6, 6), {'depth': depth})
+                    self.engine.tile.layers[name].cache()
                     length += 1
                 else:
                     self.layer -= 1
@@ -334,7 +341,7 @@ class ObjCursor(Entity):
         if self.key['delete'] and length > 0:
             if self.key['Hshift'] and self.key['Hcontrol']:
                 layer = self._get_current_layer()
-                self.engine.til.remove_layer(layer.name)
+                self.engine.tile.remove_layer(layer.name)
                 length -= 1
 
         self.layer = f_loop(self.layer, 0, length)
@@ -344,10 +351,10 @@ class ObjCursor(Entity):
         if dset != 0:
             self.tile_select = 0
             self.tilemap_select += dset
-            length = len(self.engine.til.tilemaps_list)-1
+            length = len(self.engine.tile.tilemaps_list)-1
 
             self.tilemap_select = f_loop(self.tilemap_select, 0, length)
-            self.tilemap_id = self.engine.til.tilemaps_list[self.tilemap_select]
+            self.tilemap_id = self.engine.tile.tilemaps_list[self.tilemap_select]
             self.tilemap = self._get_current_tilemap()
 
         # Changing selection
@@ -359,8 +366,8 @@ class ObjCursor(Entity):
 
         # Toggling tile maps
         if self.key['f1']:
-            layer = list(self.engine.til.layers.keys())[self.layer]
-            self.engine.til.layers[layer].toggle_visibility()
+            layer = list(self.engine.tile.layers.keys())[self.layer]
+            self.engine.tile.layers[layer].toggle_visibility()
 
         # View/Edit data
         if self.key['tab']:
@@ -509,10 +516,10 @@ class ObjCursor(Entity):
             element.text = 'Wall mode'
 
     def _get_current_layer(self) -> TileLayer:
-        return self.engine.til.layers[list(self.engine.til.layers.keys())[self.layer]]
+        return self.engine.tile.layers[list(self.engine.tile.layers.keys())[self.layer]]
 
     def _get_current_tilemap(self) -> list:
-        return self.engine.til.tilemaps[self.tilemap_id]
+        return self.engine.tile.tilemaps[self.tilemap_id]
 
     def _get_current_tile(self) -> Surface:
         return self.tilemap[self.tile_select]
@@ -541,9 +548,9 @@ class ObjCursor(Entity):
 
 
 # Main application functions
-def main():
+def main(debug: bool = False):
     clock = Clock()
-    engine = Engine(FULLTILE, FPS, SIZE, True)
+    engine = Engine(FULLTILE, FPS, SIZE, debug)
 
     cursor = ObjCursor(engine, vec2d(0, 0))
     engine.debug.menu.remove('rect')
@@ -557,7 +564,7 @@ def main():
     engine.set_cam(cam)
 
     engine.lvl.load('default')
-    engine.til.add_all()
+    engine.tile.add_all()
 
     if engine.debug:
         engine.debug.time_record = {
@@ -651,4 +658,4 @@ def render(engine: Engine):
 
 
 if __name__ == '__main__':
-    main()
+    main(True)

@@ -183,13 +183,16 @@ class MenuText(MenuElementVisible):
     def color(self, color: Tuple[int, int, int]):
         for value in color:
             if value < 0 or value > 255:
-                raise ValueError('color values must be bounded by 0-255')
+                code = ['Colors must be bounded by 0-255',
+                        'Colors: {}'.format(color),
+                        'Colors<type>: {}'.format(type(color))]
+                raise ValueError('\n'.join(code))
         self._color = color
         self._cache = True
 
     def cache(self):
         """Render text to surface."""
-        font = self._engine.fnt.get(self.font, self.size)
+        font = self._engine.font.get(self.font, self.size)
         render = font.render(self.text, 0, self.color)
         self.surface = render
 
@@ -218,7 +221,10 @@ class MenuRect(MenuElementVisible):
     def color(self, color: Tuple[int, int, int]):
         for value in color:
             if value < 0 or value > 255:
-                raise ValueError('color values must be bounded by 0-255')
+                code = ['Colors must be bounded by 0-255',
+                        'Colors: {}'.format(color),
+                        'Colors<type>: {}'.format(type(color))]
+                raise ValueError('\n'.join(code))
         self._color = color
         self._cache = True
 

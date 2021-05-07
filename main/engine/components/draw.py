@@ -11,14 +11,17 @@ class Draw(Component):
         obj = self.engine.obj.obj
         for key in obj:
             obj[key].draw(self)
-        tile = self.engine.til.layers
+        tile = self.engine.tile.layers
         for layer in tile:
             tile[layer].draw(self)
 
     def add(self, depth: int, **kwargs):
         """Add an element to be drawn when called."""
         if not isinstance(depth, int):
-            raise TypeError('depth must be int')
+            code = ['Depth must be int',
+                    'Depth: {}'.format(depth),
+                    'Depth<type>:'.format(type(depth))]
+            raise TypeError('\n'.join(code))
         try:
             self.depths[depth]
         except KeyError:

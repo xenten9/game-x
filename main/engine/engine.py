@@ -43,30 +43,91 @@ class Engine():
 
         # Parameters
         self.run = True
+        self.paused = False
         self.parallax = False
 
-        # Define components
-        self.win = Window(self, size)
-        self.aud = Mixer(self)
-        self.inp = Input(self)
-        self.fnt = Font(self)
-        self.col = Collider(self)
-        self.draw = Draw(self)
-        self.lvl = Level(self)
-        self.til = TileMap(self)
-        self.cam = Camera(size)
-        self.debug = Debug(self, debug)
-        self.obj = None
+        # Components
+        # Output
+        self._win = Window(self, size)
+        self._cam = Camera(size)
+        self._draw = Draw(self)
+        self._aud = Mixer(self)
 
+        # Input
+        self._inp = Input(self)
+
+        # System interaction
+        self._font = Font(self)
+
+        # Level interaction
+        self._col = Collider(self)
+        self._lvl = Level(self)
+        self._tile = TileMap(self)
+        self._obj = None
+
+        # Debug
+        self._debug = Debug(self, debug)
+
+    @property
+    def win(self) -> Window:
+        return self._win
+
+    @property
+    def cam(self) -> Camera:
+        return self._cam
+
+    @cam.setter
+    def cam(self, cam: Camera):
+        self._cam = cam
+
+    @property
+    def draw(self) -> Draw:
+        return self._draw
+
+    @property
+    def aud(self) -> Mixer:
+        return self._aud
+
+    @property
+    def inp(self) -> Input:
+        return self._inp
+
+    @property
+    def font(self) -> Font:
+        return self._font
+
+    @property
+    def col(self) -> Collider:
+        return self._col
+
+    @property
+    def lvl(self) -> Level:
+        return self._lvl
+
+    @property
+    def tile(self) -> TileMap:
+        return self._tile
+
+    @property
+    def obj(self) -> ObjectHandler:
+        if self._obj is None:
+            raise AttributeError('\nObject handler accessed before creation.')
+        else:
+            return self._obj
+
+    @obj.setter
+    def obj(self, obj: ObjectHandler):
+        self._obj = obj
+
+    @property
+    def debug(self) -> Debug:
+        return self._debug
 
     def init_obj(self, object_creator: Callable, max_object: int = None):
         if max_object is None:
             self.obj = ObjectHandler(self, object_creator)
         else:
             self.obj = ObjectHandler(self, object_creator, max_object)
-
-    def init_cam(self, size: vec2d):
-        self.cam = Camera(size)
 
     def set_cam(self, cam):
         if issubclass(type(cam), Camera):
@@ -77,12 +138,15 @@ class Engine():
         self.obj.clear()
         self.col.st.clear()
         self.col.dy.clear()
-        self.til.clear_ent()
+        self.tile.clear_ent()
 
     def clear_cache(self):
         """Clears out all objects and colliders."""
         self.aud.sfx.clear()
-        self.til.clear_cache()
+        self.tile.clear_cache()
+
+    def pause(self):
+        self.paused = not self.paused
 
     def end(self):
         self.run = False

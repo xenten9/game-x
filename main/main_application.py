@@ -1,12 +1,12 @@
 # Standard library
-from os import path, system, name as osname, getpid
+from os import execlp, path, system, name as osname, getpid
 from typing import Optional, Tuple
 from math import floor
 from time import time
 
 # External libraries
+from numpy import sign
 from psutil import Process
-import numpy as np
 from pygame.constants import KEYDOWN, QUIT
 from pygame.time import Clock
 from pygame.event import get as get_events
@@ -43,7 +43,6 @@ def clear_terminal():
 
 clear_terminal()
 print('All imports finished.')
-
 
 # Constants
 if True:
@@ -153,15 +152,15 @@ class Entity():
     def __init__(self, engine: Engine):
         self.engine = engine
 
-    def update_early(self):
+    def update_early(self, pause: bool):
         """Update called first."""
         pass
 
-    def update(self):
+    def update(self, pause: bool):
         """Update called second."""
         pass
 
-    def update_late(self):
+    def update_late(self, pause: bool):
         """Update called last."""
         pass
 
@@ -196,6 +195,14 @@ class ObjJukeBox(Entity):
 
         elif current_music is not None: # Fade music
             engine.aud.music.stop(1000)
+
+    def update(self, paused: bool):
+        if paused:
+            if not self.engine.aud.music.paused:
+                self.engine.aud.music.pause()
+        else:
+            if self.engine.aud.music.paused:
+                self.engine.aud.music.resume()
 
 class ObjMainMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
@@ -243,6 +250,19 @@ class ObjMainMenu(Entity):
 
         option_button.button.call = self.pressed
 
+        # QUIT BUTTON
+        quit_button = MenuButtonFull(engine, self.title_menu, 'quit-button')
+        quit_button.size = vec2d(128, 32)
+        quit_button.pos = SIZE/2 + vec2d(0, 96)
+        quit_button.center = 5
+
+        quit_button.text.color = (128, 200, 200)
+        quit_button.text.text = 'Quit'
+        quit_button.text.font = 'consolas'
+        quit_button.text.depth = 16
+
+        quit_button.button.call = self.pressed
+
         # Option menu
         self.option_menu = Menu(self.engine, SIZE)
         self.option_menu.visible = False
@@ -276,30 +296,33 @@ class ObjMainMenu(Entity):
 
         return_button.button.call = self.pressed
 
+    def update(self, pause: bool):
+        self.title_menu.get('start-button').update()
+        self.title_menu.get('option-button').update()
+        self.title_menu.get('quit-button').update()
+        #self.option_menu.get('slider-button').update()
+        self.option_menu.get('return-button').update()
+
     def draw(self, draw: Draw):
         self.title_menu.draw(draw)
         self.option_menu.draw(draw)
 
-    def update(self):
-        self.title_menu.get('start-button').update()
-        self.title_menu.get('option-button').update()
-        #self.option_menu.get('slider-button').update()
-        self.option_menu.get('return-button').update()
-
     def pressed(self, element: MenuElement, pos: vec2d):
         if element.name == 'start-button-button':
             self.engine.lvl.load('level1')
-        if element.name == 'option-button-button':
+        elif element.name == 'option-button-button':
             self.title_menu.visible = False
             self.option_menu.visible = True
-        if element.name == 'return-button-button':
+        elif element.name == 'return-button-button':
             self.title_menu.visible = True
             self.option_menu.visible = False
-        #if name == 'slider-button':
-        #    x = floor(pos.x)
-        #    x = f_limit(x, 0, 100)
-        #    size = vec2d(x, 24)
-        #    self.option_menu.get('slider-rect').set_vars(size=size)
+        elif element.name == 'quit-button-button':
+            self.engine.end()
+        if element.name == 'slider-button':
+            x = floor(pos.x)
+            x = f_limit(x, 0, 100)
+            size = vec2d(x, 24)
+            self.option_menu.get('slider-rect').set_vars(size=size)
 
 
 # Game objects
@@ -328,12 +351,19 @@ class GameObject(Entity):
     def set_frames(self, *fnames, alpha=0):
         """Frames setter."""
         self.frames = []
+        sprite_path = self.engine.paths['sprites']
         for file in fnames:
-            file_path = path.join(self.engine.paths['sprites'], file)
-            if alpha == 0:
-                self.frames.append(image.load(file_path).convert())
-            elif alpha == 1:
-                self.frames.append(image.load(file_path).convert_alpha())
+            file_path = path.join(sprite_path, file)
+            try:
+                if alpha == 0:
+                    self.frames.append(image.load(file_path).convert())
+                elif alpha == 1:
+                    self.frames.append(image.load(file_path).convert_alpha())
+            except FileNotFoundError as error:
+                code = ['Sprite image not found.',
+                        'Images path: {}'.format(file_path),
+                        'Engine sprite path: {}'.format(sprite_path)]
+                raise FileNotFoundError('\n  ' + '\n  '.join(code)) from error
 
     @property
     def frame(self):
@@ -407,8 +437,9 @@ class ObjPlayer(GameObject):
             'jump': (44, 26, 82),
             'left': (4, 80),
             'right': (7, 79),
-            'run':(225, 224),
-            'reset':(21,)}
+            'run': (225, 224),
+            'reset': (21,),
+            'pause': (41,)}
 
         # Key vars
         self.key = {
@@ -417,7 +448,8 @@ class ObjPlayer(GameObject):
             'Hleft': 0,
             'Hright': 0,
             'Hrun': 0,
-            'reset': 0}
+            'reset': 0,
+            'pause': 0}
 
         # Ground
         self.hspd, self.vspd = 0, 0
@@ -458,33 +490,38 @@ class ObjPlayer(GameObject):
         except KeyError:
             game.aud.sfx.add('boop.wav')
 
-    def update(self):
+    def update(self, paused: bool):
         """Called every frame for each game object."""
         self._get_inputs()
-        if self.mode == 0:
-            # Reset room
-            if self.key['reset'] == 1:
-                self.engine.lvl.reset()
-                return
+        if self.key['pause']:
+            self.engine.pause()
+        if paused:
+            pass
+        else:
+            if self.mode == 0:
+                # Reset room
+                if self.key['reset'] == 1:
+                    self.engine.lvl.reset()
+                    return
 
-            # Dynamic collisions
-            col = self.dcollide()
-            for obj in col:
-                try:
-                    if obj.collide(self) == 'return':
-                        return
-                except AttributeError:
-                    pass
+                # Dynamic collisions
+                col = self.dcollide()
+                for obj in col:
+                    try:
+                        if obj.collide(self) == 'return':
+                            return
+                    except AttributeError:
+                        pass
 
-            # Move player
-            self._movement()
+                # Move player
+                self._movement()
 
-            self.trail.insert(0, self.pos)
-            if len(self.trail) > 4:
-                self.trail = self.trail[0:3]
+                self.trail.insert(0, self.pos)
+                if len(self.trail) > 4:
+                    self.trail = self.trail[0:3]
 
-            # Update camera position
-            self._move_cam()
+                # Update camera position
+                self._move_cam()
 
     def draw(self, draw: Draw):
         """Called every frame to draw each game object."""
@@ -512,12 +549,12 @@ class ObjPlayer(GameObject):
     def _movement(self):
         """Handle player movement."""
         # Veritcal controls
-        self.jump -= np.sign(self.jump)
+        self.jump -= sign(self.jump)
         if (self.key['jump'] and self.jump <= 0):
             self.jump = self.jump_lenience
 
         # Grounded
-        self.grounded -= np.sign(self.grounded)
+        self.grounded -= sign(self.grounded)
 
         # Floor
         if self.grav >= 0 and self.scollide(self.pos + vec2d(0, 1)):
@@ -563,7 +600,7 @@ class ObjPlayer(GameObject):
                 # Static grounded
                 self.hspd *= self.ground_fric_static
         else:
-            if np.sign(move) != np.sign(self.hspd):
+            if sign(move) != sign(self.hspd):
                 # Retrograde aerial
                 self.hspd += move * self.air_speed * 2
                 self.hspd *= self.air_fric_retro
@@ -588,10 +625,10 @@ class ObjPlayer(GameObject):
                 self.jump_delay = self.coyote
                 self.vspd += self.jump_speed
         else:
-            self.jump_delay -= np.sign(self.jump_delay)
+            self.jump_delay -= sign(self.jump_delay)
 
         # Jump gravity
-        if np.sign(self.vspd) == np.sign(self.grav):
+        if sign(self.vspd) == sign(self.grav):
             self.vspd += self.grav * self.fallgrav
         elif self.key['Hjump']:
             self.vspd += self.grav * self.jumpgrav
@@ -602,7 +639,7 @@ class ObjPlayer(GameObject):
         """Check for player collisions and correct for them."""
         pos = self.pos
         hspd, vspd = self.hspd, self.vspd
-        svspd, shspd = np.sign(vspd), np.sign(hspd)
+        svspd, shspd = sign(vspd), sign(hspd)
 
         # Horizontal collision
         if self.scollide(vec2d(pos.x + hspd, pos.y)):
@@ -719,7 +756,7 @@ class ObjGravOrb(GameObject):
 
             # Flip gravity and change grav ammount
             elif grav_mult < 0:
-                if np.sign(obj.grav) in (0, 1):
+                if sign(obj.grav) in (0, 1):
                     obj.grav = obj.default_grav * grav_mult
                 else:
                     obj.grav = obj.default_grav * -grav_mult
@@ -767,13 +804,19 @@ class ObjSpikeInv(GameObject):
 
 
 # Main application functions
-def main():
-    clock = Clock()
-    engine = Engine(FULLTILE, FPS, SIZE, True)
-    engine.init_obj(create_objects)
+def main(debug: bool = False):
+    # Create engine object
+    engine = Engine(FULLTILE, FPS, SIZE, debug)
+    engine.init_obj(create_objects)#, 255)
     cam = View(SIZE)
     engine.set_cam(cam)
+
+    # Load main menu
     engine.lvl.load('mainmenu')
+    gameplay_mode(engine)
+
+def gameplay_mode(engine: Engine):
+    clock = Clock()
     if engine.debug:
         engine.debug.time_record = {
             'Update': 0.0,
@@ -811,9 +854,9 @@ def event_handle(engine: Engine):
         if event.type == QUIT:
             engine.end()
             return
-    if engine.inp.kb.get_key_pressed(41):
-        engine.end()
-        return
+    #if engine.inp.kb.get_key_pressed(41):
+    #    engine.end()
+    #    return
 
 def update(engine: Engine):
     t = 0
@@ -828,25 +871,25 @@ def update(engine: Engine):
 def update_debug(engine: Engine, clock: Clock):
     debug = engine.debug
     if debug:
-            fps = debug.menu.get('fps')
-            fps.text = 'fps: {:.0f}'.format(clock.get_fps())
+        fps = debug.menu.get('fps')
+        fps.text = 'fps: {:.0f}'.format(clock.get_fps())
 
-            campos = debug.menu.get('campos')
-            campos.text = 'cam pos: {}'.format(engine.cam.pos)
+        campos = debug.menu.get('campos')
+        campos.text = 'cam pos: {}'.format(engine.cam.pos)
 
-            memory = debug.menu.get('memory')
-            mem = PROCESS.memory_info().rss
-            mb = mem // (10**6)
-            kb = (mem - (mb * 10**6)) // 10**3
-            memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
+        memory = debug.menu.get('memory')
+        mem = PROCESS.memory_info().rss
+        mb = mem // (10**6)
+        kb = (mem - (mb * 10**6)) // 10**3
+        memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
 
 def draw(engine: Engine):
     t = 0
     if engine.debug:
         t = time()
     engine.draw.draw()
-    engine.debug.menu.draw(engine.draw)
     if engine.debug:
+        engine.debug.menu.draw(engine.draw)
         engine.debug.time_record['Draw'] += (time() - t)
 
 def render(engine: Engine):
@@ -865,4 +908,4 @@ def render(engine: Engine):
 
 # Run main
 if __name__ == '__main__':
-    main()
+    main(debug=True)

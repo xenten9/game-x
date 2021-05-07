@@ -29,14 +29,14 @@ class Input(Component):
 
         # Mouse pressed
         elif event.type == MOUSEBUTTONDOWN:
-            self.ms.button_pressed[event.button] = 1
-            self.ms.button_held[event.button] = 1
+            self.ms.button_pressed[event.button] = True
+            self.ms.button_held[event.button] = True
             self.ms.button_pressed_pos[event.button] = vec2d(*event.pos)
 
         # Mouse released
         elif event.type == MOUSEBUTTONUP:
-            self.ms.button_pressed[event.button] = 0
-            self.ms.button_held[event.button] = 0
+            self.ms.button_pressed[event.button] = False
+            self.ms.button_held[event.button] = False
 
         # Music end
         elif event.type == 56709:

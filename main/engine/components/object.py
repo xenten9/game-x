@@ -1,4 +1,5 @@
 """Handles object instances"""
+import sys
 from typing import Callable
 from ..types.component import Component
 
@@ -19,37 +20,22 @@ class ObjectHandler(Component):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
-            try:
-                self.obj[key]
-            except KeyError:
-                #print('key {} does not exist'.format(key))
-                pass
-            else:
-                self.obj[key].update_early()
+            if key in self.obj:
+                self.obj[key].update_early(self.engine.paused)
 
     def update(self):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
-            try:
-                self.obj[key]
-            except KeyError:
-                #print('key {} does not exist'.format(key))
-                pass
-            else:
-                self.obj[key].update()
+            if key in self.obj:
+                self.obj[key].update(self.engine.paused)
 
     def update_late(self):
         """Update all GameObjects."""
         objcopy = self.obj.copy()
         for key in objcopy:
-            try:
-                self.obj[key]
-            except KeyError:
-                #print('key {} does not exist'.format(key))
-                pass
-            else:
-                self.obj[key].update_late()
+            if key in self.obj:
+                self.obj[key].update_late(self.engine.paused)
 
     # Object creation
     def instantiate_key(self, key: int = None):
