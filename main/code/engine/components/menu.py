@@ -1,7 +1,7 @@
 """Menu's for all manner of occasions."""
 from __future__ import annotations
 from typing import Callable, Tuple
-from pygame import Surface, draw, Rect
+from pygame import Surface, Rect
 
 from ..types.vector import vec2d
 from ..types.component import Component
@@ -108,9 +108,6 @@ class MenuElement():
         if self.center == 9:
             return self.pos - vec2d(size.x, 0)
 
-    def __del__(self):
-        self._menu.remove(self._name)
-
 class MenuElementVisible(MenuElement):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
@@ -132,7 +129,7 @@ class MenuElementVisible(MenuElement):
         pos = self.get_cpos(vec2d(*surface.get_size()))
         if self._cache:
             self.cache()
-        draw.add(self.depth, pos=pos, surface=surface, gui=1)
+        draw.add(self.depth, pos=pos, surface=surface, gui=True)
 
 class SubMenu(MenuElement, Menu):
     def __init__(self, engine, menu: Menu, name: str):
@@ -201,7 +198,7 @@ class MenuRect(MenuElementVisible):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self._size = vec2d(0, 0)
-        self._color = (255, 0, 255)
+        self._color = (0, 0, 0)
         menu.add(self)
 
     @property
@@ -218,12 +215,12 @@ class MenuRect(MenuElementVisible):
         return self._color
 
     @color.setter
-    def color(self, color: Tuple[int, int, int]):
+    def color(self, color):
         for value in color:
             if value < 0 or value > 255:
                 code = ['Colors must be bounded by 0-255',
-                        'Colors: {}'.format(color),
-                        'Colors<type>: {}'.format(type(color))]
+                        'Color: {}'.format(color),
+                        'Color<type>: {}'.format(type(color))]
                 raise ValueError('\n'.join(code))
         self._color = color
         self._cache = True
@@ -231,7 +228,9 @@ class MenuRect(MenuElementVisible):
     def cache(self):
         """Render rect to surface."""
         self.surface = Surface(self.size.ftup())
-        draw.rect(self.surface, self.color, Rect(self.pos.tup(), self.size.tup()))
+        if len(self.color) == 4:
+            self.surface = self.surface.convert_alpha() # type: ignore
+        self.surface.fill(self.color)
 
 class MenuButton(MenuElement):
     """Button menu element."""

@@ -5,7 +5,8 @@ from typing import List
 from pygame.image import load
 from pygame import Surface, Rect, draw
 
-from .grid import f_make_grid, f_change_grid_dimensions, f_minimize_grid
+#from .grid import f_make_grid, f_change_grid_dimensions, f_minimize_grid
+from ..types.array import array2d
 from ..types.vector import vec2d
 from ..types.component import Component
 from .draw import Draw
@@ -109,14 +110,14 @@ class TileMap(Component):
 class TileLayer(Component):
     """Layer containing all of the tiles in a lookup form."""
     def __init__(self, engine: object, tile_handler: TileMap, name: str,
-                 size: vec2d, data: dict, grid: List[List] = None):
+                 size: vec2d, data: dict, array: List[List] = None):
         super().__init__(engine)
         self.tile = tile_handler
         self.name = name
         self.size = size
-        if grid is None:
-            grid = f_make_grid(size, None)
-        self.grid = grid
+        self.array = array2d(size)
+        if array is not None:
+            self.array._array = array
         self.surface = Surface((0, 0))
         self.visible = True
         self.data = data
@@ -138,28 +139,24 @@ class TileLayer(Component):
     def place(self, pos: vec2d, tilemap_id: int, tile_id: int):
         """Add tiles to grid on the layer."""
         x, y = pos // (self.fulltile // 2)
-        try:
-            self.grid[x][y] = (tilemap_id, tile_id)
-        except IndexError:
-            if len(self.grid) == 0:
-                size = vec2d(x + 1, y + 1)
-            else:
-                size = vec2d(max(x + 1, len(self.grid)),
-                        max(y + 1, len(self.grid[0])))
-            self.dialate(size)
-            self.grid[x][y] = (tilemap_id, tile_id)
+        self.array.set(x, y, (tilemap_id, tile_id))
 
     def remove(self, pos: vec2d):
         """Remove tiles from the grid on the grid."""
         x, y = pos // (self.fulltile // 2)
         try:
-            self.grid[x][y] = None
+            self.array.delete(x, y)
         except IndexError:
             pass
 
     def draw(self, draw: Draw):
         """Draw tiles."""
         if self.visible:
+            if self.size != self.array.size:
+                self.size = self.array.size
+                surface = Surface(vec2d(*self.array.size) * self.fulltile).convert_alpha()
+                surface.fill((0, 0, 0, 0))
+                surface.blit(self.surface, vec2d(0, 0))
             surface = self.surface
             depth = self.depth
             if self.engine.parallax and self.parallax != vec2d(0, 0):
@@ -173,18 +170,9 @@ class TileLayer(Component):
         """Turn layer invisible."""
         self.visible = not self.visible
 
-    def dialate(self, size: vec2d):
-        """Change the size of the grid."""
-        self.size = size
-        self.grid = f_change_grid_dimensions(self.grid, size, None)
-        surface = Surface(size * self.fulltile).convert_alpha()
-        surface.fill((0, 0, 0, 0))
-        surface.blit(self.surface, vec2d(0, 0))
-        self.surface = surface
-
     def minimize(self):
         """Get rid of empty rows and columns."""
-        self.grid = f_minimize_grid(self.grid, None)
+        self.array.minimize()
 
     def cache(self):
         """Cache grid to surface."""
@@ -194,19 +182,20 @@ class TileLayer(Component):
         self.surface.fill((0, 0, 0, 0))
 
         # Iterate through grid
-        for column, _ in enumerate(self.grid):
-            for row, cell in enumerate(self.grid[column]):
-                if cell is not None:
+        for x in range(self.array.width):
+            for y in range(self.array.height):
+                cell = self.array.get(x, y)
+                if isinstance(cell, tuple):
                     tile = self.tile.get_image(*cell)
-                    pos = vec2d(column, row) * halftile
+                    pos = vec2d(x, y) * halftile
                     self.surface.blit(tile, pos)
 
     def cache_partial(self, pos: vec2d):
         """Cache tile to Surface."""
         halftile = self.fulltile // 2
-        x, y = pos // halftile
+        x, y = (pos // halftile)
         try:
-            tile_info = self.grid[x][y]
+            tile_info = self.array.get(x, y)
         except IndexError:
             pass
         else:
@@ -215,6 +204,6 @@ class TileLayer(Component):
                 color = (0, 0, 0, 0)
                 rect = Rect((x, y), vec2d(1, 1) * halftile)
                 draw.rect(self.surface, color, rect)
-            else:
+            elif isinstance(tile_info, tuple):
                 tile = self.tile.get_image(*tile_info)
                 self.surface.blit(tile, pos)

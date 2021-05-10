@@ -61,6 +61,12 @@ class ObjectHandler(Component):
         """Creates instances of objects and instantiates them."""
         self.object_creator(self.engine, **kwargs)
 
+    def post_init(self):
+        objcopy = self.obj.copy()
+        for key in objcopy:
+            if key in self.obj:
+                self.obj[key].post_init()
+
     # Object deletion
     def delete(self, key: int):
         """Removes a ref. of a game object from the self.obj dictionary."""

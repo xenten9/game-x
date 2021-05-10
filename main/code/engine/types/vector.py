@@ -48,6 +48,8 @@ class vec2d(tuple):
         return self.__new__(type(self), self.x * x, self.y * y)
     def __imul__(self, other) -> vec2d:
         return self.__mul__(other)
+    def __rmul__(self, other) -> vec2d:
+        return self.__mul__(other)
 
     def __truediv__(self, other) -> vec2d:
         x, y = self.parse(other)
@@ -80,3 +82,8 @@ class vec2d(tuple):
 
     def __str__(self) -> str:
         return '<{}, {}>'.format(self.x, self.y)
+
+    def normalize(self, mag: float = None):
+        if mag is None:
+            mag = self.magnitude()
+        return self / mag

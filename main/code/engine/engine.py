@@ -1,4 +1,5 @@
 # Imports
+from __future__ import annotations
 from os import path, getcwd
 import sys
 from typing import Callable
@@ -32,6 +33,8 @@ class Engine():
                 self.paths['main'] = getcwd()
         else:
             self.paths['main'] = maindir
+        if not path.exists(self.paths['main']):
+            raise FileNotFoundError('unable to locate main')
         self.paths['debug'] = path.join(self.paths['main'], 'debug')
         self.paths['assets'] = path.join(self.paths['main'], 'assets')
         self.paths['sprites'] = path.join(self.paths['assets'], 'sprites')
@@ -40,6 +43,12 @@ class Engine():
         self.paths['tilemaps'] = path.join(self.paths['assets'], 'tilemaps')
         self.paths['music'] = path.join(self.paths['assets'], 'music')
         self.paths['sfx'] = path.join(self.paths['assets'], 'sfx')
+        for dirpath in self.paths:
+            if dirpath not in ('main', 'debug'):
+                if not path.exists(self.paths[dirpath]):
+                    msg = 'unable to locate {} directory\n'.format(dirpath)
+                    msg += 'attempted path: {}\n'.format(self.paths[dirpath])
+                    raise FileNotFoundError(msg)
 
         # Parameters
         self.run = True

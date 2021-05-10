@@ -1,5 +1,6 @@
 from os import path
 from datetime import datetime
+import os
 from .menu import Menu, MenuRect, MenuText
 from ..types.vector import vec2d
 from ..types.component import Component
@@ -34,6 +35,11 @@ class Debug(Component):
             rect = MenuRect(engine, self.menu, 'rect')
             rect.size = vec2d(160, 36)
             rect.color = (0, 0, 0)
+
+            # Create debug directory
+            if not path.exists(self.paths['debug']):
+                os.mkdir(self.paths['debug'])
+                print('debug directory created!')
 
             # Debug file vars
             self.date_time = datetime.now()

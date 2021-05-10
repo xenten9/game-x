@@ -3,7 +3,7 @@ from pygame import Rect, Surface, draw as pydraw
 
 from ..types.vector import vec2d
 from ..types.component import Component
-from .grid import f_make_grid, f_change_grid_dimensions, f_minimize_grid
+from ..types.array import array2d
 
 class Collider(Component):
     def __init__(self, engine: object):
@@ -16,72 +16,59 @@ class StaticCollider(Component):
     """Handles static collisions aligned to a grid."""
     def __init__(self, engine: object):
         super().__init__(engine)
-        self.size = vec2d(16, 16)
-        self.grid = f_make_grid(self.size, 0)
+        self.array = array2d((16, 16))
         self.visible = True
 
     def add(self, pos: vec2d):
         """Add a wall at a given position."""
         pos //= self.fulltile
-        try:
-            self.grid[int(pos.x)][int(pos.y)] = 1
-        except IndexError:
-            if len(self.grid) == 0:
-                size = pos + vec2d(1, 1)
-            else:
-                size = vec2d(max(pos[0] + 1, len(self.grid)),
-                             max(pos[1] + 1, len(self.grid[0])))
-            self.expand(size)
-            self.grid[int(pos.x)][int(pos.y)] = 1
+        x, y = pos
+        self.array.set(x, y, True)
 
     def remove(self, pos: vec2d):
         """Remove a wall at a given position."""
         pos //= self.fulltile
-        try:
-            self.grid[int(pos.x)][int(pos.y)] = 0
-        except IndexError:
-            pass
+        x, y = pos
+        self.array.delete(x, y)
 
-    def get(self, pos):
+    def get(self, pos: vec2d) -> bool:
         """Check for a collision at a given position."""
         pos //= self.fulltile
-        pos = pos.floor()
+        x, y = pos.ftup()
         try:
-            return self.grid[pos.x][pos.y]
+            if self.array.get(x, y):
+                return True
+            else:
+                return False
         except IndexError:
-            print('outside of static collider')
-            return 0
-
-    def expand(self, size):
-        """Expand grid to accomodate new colliders."""
-        self.size = size
-        self.grid = f_change_grid_dimensions(self.grid, size, 0)
+            #print('outside of static collider')
+            return False
 
     def clear(self):
         """Clear all Static collision points off of grid"""
-        self.grid = f_make_grid((16, 16), 0)
+        self.array = array2d((16, 16))
 
     def toggle_visibility(self):
         self.visible = not self.visible
 
     def debug_draw(self, draw: object):
-        size = vec2d(1, 1) * self.fulltile
-        surface = Surface((size * self.fulltile).ftup()).convert_alpha()
+        size = (vec2d(*self.array.size) * self.fulltile).ftup()
+        surface = Surface(size).convert_alpha()
         surface.fill((0, 0, 0, 0))
         color = (16, 16, 16)
-        size = size.ftup()
+        size = (vec2d(1, 1) * self.fulltile).ftup()
         if self.visible:
-            for row, slice in enumerate(self.grid):
-                for column, cell in enumerate(slice):
-                    if cell:
-                        pos = vec2d(row, column) * self.fulltile
-                        rect = Rect(pos.ftup(), size)
+            for x in range(self.array.width):
+                for y in range(self.array.height):
+                    if self.array.get(x, y):
+                        pos = vec2d(x, y) * self.fulltile
+                        rect = Rect(pos, size)
                         pydraw.rect(surface, color, rect)
             pos = vec2d(0, 0)
             self.engine.draw.add(0, pos=pos, surface=surface)
 
     def minimize(self):
-        self.grid = f_minimize_grid(self.grid, 0)
+        self.array.minimize()
 
 # Handles Dynamic collisions
 class DynamicCollider(Component):

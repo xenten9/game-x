@@ -8,6 +8,7 @@ from ..types.component import Component
 from ..types.vector import vec2d
 from ..types.component import Component
 
+from .tile import TileLayer
 
 # Handles level loading
 class Level(Component):
@@ -54,17 +55,17 @@ class Level(Component):
             # Parse all objects in list
             name = c[0]
             if name == 'tile-layer':
-                layername, grid, data = c[1:4]
-                for column, _ in enumerate(grid):
-                    for row, cell in enumerate(grid[column]):
+                layername, array, data = c[1:4]
+                for column, _ in enumerate(array):
+                    for row, cell in enumerate(array[column]):
                         if cell is not None:
-                            grid[column][row] = tuple(cell)
+                            array[column][row] = tuple(cell)
                 data = dict(data)
-                obj_list.append([name, layername, grid, data])
+                obj_list.append([name, layername, array, data])
 
             elif name == 'static-collider':
-                grid = c[1]
-                obj_list.append([name, grid])
+                array = c[1]
+                obj_list.append([name, array])
 
             else: # Any game object
                 pos, key, data = c[1:4]
@@ -84,15 +85,16 @@ class Level(Component):
 
             # TILE LAYER
             if name == 'tile-layer':
-                layer_name, grid, data = arg[1:4]
-                size = vec2d(len(grid), len(grid[0]))
-                self.engine.tile.add_layer(layer_name, size, data, grid)
+                layer_name, array, data = arg[1:4]
+                size = vec2d(len(array), len(array[0]))
+                self.engine.tile.add_layer(layer_name, size, data, array)
 
             # STATIC COLLIDER
             elif name == 'static-collider':
-                self.size = (vec2d(len(arg[1]), len(arg[1][0]))
+                array = arg[1]
+                self.size = (vec2d(len(array), len(array[0]))
                              * self.fulltile)
-                self.engine.col.st.grid = arg[1]
+                self.engine.col.st.array.array = array
                 self.engine.col.st.size = self.size // self.fulltile
 
                 # Update camera level size to bind camera position
@@ -125,6 +127,7 @@ class Level(Component):
 
         # Update current level
         self.current_level = level_name
+        self.engine.obj.post_init()
 
     def save(self, level_name: Union[str, None] = None):
         """Saves level to level path."""
@@ -141,12 +144,14 @@ class Level(Component):
         obj_list = []
 
         # Write layers
-        for name, layer in self.engine.til.layers.items():
-            info = ['tile-layer', name, layer.grid, layer.data]
-            obj_list.append(info)
+        for name, layer in self.engine.tile.layers.items():
+            if isinstance(layer, TileLayer):
+                info = ['tile-layer', name, layer.array._array, layer.data]
+                obj_list.append(info)
 
         # Write stcol
-        info = ['static-collider', self.engine.col.st.grid]
+        col = self.engine.col.st
+        info = ['static-collider', col.array.array]
         obj_list.append(info)
 
         # Write each object to file

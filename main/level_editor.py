@@ -12,6 +12,7 @@ def clear_terminal():
 
 clear_terminal()
 
+from numpy import sign
 from pygame.constants import KEYDOWN, QUIT
 from pygame.time import Clock
 from pygame.event import get as get_events
@@ -69,20 +70,56 @@ class View(Camera):# type: ignore
     """Camera like object which is limited to the inside of the level."""
     def __init__(self, size: vec2d):
         super().__init__(size)
-        self.level_size = size
+        self.keys = {
+            }
+        self.key = {
+            }
 
-    def pos_get(self) -> vec2d:
+    def update(self, dt: float):
+        self._get_inputs()
+
+        # Mouse movement
+        hspd = (self.key['right'] - self.key['left']) * FULLTILE
+        vspd = (self.key['down'] - self.key['up']) * FULLTILE
+
+        # Mouse movement
+        if self.game.input.ms.get_button_held(2):
+            self.rel += self.game.input.ms.get_delta()
+            dx = abs(self.rel.x) // FULLTILE * sign(self.rel.x) * FULLTILE
+            dy = abs(self.rel.y) // FULLTILE * sign(self.rel.y) * FULLTILE
+            if dx != 0:
+                hspd -= dx
+                self.rel -= vec2d(dx, 0)
+            if dy != 0:
+                vspd -= dy
+                self.rel -= vec2d(0, dy)
+        else:
+            self.rel = vec2d(0, 0)
+
+        # Set pos
+        self.pos = self.pos + vec2d(hspd, vspd)
+
+    def _get_inputs(self):
+        for key in self.key:
+                if key[0] != 'H':
+                    self.key[key] = self.game.input.kb.get_key_pressed(
+                        *self.keys[key])
+                else:
+                    self.key[key] = self.game.input.kb.get_key_held(
+                        *self.keys[key[1:]])
+
+    def _pos_get(self) -> vec2d:
         return self._pos
 
-    def pos_set(self, pos: vec2d):
+    def _pos_set(self, pos: vec2d):
         """Position setter."""
-        size0 = self.size
-        size1 = self.level_size
-        x = f_limit(pos.x, 0, size1.x - size0.x)
-        y = f_limit(pos.y, 0, size1.y - size0.y)
-        self._pos = vec2d(x, y).floor()
+        if pos.x < 0:
+            pos = vec2d(0, pos.y)
+        if pos.y < 0:
+            pos = vec2d(pos.x, 0)
+        self._pos = pos.floor()
 
-    pos = property(pos_get, pos_set)
+    pos = property(_pos_get, _pos_set)
 
 
 # Entities
@@ -91,15 +128,18 @@ class Entity():
     def __init__(self, engine: Engine):
         self.engine = engine
 
-    def update_early(self):
+    def post_init(self):
+        pass
+
+    def update_early(self, pause: bool):
         """Update called first."""
         pass
 
-    def update(self):
+    def update(self, pause: bool):
         """Update called second."""
         pass
 
-    def update_late(self):
+    def update_late(self, pause: bool):
         """Update called last."""
         pass
 
@@ -177,7 +217,11 @@ class ObjCursor(Entity):
             'prevset': (29,),
             'nextlayer': (25,),
             'prevlayer': (6,),
-            'reload': (21,)}
+            'reload': (21,),
+            'left': (4, 80),
+            'right': (7, 79),
+            'up': (26, 82),
+            'down': (22, 81)}
 
         self.mkeys = {
             'place': (1,),
@@ -186,30 +230,34 @@ class ObjCursor(Entity):
         # input vars
         self.key = {
             # Keyboard
-            'save': 0,
-            'load': 0,
-            'modeup': 0,
-            'modedown': 0,
-            'next': 0,
-            'prev': 0,
-            'f1': 0,
-            'tab': 0,
-            'shift': 0,
-            'control': 0,
-            'Hcontrol': 0,
-            'Hshift': 0,
-            'delete': 0,
-            'nextset': 0,
-            'prevset': 0,
-            'nextlayer': 0,
-            'prevlayer': 0,
-            'reload': 0}
+            'save': False,
+            'load': False,
+            'modeup': False,
+            'modedown': False,
+            'next': False,
+            'prev': False,
+            'f1': False,
+            'tab': False,
+            'shift': False,
+            'control': False,
+            'Hcontrol': False,
+            'Hshift': False,
+            'delete': False,
+            'nextset': False,
+            'prevset': False,
+            'nextlayer': False,
+            'prevlayer': False,
+            'reload': False,
+            'left': False,
+            'right': False,
+            'up': False,
+            'down': False}
 
         self.mkey = {
-            'place': 0,
-            'Hplace': 0,
-            'remove': 0,
-            'Hremove': 0}
+            'place': False,
+            'Hplace': False,
+            'remove': False,
+            'Hremove': False,}
 
     def update(self):
         """Update cursor pos and level changes."""
@@ -247,6 +295,26 @@ class ObjCursor(Entity):
             self.mode1()
         elif self.mode == 2: # Wall mode
             self.mode2()
+
+        # Move camera
+        hspd = (self.key['right'] - self.key['left']) * FULLTILE
+        vspd = (self.key['down'] - self.key['up']) * FULLTILE
+
+        if self.engine.inp.ms.get_button_held(2):
+            self.rel += self.engine.inp.ms.get_delta()
+            dx = abs(self.rel.x) // FULLTILE * sign(self.rel.x) * FULLTILE
+            dy = abs(self.rel.y) // FULLTILE * sign(self.rel.y) * FULLTILE
+            if dx != 0:
+                hspd -= dx
+                self.rel -= vec2d(dx, 0)
+            if dy != 0:
+                vspd -= dy
+                self.rel -= vec2d(0, dy)
+        else:
+            self.rel = vec2d(0, 0)
+
+        cam = self.engine.cam
+        cam.pos = cam.pos + vec2d(hspd, vspd)
 
     def get_inputs(self):
         """Register inputs and change variables."""
@@ -406,7 +474,7 @@ class ObjCursor(Entity):
         if self.key['f1']:
             self.engine.col.st.toggle_visibility()
 
-        # Place object
+        # Place wall
         if self.mkey['Hplace']:
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
             pos = pos.grid(FULLTILE)
@@ -414,7 +482,7 @@ class ObjCursor(Entity):
                 self.pos = pos
                 self.engine.col.st.add(pos)
 
-        # Remove object
+        # Remove wall
         elif self.mkey['Hremove']:
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
             pos = pos.grid(FULLTILE)
