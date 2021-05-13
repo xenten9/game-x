@@ -1,6 +1,8 @@
-"""Objects for handling collision detection."""
+"""Collision detection handlers."""
+# External libraries
 from pygame import Rect, Surface, draw as pydraw
 
+# Local imports
 from ..types.vector import vec2d
 from ..types.component import Component
 from ..types.array import array2d

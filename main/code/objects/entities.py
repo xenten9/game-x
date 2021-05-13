@@ -1,13 +1,16 @@
+"""All entities."""
+# Standard library
 from math import floor
 
+# Local imports
 from ..engine.engine import Engine
 from ..engine.components.draw import Draw
-from ..engine.components.menu import Menu, MenuElement
+from ..engine.components.menu import Menu, MenuButton, MenuElement, MenuSlider
 from ..engine.components.menu import MenuText, MenuRect
 from ..engine.components.menu import MenuButtonFull
-from ..engine.types.vector import vec2d
-from .constants import SIZE
 from ..engine.components.maths import f_limit
+from ..engine.types.vector import vec2d
+from ..constants import SIZE
 
 # Entities
 class Entity():
@@ -52,7 +55,7 @@ class ObjJukeBox(Entity):
         if self.music is not None: # Add new music
             if current_music is None: # Start playing music
                 engine.aud.music.load(self.music)
-                engine.aud.music.set_volume(self.volume)
+                engine.aud.music.music_volume = self.volume
                 engine.aud.music.play(self.loops)
 
             elif current_music != self.music: # Queue up music
@@ -63,10 +66,11 @@ class ObjJukeBox(Entity):
             engine.aud.music.stop(1000)
 
     def update(self, paused: bool):
-        if paused:
-            self.engine.aud.music.set_volume(self.volume / 4)
-        else:
-            self.engine.aud.music.set_volume(self.volume)
+        if self.engine.aud.music.get_current() == self.music:
+            if paused:
+                self.engine.aud.music.music_volume = self.volume / 4
+            else:
+                self.engine.aud.music.music_volume = self.volume
 
 class ObjMainMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
@@ -140,14 +144,26 @@ class ObjMainMenu(Entity):
         title.center = 5
 
         # VOLUME SLIDER
-        #slider_rect = MenuRect(self.option_menu, 'slider-rect')
-        #size = vec2d(100, 24)
-        #pos += vec2d(-50, 12)
-        #color = (64, 64, 64)
-        #slider_rect.set_vars(size=size, pos=pos, color=color)
+        volume_slider = MenuSlider(engine, self.option_menu, 'volume-slider')
+        volume_slider.size = vec2d(100, 24)
+        volume_slider.pos = SIZE/2 + vec2d(0, 24) - vec2d(100, 24) / 2
+        volume_slider.center = 7
 
-        #slider_button = MenuButton(self.option_menu, 'slider-button')
-        #slider_button.set_vars(size=size, pos=pos, call=call, held=True)
+        volume_slider.rect_slide.color = (64, 64, 64)
+
+        volume_slider.button.call = self.pressed
+
+        # RETURN Button
+        save_button = MenuButtonFull(engine, self.option_menu, 'save-button')
+        save_button.pos = SIZE/2 + vec2d(0, 104)
+        save_button.center = 5
+        save_button.size = vec2d(128, 24)
+
+        save_button.text.text = 'Save'
+        save_button.text.color = (128, 128, 128)
+        save_button.text.depth = 16
+
+        save_button.button.call = self.pressed
 
         # RETURN Button
         return_button = MenuButtonFull(engine, self.option_menu, 'return-button')
@@ -165,29 +181,49 @@ class ObjMainMenu(Entity):
         self.title_menu.get('start-button').update()
         self.title_menu.get('option-button').update()
         self.title_menu.get('quit-button').update()
-        #self.option_menu.get('slider-button').update()
+        self.option_menu.get('volume-slider').update()
+        self.option_menu.get('save-button').update()
         self.option_menu.get('return-button').update()
+        if self.option_menu.visible:
+            if self.engine.inp.kb.get_key_pressed(41):
+                self.option_menu.visible = False
+                self.title_menu.visible = True
 
     def draw(self, draw: Draw):
         self.title_menu.draw(draw)
         self.option_menu.draw(draw)
 
-    def pressed(self, element: MenuElement, pos: vec2d):
+    def pressed(self, element: MenuButton, pos: vec2d):
         if element.name == 'start-button-button':
             self.engine.lvl.load('level1')
         elif element.name == 'option-button-button':
             self.title_menu.visible = False
             self.option_menu.visible = True
+            vol = self.option_menu.get('volume-slider')
+            self.engine.settings.load()
+
+            if isinstance(vol, MenuSlider):
+                vol.value = self.engine.settings.volume
         elif element.name == 'return-button-button':
             self.title_menu.visible = True
             self.option_menu.visible = False
         elif element.name == 'quit-button-button':
             self.engine.end()
-        if element.name == 'slider-button':
-            x = floor(pos.x)
-            x = f_limit(x, 0, 100)
-            size = vec2d(x, 24)
-            self.option_menu.get('slider-rect').set_vars(size=size)
+        elif element.name == 'volume-slider-button':
+            size = element.size
+            x = floor(pos.x) / size.x
+            x = f_limit(x, 0, 1)
+            if isinstance(element.menu, MenuSlider):
+                element.menu.value = x
+        elif element.name == 'save-button-button':
+            menu = self.option_menu
+            settings = self.engine.settings
+
+            volume = menu.get('volume-slider')
+            if isinstance(volume, MenuSlider):
+                settings.volume = volume.value
+
+            settings.save()
 
 class ObjPauseMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data:dict):
@@ -264,7 +300,6 @@ class ObjPauseMenu(Entity):
         self.menu.draw(draw)
 
     def pressed(self, element: MenuElement, pos: vec2d):
-        print(element.name)
         if element.name == 'resume-button':
             self.menu.visible = False
             self.engine.pause()

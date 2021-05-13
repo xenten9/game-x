@@ -1,10 +1,12 @@
 """Object for rendering to the screen."""
+# Standard library
 from pygame import display
+
+# Local imports
 from ..types.component import Component
 from ..types.vector import vec2d
 from .camera import Camera
 
-# Handles graphics
 class Window(Component):
     """Handles graphics."""
     def __init__(self, engine, size: vec2d):

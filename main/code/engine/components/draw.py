@@ -1,3 +1,5 @@
+"""Handles drawing objects to a camera."""
+# Local imports
 from ..types.component import Component
 from .camera import Camera
 

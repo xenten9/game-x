@@ -1,6 +1,8 @@
-"""Handles object instances"""
-import sys
+"""Handles object instances."""
+# Standard library
 from typing import Callable
+
+# Local imports
 from ..types.component import Component
 
 class ObjectHandler(Component):

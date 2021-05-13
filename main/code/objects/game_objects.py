@@ -1,16 +1,20 @@
+"""All game objects."""
+# Standard library
 from os import path
 from math import floor
 from typing import Optional, Tuple
 
+# External libraries
 from numpy import sign
 from pygame import image
 
-from .constants import FULLTILE
+# Local imports
+from ..constants import FULLTILE
 from .entities import Entity, ObjPauseMenu
 from ..engine.engine import Engine
 from ..engine.components.draw import Draw
 from ..engine.components.maths import f_loop
-from ..engine.types.vecor import vec2d
+from ..engine.types.vector import vec2d
 
 # Game objects
 class GameObject(Entity):

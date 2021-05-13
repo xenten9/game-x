@@ -1,8 +1,12 @@
 """Menu's for all manner of occasions."""
+# Standard library
 from __future__ import annotations
 from typing import Callable, Tuple
+
+# External libraries
 from pygame import Surface, Rect
 
+# Local imports
 from ..types.vector import vec2d
 from ..types.component import Component
 from .draw import Draw
@@ -56,7 +60,11 @@ class MenuElement():
         self._center = 7
         self._surface = Surface((0, 0))
         self._cache = True
-        self._menu.add(self)
+        self.menu.add(self)
+
+    @property
+    def menu(self):
+        return self._menu
 
     @property
     def name(self):
@@ -143,7 +151,7 @@ class MenuText(MenuElementVisible):
         self._font = 'arial'
         self._text = name
         self._color = (255, 0, 255)
-        self._menu.add(self)
+        self.menu.add(self)
 
     @property
     def size(self):
@@ -276,8 +284,16 @@ class MenuButton(MenuElement):
     def held(self, held: bool):
         self._held = held
 
+    @property
+    def focus(self):
+        return self._focus
+
+    @focus.setter
+    def focus(self, focus: bool):
+        self._focus = focus
+
     def update(self):
-        if self._menu.visible:
+        if self.menu.visible:
             pos = self._engine.inp.ms.get_button_pressed_pos(self.mkey)
             if pos is not None:
                 if self.collide(pos):
@@ -285,7 +301,7 @@ class MenuButton(MenuElement):
                         self.focus = True
                     else:
                         self.call(self, pos - self.pos)
-            if self._focus:
+            if self.focus:
                 if self._engine.inp.ms.get_button_held(self.mkey):
                     pos = self._engine.inp.ms.get_pos()
                     self.call(self, pos - self.pos)
@@ -309,7 +325,7 @@ class MenuButtonFull(SubMenu):
 
     @property
     def visible(self):
-        return self._menu.visible
+        return self.menu.visible
 
     @property
     def pos(self):
@@ -351,3 +367,69 @@ class MenuButtonFull(SubMenu):
     def draw(self, draw: Draw):
         self.text.draw(draw)
         self.rect.draw(draw)
+
+class MenuSlider(SubMenu):
+    def __init__(self, engine, menu: Menu, name: str):
+        super().__init__(engine, menu, name)
+        self.elements = {}
+        self.rect_slide = MenuRect(self._engine, self, name + '-rect-slide')
+        self.rect_slide.depth = 12
+        self.rect_back = MenuRect(self._engine, self, name + '-rect-back')
+        self.button = MenuButton(self._engine, self, name + '-button')
+        self.button.held = True
+        self._size = vec2d(0, 0)
+        self._value = 1
+
+    @property
+    def visible(self):
+        return self.menu.visible
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, pos: vec2d):
+        self._pos = pos
+        self.rect_slide.pos = pos
+        self.rect_back.pos = pos
+        self.button.pos = pos
+
+    @property
+    def center(self):
+        return self._center
+
+    @center.setter
+    def center(self, center: int):
+        if 1 <= center <= 9:
+            self._center = center
+            self.rect_slide.center = self.center
+            self.rect_back.center = self.center
+            self.button.center = self.center
+
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, size: vec2d):
+        self._size = size.floor()
+        self.rect_slide.size = vec2d(self.value * self.size.x, self.size.y)
+        self.rect_back.size = self.size
+        self.button.size = self.size
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value: float):
+        self._value = value
+        self.rect_slide.size = vec2d(self.value * self.size.x, self.size.y)
+
+    def update(self):
+        self.button.update()
+
+    def draw(self, draw: Draw):
+        self.rect_slide.draw(draw)
+        self.rect_back.draw(draw)

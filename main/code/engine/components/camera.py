@@ -1,11 +1,14 @@
-"""Camera objects for getting images."""
+"""Camera objects for containing information for the screen."""
+# External libraries
 from pygame import Surface
+
+# Local imports
 from ..types.vector import vec2d
 
-# Camera object
 class Camera():
     """Camera object for defining viewframe."""
-    def __init__(self, size: vec2d):
+    def __init__(self, engine, size: vec2d):
+        self.engine = engine
         self.size = size
         self._pos = vec2d(0, 0)
         self._surface = Surface(size.ftup())

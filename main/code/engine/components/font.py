@@ -1,6 +1,11 @@
 """Object for handling fonts."""
+# External libraries
 from pygame import font
+
+# Local imports
 from ..types.component import Component
+
+# Initializing fonts
 font.init()
 
 class Font(Component):

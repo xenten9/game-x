@@ -1,8 +1,12 @@
 """Handles game audio"""
+# Standard library
 from typing import Union
-from pygame import mixer
 from os import path
 
+# External libraries
+from pygame import mixer
+
+# Local imports
 from ..types.component import Component
 
 class Mixer(Component):
@@ -20,9 +24,30 @@ class Music(Component):
         self.music_queue = []
         self.fading = False
         self.paused = False
-        self.volume = 1
-        self.music_volume = 1
+        self._volume = 1
+        self._music_volume = 1
+        mixer.music.set_volume(self.music_volume * self.volume)
         mixer.music.set_endevent(56709)
+
+    @property
+    def volume(self):
+        return self._volume
+
+    @volume.setter
+    def volume(self, volume: float):
+        if 0 <= volume <= 1:
+            self._volume = volume
+            mixer.music.set_volume(self.music_volume * self.volume)
+
+    @property
+    def music_volume(self):
+        return self._music_volume
+
+    @music_volume.setter
+    def music_volume(self, volume: float):
+        if 0 <= volume <= 1:
+            self._music_volume = volume
+            mixer.music.set_volume(self.music_volume * self.volume)
 
     def load(self, file: str):
         """Load music."""
@@ -36,7 +61,7 @@ class Music(Component):
 
     def stop(self, fade: int = 0):
         """Load music."""
-        if not fade and not self.fading:
+        if fade == 0 and not self.fading:
             mixer.music.stop()
         else:
             mixer.music.fadeout(fade)
@@ -61,11 +86,6 @@ class Music(Component):
         if mixer.music.get_busy():
             return self.music
         return None
-
-    def set_volume(self, vol: float):
-        """Change volume."""
-        self.volume = vol
-        mixer.music.set_volume(self.music_volume * self.volume)
 
     def end(self):
         """Called when music ends."""

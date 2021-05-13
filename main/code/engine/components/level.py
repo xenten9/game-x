@@ -1,13 +1,15 @@
 """Loads and saves levels from disk."""
+# Standard library
 from os import path
 from ast import literal_eval
 from typing import Union
 import json
 
+# Local imports
+from ...constants import colorize, cprint
 from ..types.component import Component
 from ..types.vector import vec2d
 from ..types.component import Component
-
 from .tile import TileLayer
 
 # Handles level loading
@@ -25,14 +27,14 @@ class Level(Component):
             while level_name in ('', None):
                 level_name = input('load level name? ')
                 if level_name in ('', None):
-                    print('improper level name.')
+                    cprint('improper level name.', 'yellow')
                 elif level_name == 'exit':
                     return
                 else:
                     level = path.join(self.paths['levels'], level_name+'.json')
                     if not path.exists(level):
                         level_name = None
-                        print('improper level name.')
+                        cprint('improper level name.', 'yellow')
         else:
             level = path.join(self.paths['levels'], level_name+'.json')
             if not path.exists(level):
@@ -40,7 +42,7 @@ class Level(Component):
                         'path: {}'.format(level),
                         'level name: {}'.format(level_name),
                         'level not found']
-                raise Exception('\n'.join(code))
+                raise Exception(colorize('\n'.join(code), 'red'))
 
         # Load level file
         if not isinstance(level_name, str):
@@ -101,7 +103,8 @@ class Level(Component):
                 try:
                     self.engine.cam.level_size
                 except AttributeError:
-                    print('Camera has no variable: level_size')
+                    msg = 'Camera has no variable: level_size'
+                    cprint(msg, 'yellow')
                 else:
                     self.engine.cam.level_size = self.size
 
@@ -123,7 +126,7 @@ class Level(Component):
 
         # Say level succesful level laod if level is no reloaded
         if self.current_level != level_name:
-            print('successful level load!')
+            cprint('successful level load!', 'green')
 
         # Update current level
         self.current_level = level_name
@@ -136,7 +139,7 @@ class Level(Component):
             while level_name in ('', None):
                 level_name = input('save level name? ')
                 if level_name in ('', None):
-                    print('improper level name.')
+                    cprint('improper level name.', 'yellow')
                 elif level_name == 'exit':
                     return
 
@@ -162,12 +165,12 @@ class Level(Component):
         # Create file object and write dumped json to it
         data = json.dumps(obj_list)
         data = data.replace('[["', '[\n\t["')
-        data = data.replace('}], ["', '}], \n\t["')
+        data = data.replace('], ["', '], \n\t["')
         data = data.replace('}]]', '}]\n]')
         level = open(path.join(self.paths['levels'], level_name+'.json'), 'w')
         level.write(data)
         level.close()
-        print('successful level save!')
+        cprint('successful level save!', 'green')
 
     def convert(self, level_name: Union[str, None] = None):
         # Get name
@@ -175,14 +178,14 @@ class Level(Component):
             while level_name in ('', None):
                 level_name = input('load level name? ')
                 if level_name in ('', None):
-                    print('improper level name.')
+                    cprint('improper level name.', 'yellow')
                 elif level_name == 'exit':
                     return
                 else:
                     level = path.join(self.paths['levels'], level_name+'.lvl')
                     if not path.exists(level):
                         level_name = None
-                        print('improper level name.')
+                        cprint('improper level name.', 'yellow')
         else:
             level = path.join(self.paths['levels'], level_name+'.lvl')
             if not path.exists(level):
@@ -190,7 +193,7 @@ class Level(Component):
                         'path: {}'.format(level),
                         'level name: {}'.format(level_name),
                         'level not found']
-                raise Exception('\n'.join(code))
+                raise FileNotFoundError(colorize('\n'.join(code), 'red'))
 
         # Load lvl
         if not isinstance(level_name, str):

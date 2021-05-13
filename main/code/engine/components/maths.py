@@ -1,3 +1,5 @@
+"""Useful mathematical functions"""
+
 # Return a value following packman logic
 def f_loop(value, minval, maxval):
     """Returns a number that loops between the min and max."""

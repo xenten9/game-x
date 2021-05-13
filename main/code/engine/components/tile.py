@@ -1,17 +1,19 @@
-
+"""Handles rendering, loading and modifying tilemaps and tile layers."""
+# Standard library
 from os import path, listdir
 from typing import List
 
+# External libraries
 from pygame.image import load
 from pygame import Surface, Rect, draw
 
-#from .grid import f_make_grid, f_change_grid_dimensions, f_minimize_grid
+# Local imports
 from ..types.array import array2d
 from ..types.vector import vec2d
 from ..types.component import Component
 from .draw import Draw
+from ...constants import colorize
 
-# Tile map
 class TileMap(Component):
     """Handles background and foreground graphics."""
     def __init__(self, engine: object):
@@ -79,9 +81,9 @@ class TileMap(Component):
             code = ['Tilemap not found.',
                     'Tilemap dir: {}'.format(self.paths['tilemaps']),
                     'Tilemap id: {}'.format(map_id)]
-            raise FileNotFoundError('\n  ' + '\n  '.join(code))
+            code = '\n  ' + '\n  '.join(code)
+            raise FileNotFoundError(colorize(code, 'red'))
         return self.tilemaps[map_id][tile_id]
-
 
     def add_all(self):
         directory = listdir(self.paths['tilemaps'])
@@ -154,17 +156,17 @@ class TileLayer(Component):
         if self.visible:
             if self.size != self.array.size:
                 self.size = self.array.size
-                surface = Surface(vec2d(*self.array.size) * self.fulltile).convert_alpha()
+                surface = Surface(vec2d(*self.array.size) * self.fulltile)
+                surface = surface.convert_alpha()
                 surface.fill((0, 0, 0, 0))
                 surface.blit(self.surface, vec2d(0, 0))
             surface = self.surface
             depth = self.depth
             if self.engine.parallax and self.parallax != vec2d(0, 0):
                 pos = (self.engine.cam.pos * self.parallax).floor()
-                self.engine.draw.add(depth, pos=pos, surface=surface)
             else:
                 pos = vec2d(0, 0)
-                self.engine.draw.add(depth, pos=pos, surface=surface)
+            draw.add(depth, pos=pos, surface=surface)
 
     def toggle_visibility(self):
         """Turn layer invisible."""

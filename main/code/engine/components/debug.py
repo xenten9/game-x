@@ -1,10 +1,12 @@
-from os import path
+"""Debug object for containing and displaying debug info."""
+# Standard library
+from os import path, mkdir
 from datetime import datetime
-import os
+
+# Local imports
 from .menu import Menu, MenuRect, MenuText
 from ..types.vector import vec2d
 from ..types.component import Component
-
 
 class Debug(Component):
     def __init__(self, engine, debug):
@@ -38,7 +40,7 @@ class Debug(Component):
 
             # Create debug directory
             if not path.exists(self.paths['debug']):
-                os.mkdir(self.paths['debug'])
+                mkdir(self.paths['debug'])
                 print('debug directory created!')
 
             # Debug file vars
@@ -86,4 +88,3 @@ class Debug(Component):
         file = open(self.file, 'a')
         file.write(write + '\n')
         file.close()
-

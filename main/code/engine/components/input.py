@@ -1,10 +1,15 @@
+"""Input handlers for mouse and keyboard."""
+# Standard library
 from typing import Union
+
+# External libraries
 from pygame.constants import (KEYDOWN, KEYUP, MOUSEMOTION,
                               MOUSEBUTTONUP, MOUSEBUTTONDOWN)
 from pygame.event import Event
+
+# Local imports
 from ..types.component import Component
 from ..types.vector import vec2d
-
 
 class Input(Component):
     def __init__(self, engine: object):

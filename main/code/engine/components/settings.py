@@ -1,0 +1,59 @@
+"""Handles loading and saving settings."""
+# Standard library
+from os import path
+
+# External libraries
+import json
+
+# Local imports
+from ...constants import cprint
+from ..types.component import Component
+
+class Settings(Component):
+    def __init__(self, engine):
+        super().__init__(engine)
+
+        # Settings file
+        self.settings_file = path.join(self.paths['settings'], 'settings.json')
+
+        # Settings
+        self._volume = 0
+
+        # Load settings from file
+        self.load()
+
+    @property
+    def volume(self) -> float:
+        return self._volume
+
+    @volume.setter
+    def volume(self, volume: float):
+        if 0 <= volume <= 1:
+            self._volume = volume
+            self.engine.aud.music.volume = volume
+
+    def load(self):
+        file = open(self.settings_file, 'r')
+        data = file.read()
+        file.close()
+
+        settings = json.loads(data)
+        if isinstance(settings['volume'], float):
+            self.volume = settings['volume']
+
+        cprint('succesful settings load!', 'green')
+
+    def save(self):
+        data = self._getdata()
+        text = json.dumps(data, indent=4, separators=(', ', ' : '))
+
+        file = open(self.settings_file, 'w')
+        file.write(text)
+        file.close()
+
+        cprint('succesful settings save!', 'green')
+
+    def _getdata(self):
+        data = {
+            'volume': self.volume}
+        return data

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from math import hypot, floor
-from typing import Tuple, Union
+from typing import Tuple
 
 class vec2d(tuple):
     def __new__(cls, x, y) -> vec2d:

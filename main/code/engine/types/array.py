@@ -29,7 +29,6 @@ class array2d():
     @array.setter
     def array(self, array: List[list]):
         self._array = array
-        print((len(array), len(array[0])))
         self._size = (len(array), len(array[0]))
 
     @property

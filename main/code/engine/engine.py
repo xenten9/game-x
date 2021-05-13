@@ -1,10 +1,14 @@
-# Imports
+"""Game engine."""
+# Standard library
 from __future__ import annotations
+from typing import Callable
 from os import path, getcwd
 import sys
-from typing import Callable
 
+# Local imports
+from ..constants import colorize
 from .types.vector import vec2d
+from .components.settings import Settings
 from .components.window import Window
 from .components.input import Input
 from .components.audio import Mixer
@@ -16,7 +20,6 @@ from .components.level import Level
 from .components.camera import Camera
 from .components.tile import TileMap
 from .components.debug import Debug
-
 
 class Engine():
     def __init__(self, fulltile: int, fps: int, size: vec2d, debug: bool = False, maindir: str = None):
@@ -34,7 +37,8 @@ class Engine():
         else:
             self.paths['main'] = maindir
         if not path.exists(self.paths['main']):
-            raise FileNotFoundError('unable to locate main')
+            msg = 'unable to locate main'
+            raise FileNotFoundError(colorize(msg, 'red'))
         self.paths['debug'] = path.join(self.paths['main'], 'debug')
         self.paths['assets'] = path.join(self.paths['main'], 'assets')
         self.paths['sprites'] = path.join(self.paths['assets'], 'sprites')
@@ -43,12 +47,13 @@ class Engine():
         self.paths['tilemaps'] = path.join(self.paths['assets'], 'tilemaps')
         self.paths['music'] = path.join(self.paths['assets'], 'music')
         self.paths['sfx'] = path.join(self.paths['assets'], 'sfx')
+        self.paths['settings'] = path.join(self.paths['main'], 'settings')
         for dirpath in self.paths:
             if dirpath not in ('main', 'debug'):
                 if not path.exists(self.paths[dirpath]):
                     msg = 'unable to locate {} directory\n'.format(dirpath)
                     msg += 'attempted path: {}\n'.format(self.paths[dirpath])
-                    raise FileNotFoundError(msg)
+                    raise FileNotFoundError(colorize(msg, 'red'))
 
         # Parameters
         self.run = True
@@ -58,7 +63,7 @@ class Engine():
         # Components
         # Output
         self._win = Window(self, size)
-        self._cam = Camera(size)
+        self._cam = Camera(self, size)
         self._draw = Draw(self)
         self._aud = Mixer(self)
 
@@ -74,9 +79,13 @@ class Engine():
         self._tile = TileMap(self)
         self._obj = None
 
+        # Settings
+        self._set = Settings(self)
+
         # Debug
         self._debug = Debug(self, debug)
 
+    # All components
     @property
     def win(self) -> Window:
         return self._win
@@ -87,7 +96,8 @@ class Engine():
 
     @cam.setter
     def cam(self, cam: Camera):
-        self._cam = cam
+        if issubclass(type(cam), Camera):
+            self._cam = cam
 
     @property
     def draw(self) -> Draw:
@@ -120,9 +130,14 @@ class Engine():
     @property
     def obj(self) -> ObjectHandler:
         if self._obj is None:
-            raise AttributeError('\nObject handler accessed before creation.')
+            msg = '\nObject handler accessed before creation.'
+            raise AttributeError(colorize(msg, 'red'))
         else:
             return self._obj
+
+    @property
+    def settings(self) -> Settings:
+        return self._set
 
     @obj.setter
     def obj(self, obj: ObjectHandler):
@@ -137,10 +152,6 @@ class Engine():
             self.obj = ObjectHandler(self, object_creator)
         else:
             self.obj = ObjectHandler(self, object_creator, max_object)
-
-    def set_cam(self, cam):
-        if issubclass(type(cam), Camera):
-            self.cam = cam
 
     def clear_ent(self):
         """Clears out all objects and colliders."""

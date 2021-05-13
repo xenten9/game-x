@@ -1,29 +1,73 @@
+"""Game-X main application file[supports running directly and from root]."""
 # Standard library
-from os import system, name as osname
+from os import system, name as osname, path, getcwd
 from time import time
+import sys
 
 # External libraries
 from pygame.constants import KEYDOWN, QUIT
 from pygame.time import Clock
 from pygame.event import get as get_events
 
-# Package imports
-if __name__ == '__main__':
-    # If ran directly
-    from code.engine.types.vector import vec2d
-    from code.engine.engine import Engine
-    from code.engine.components.maths import f_limit
-    from code.engine.components.camera import Camera
-    from code.classes.entities import *
-    from code.classes.objects import *
+# Check if ran from an executable
+if getattr(sys, 'frozen', False):
+    main_path = path.dirname(sys.executable)
 else:
-    # If imported as module
-    from .code.engine.types.vector import vec2d
-    from .code.engine.engine import Engine
-    from .code.engine.components.maths import f_limit
-    from .code.engine.components.camera import Camera
-    from .code.classes.entities import *
-    from .code.classes.objects import *
+    main_path = getcwd()
+
+# Add current directory to sys.path
+if main_path not in sys.path:
+    print('add path')
+    sys.path.insert(0, main_path)
+
+# Local imports
+if __name__ == '__main__':
+    try:
+        from main.code.engine.types.vector import vec2d
+        from main.code.engine.engine import Engine
+        from main.code.engine.components.maths import f_limit
+        from main.code.engine.components.camera import Camera
+        from main.code.engine.components.menu import MenuText
+        from main.code.objects.entities import ObjJukeBox, ObjMainMenu
+        from main.code.constants import FULLTILE, FPS, SIZE, PROCESS
+        from main.code.constants import cprint
+        from main.code.objects.game_objects import (
+            ObjPlayer,
+            ObjGravOrb,
+            ObjDoor,
+            ObjButton,
+            ObjSpike,
+            ObjSpikeInv)
+
+    except ModuleNotFoundError:
+        print('Unable to find all modules.')
+        print('sys path is: ')
+        paths = sys.path
+        for path in paths:
+            print(path)
+        exit()
+else:
+    try:
+        # If imported as module
+        from .code.engine.types.vector import vec2d
+        from .code.engine.engine import Engine
+        from .code.engine.components.maths import f_limit
+        from .code.engine.components.camera import Camera
+        from .code.engine.components.menu import MenuText
+        from .code.objects.entities import ObjJukeBox, ObjMainMenu
+        from .code.constants import FULLTILE, FPS, SIZE, PROCESS
+        from .code.constants import cprint
+        from .code.objects.game_objects import (
+            ObjPlayer,
+            ObjGravOrb,
+            ObjDoor,
+            ObjButton,
+            ObjSpike,
+            ObjSpikeInv)
+
+    except ModuleNotFoundError:
+        print('unable to import modules relatively.')
+        exit()
 
 
 
@@ -35,7 +79,7 @@ def clear_terminal():
         system('clear')
 
 clear_terminal()
-print('All imports finished.')
+cprint('All imports finished.', 'green')
 
 # Object creation function
 def create_objects(engine: Engine, **kwargs):
@@ -114,8 +158,8 @@ def create_objects(engine: Engine, **kwargs):
 # Special
 class View(Camera):# type: ignore
     """Camera like object which is limited to the inside of the level."""
-    def __init__(self, size: vec2d):
-        super().__init__(size)
+    def __init__(self, engine: Engine, size: vec2d):
+        super().__init__(engine, size)
         self.level_size = size
 
     def pos_get(self) -> vec2d:
@@ -138,11 +182,19 @@ def main(debug: bool = False):
     # Create engine object
     engine = Engine(FULLTILE, FPS, SIZE, debug)
     engine.init_obj(create_objects)
-    cam = View(SIZE)
-    engine.set_cam(cam)
+    cam = View(engine, SIZE)
+    engine.cam = cam
 
     # Load main menu
     engine.lvl.load('mainmenu')
+
+    # Add debug elements
+    if engine.debug:
+        volume = MenuText(engine, engine.debug.menu, 'volume')
+        volume.pos = vec2d(0, 12*3)
+        rect = engine.debug.menu.get('rect')
+        rect.size = vec2d(190, 12*4)
+
     gameplay_mode(engine)
 
 def gameplay_mode(engine: Engine):
@@ -198,6 +250,7 @@ def update(engine: Engine):
 def update_debug(engine: Engine, clock: Clock):
     debug = engine.debug
     if debug:
+        # Update debug menu
         fps = debug.menu.get('fps')
         fps.text = 'fps: {:.0f}'.format(clock.get_fps())
 
@@ -209,6 +262,11 @@ def update_debug(engine: Engine, clock: Clock):
         mb = mem // (10**6)
         kb = (mem - (mb * 10**6)) // 10**3
         memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
+
+        volume = debug.menu.get('volume')
+        vol = engine.aud.music.volume
+        mvol = engine.aud.music.music_volume
+        volume.text = 'volume: {}; music_volume: {}'.format(vol, mvol)
 
 def draw(engine: Engine):
     t = 0
