@@ -12,7 +12,7 @@ class Window(Component):
     def __init__(self, engine, size: vec2d):
         super().__init__(engine)
         size = size.floor()
-        self.display = display.set_mode(size)
+        self.display = display.set_mode(size,vsync=1)
         self.size = size
 
     def render(self, camera: Camera):

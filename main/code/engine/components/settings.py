@@ -17,10 +17,13 @@ class Settings(Component):
         self.settings_file = path.join(self.paths['settings'], 'settings.json')
 
         # Settings
-        self._volume = 0
+        self._volume = 0.5
 
         # Load settings from file
-        self.load()
+        if path.exists(self.settings_file):
+            self.load()
+        else:
+            self.save()
 
     @property
     def volume(self) -> float:

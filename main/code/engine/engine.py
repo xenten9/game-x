@@ -2,7 +2,7 @@
 # Standard library
 from __future__ import annotations
 from typing import Callable
-from os import path, getcwd
+from os import path, getcwd, mkdir
 import sys
 
 # Local imports
@@ -51,9 +51,14 @@ class Engine():
         for dirpath in self.paths:
             if dirpath not in ('main', 'debug'):
                 if not path.exists(self.paths[dirpath]):
-                    msg = 'unable to locate {} directory\n'.format(dirpath)
-                    msg += 'attempted path: {}\n'.format(self.paths[dirpath])
-                    raise FileNotFoundError(colorize(msg, 'red'))
+                    if dirpath == 'settings':
+                        mkdir(self.paths[dirpath])
+                    elif dirpath == 'debug':
+                        mkdir(self.paths[dirpath])
+                    else:
+                        msg = 'unable to locate {} directory\n'.format(dirpath)
+                        msg += 'attempted path: {}\n'.format(self.paths[dirpath])
+                        raise FileNotFoundError(colorize(msg, 'red'))
 
         # Parameters
         self.run = True
