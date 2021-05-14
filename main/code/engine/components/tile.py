@@ -1,7 +1,7 @@
 """Handles rendering, loading and modifying tilemaps and tile layers."""
 # Standard library
 from os import path, listdir
-from typing import List
+from typing import Dict, List
 
 # External libraries
 from pygame.image import load
@@ -18,7 +18,7 @@ class TileMap(Component):
     """Handles background and foreground graphics."""
     def __init__(self, engine: object):
         super().__init__(engine)
-        self.layers = {}
+        self.layers: Dict[str, TileLayer] = {}
         self.tilemaps = {}
         self.tilemaps_list = []
         self.clear_cache()

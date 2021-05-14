@@ -1,6 +1,6 @@
 """Game-X main application file[supports running directly and from root]."""
 # Standard library
-from os import system, name as osname, path, getcwd
+from os import path, getcwd
 from time import time
 import sys
 
@@ -13,11 +13,33 @@ from pygame.event import get as get_events
 if getattr(sys, 'frozen', False):
     main_path = path.dirname(sys.executable)
 else:
+    def splitall(filepath: str) -> list:
+        allparts = []
+        while True:
+            parts = path.split(filepath)
+            if parts[0] == filepath:
+                allparts.insert(0, parts[0])
+                break
+            elif parts[1] == filepath:
+                allparts.insert(0, parts[1])
+                break
+            else:
+                filepath = parts[0]
+                allparts.insert(0, parts[1])
+        return allparts
+
     main_path = getcwd()
+    path_parts = splitall(main_path)
+    root = path_parts[0]
+    main_path = root
+    for part in path_parts[1:]:
+        main_path = path.join(main_path, part)
+        if part == 'game-x':
+            break
 
 # Add current directory to sys.path
 if main_path not in sys.path:
-    print('add path')
+    print('adding path: {}'.format(main_path))
     sys.path.insert(0, main_path)
 
 # Local imports
@@ -30,7 +52,7 @@ if __name__ == '__main__':
         from main.code.engine.components.menu import MenuText
         from main.code.objects.entities import ObjJukeBox, ObjMainMenu
         from main.code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from main.code.constants import cprint
+        from main.code.constants import cprint, clear_terminal
         from main.code.objects.game_objects import (
             ObjPlayer,
             ObjGravOrb,
@@ -56,7 +78,7 @@ else:
         from .code.engine.components.menu import MenuText
         from .code.objects.entities import ObjJukeBox, ObjMainMenu
         from .code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from .code.constants import cprint
+        from .code.constants import cprint, clear_terminal
         from .code.objects.game_objects import (
             ObjPlayer,
             ObjGravOrb,
@@ -71,13 +93,7 @@ else:
 
 
 
-# Clear the terminal
-def clear_terminal():
-    if osname == 'nt':
-        system('cls')
-    else:
-        system('clear')
-
+# print succesful importing
 clear_terminal()
 cprint('All imports finished.', 'green')
 
@@ -156,7 +172,7 @@ def create_objects(engine: Engine, **kwargs):
 
 
 # Special
-class View(Camera):# type: ignore
+class View(Camera):
     """Camera like object which is limited to the inside of the level."""
     def __init__(self, engine: Engine, size: vec2d):
         super().__init__(engine, size)
@@ -180,7 +196,7 @@ class View(Camera):# type: ignore
 # Main application functions
 def main(debug: bool = False):
     # Create engine object
-    engine = Engine(FULLTILE, FPS, SIZE, debug)
+    engine = Engine(FULLTILE, FPS, SIZE, debug, maindir=main_path)
     engine.init_obj(create_objects)
     cam = View(engine, SIZE)
     engine.cam = cam
@@ -264,8 +280,8 @@ def update_debug(engine: Engine, clock: Clock):
         memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
 
         volume = debug.menu.get('volume')
-        vol = engine.aud.music.volume
-        mvol = engine.aud.music.music_volume
+        vol = engine.aud.volume
+        mvol = engine.aud.music.volume
         volume.text = 'volume: {}; music_volume: {}'.format(vol, mvol)
 
 def draw(engine: Engine):

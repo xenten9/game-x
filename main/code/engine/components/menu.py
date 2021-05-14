@@ -96,25 +96,27 @@ class MenuElement():
     def pos(self, pos: vec2d):
         self._pos = pos
 
-    def get_cpos(self, size: vec2d):
+    def get_cpos(self, size: vec2d) -> vec2d:
         if self.center == 1:
             return self.pos - vec2d(0, size.y)
-        if self.center == 2:
+        elif self.center == 2:
             return self.pos - vec2d(size.x/2, size.y)
-        if self.center == 3:
+        elif self.center == 3:
             return self.pos - size
-        if self.center == 4:
+        elif self.center == 4:
             return self.pos - vec2d(0, size.y/2)
-        if self.center == 5:
+        elif self.center == 5:
             return self.pos - size/2
-        if self.center == 6:
+        elif self.center == 6:
             return self.pos - vec2d(size.x, size.y/2)
-        if self.center == 7:
+        elif self.center == 7:
             return self.pos
-        if self.center == 8:
+        elif self.center == 8:
             return self.pos - vec2d(size.x/2, 0)
-        if self.center == 9:
+        elif self.center == 9:
             return self.pos - vec2d(size.x, 0)
+        else:
+            return self.pos
 
 class MenuElementVisible(MenuElement):
     def __init__(self, engine, menu: Menu, name: str):
@@ -293,6 +295,10 @@ class MenuButton(MenuElement):
         self._focus = focus
 
     def update(self):
+        """Returns a value in terms of size of the button.
+            If the button was pressed at the bottom right the coord
+            would be vec2d(1.0, 1.0), and top left vec2d(0.0, 0.0),
+            NOTE return are not bounded [0.0, 1.0] when held is enabled."""
         if self.menu.visible:
             pos = self._engine.inp.ms.get_button_pressed_pos(self.mkey)
             if pos is not None:
@@ -300,11 +306,13 @@ class MenuButton(MenuElement):
                     if self.held:
                         self.focus = True
                     else:
-                        self.call(self, pos - self.pos)
+                        pos = pos - self.get_cpos(self.size)
+                        self.call(self, pos / self.size)
             if self.focus:
                 if self._engine.inp.ms.get_button_held(self.mkey):
                     pos = self._engine.inp.ms.get_pos()
-                    self.call(self, pos - self.pos)
+                    pos = pos - self.get_cpos(self.size)
+                    self.call(self, pos / self.size)
                 else:
                     self._focus = False
 
@@ -403,7 +411,7 @@ class MenuSlider(SubMenu):
     def center(self, center: int):
         if 1 <= center <= 9:
             self._center = center
-            self.rect_slide.center = self.center
+            self.rect_slide.pos = self.get_cpos(self.size)
             self.rect_back.center = self.center
             self.button.center = self.center
 

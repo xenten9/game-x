@@ -33,7 +33,7 @@ class Settings(Component):
     def volume(self, volume: float):
         if 0 <= volume <= 1:
             self._volume = volume
-            self.engine.aud.music.volume = volume
+            self.engine.aud.volume = volume
 
     def load(self):
         file = open(self.settings_file, 'r')

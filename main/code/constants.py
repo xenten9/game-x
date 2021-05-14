@@ -1,6 +1,6 @@
 """All constants."""
 # Standard Library
-from os import getpid
+from os import getpid, name as osname, system
 from psutil import Process
 
 # Local imports
@@ -29,3 +29,10 @@ def colorize(text: str, color: str) -> str:
 
 def cprint(text: str, color: str):
     print(colorize(text, color))
+
+# Clear the terminal
+def clear_terminal():
+    if osname == 'nt':
+        system('cls')
+    else:
+        system('clear')

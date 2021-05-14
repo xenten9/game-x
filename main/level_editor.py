@@ -1,6 +1,6 @@
 """Level editing tool for Game-X."""
 # Standard Library
-from os import system, name as osname
+from os import path, system, name as osname, sys, getcwd
 from time import time
 
 # External Libraries
@@ -8,36 +8,72 @@ from pygame.constants import KEYDOWN, QUIT
 from pygame.time import Clock
 from pygame.event import get as get_events
 
+# Check if ran from an executable
+if getattr(sys, 'frozen', False):
+    main_path = path.dirname(sys.executable)
+else:
+    def splitall(filepath: str) -> list:
+        allparts = []
+        while True:
+            parts = path.split(filepath)
+            if parts[0] == filepath:
+                allparts.insert(0, parts[0])
+                break
+            elif parts[1] == filepath:
+                allparts.insert(0, parts[1])
+                break
+            else:
+                filepath = parts[0]
+                allparts.insert(0, parts[1])
+        return allparts
+
+    main_path = getcwd()
+    path_parts = splitall(main_path)
+    root = path_parts[0]
+    main_path = root
+    for part in path_parts[1:]:
+        main_path = path.join(main_path, part)
+        if part == 'game-x':
+            break
+
+# Add current directory to sys.path
+if main_path not in sys.path:
+    print('adding path: {}'.format(main_path))
+    sys.path.insert(0, main_path)
+
 # Local Imports
 if __name__ == '__main__':
     try:
         # If ran directly
-        from code.engine.types.vector import vec2d
-        from code.engine.engine import Engine
-        from code.engine.components.camera import Camera
-        from code.engine.components.menu import MenuText
-        from code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from code.constants import cprint
-        from code.objects.editor import ObjCursor, Object
-
-    except ModuleNotFoundError:
-        # If ran from root
         from main.code.engine.types.vector import vec2d
         from main.code.engine.engine import Engine
         from main.code.engine.components.camera import Camera
         from main.code.engine.components.menu import MenuText
         from main.code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from main.code.constants import cprint
+        from main.code.constants import cprint, clear_terminal
         from main.code.objects.editor import ObjCursor, Object
+
+    except ModuleNotFoundError:
+        print('Unable to find all modules.')
+        print('sys path is: ')
+        paths = sys.path
+        for path in paths:
+            print(path)
+        exit()
 else:
-    # If imported as module
-    from .code.engine.types.vector import vec2d
-    from .code.engine.engine import Engine
-    from .code.engine.components.camera import Camera
-    from .code.engine.components.menu import MenuText
-    from .code.constants import FULLTILE, FPS, SIZE, PROCESS
-    from .code.constants import cprint
-    from .code.objects.editor import ObjCursor, Object # type: ignore
+    try:
+        # If imported as module
+        from .code.engine.types.vector import vec2d
+        from .code.engine.engine import Engine
+        from .code.engine.components.camera import Camera
+        from .code.engine.components.menu import MenuText
+        from .code.constants import FULLTILE, FPS, SIZE, PROCESS
+        from .code.constants import cprint
+        from .code.objects.editor import ObjCursor, Object
+
+    except ModuleNotFoundError:
+        print('unable to import modules relatively.')
+        exit()
 
 
 
@@ -99,7 +135,7 @@ class View(Camera):
 
 # Main application functions
 def main(debug: bool = False):
-    engine = Engine(FULLTILE, FPS, SIZE, debug)
+    engine = Engine(FULLTILE, FPS, SIZE, debug, maindir=main_path)
 
     engine.debug.menu.remove('rect')
     ele = MenuText(engine, engine.debug.menu, 'curpos')

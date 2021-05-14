@@ -1,6 +1,7 @@
 """All entities."""
 # Standard library
-from math import floor
+from time import sleep
+from random import random
 
 # Local imports
 from ..engine.engine import Engine
@@ -55,7 +56,7 @@ class ObjJukeBox(Entity):
         if self.music is not None: # Add new music
             if current_music is None: # Start playing music
                 engine.aud.music.load(self.music)
-                engine.aud.music.music_volume = self.volume
+                engine.aud.music.volume = self.volume
                 engine.aud.music.play(self.loops)
 
             elif current_music != self.music: # Queue up music
@@ -68,9 +69,9 @@ class ObjJukeBox(Entity):
     def update(self, paused: bool):
         if self.engine.aud.music.get_current() == self.music:
             if paused:
-                self.engine.aud.music.music_volume = self.volume / 4
+                self.engine.aud.music.volume = self.volume / 4
             else:
-                self.engine.aud.music.music_volume = self.volume
+                self.engine.aud.music.volume = self.volume
 
 class ObjMainMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
@@ -80,6 +81,7 @@ class ObjMainMenu(Entity):
         self.name = name
         self.data = data
         self.engine.cam.pos = vec2d(0, 0)
+        self.engine.aud.sfx.add('beep.ogg')
 
         # Title menu
         self.title_menu = Menu(engine, SIZE)
@@ -146,8 +148,8 @@ class ObjMainMenu(Entity):
         # VOLUME SLIDER
         volume_slider = MenuSlider(engine, self.option_menu, 'volume-slider')
         volume_slider.size = vec2d(100, 24)
-        volume_slider.pos = SIZE/2 + vec2d(0, 24) - vec2d(100, 24) / 2
-        volume_slider.center = 7
+        volume_slider.pos = SIZE/2 + vec2d(0, 24)# - vec2d(100, 24) / 2
+        volume_slider.center = 5
 
         volume_slider.rect_slide.color = (64, 64, 64)
 
@@ -195,27 +197,33 @@ class ObjMainMenu(Entity):
 
     def pressed(self, element: MenuButton, pos: vec2d):
         if element.name == 'start-button-button':
+            self._beep()
+            self._rsleep(0.4)
             self.engine.lvl.load('level1')
         elif element.name == 'option-button-button':
+            self._beep()
             self.title_menu.visible = False
             self.option_menu.visible = True
             vol = self.option_menu.get('volume-slider')
             self.engine.settings.load()
-
             if isinstance(vol, MenuSlider):
                 vol.value = self.engine.settings.volume
         elif element.name == 'return-button-button':
+            self._beep()
+            self._rsleep(0.05)
             self.title_menu.visible = True
             self.option_menu.visible = False
         elif element.name == 'quit-button-button':
+            self._beep()
+            self._rsleep(0.5)
             self.engine.end()
         elif element.name == 'volume-slider-button':
-            size = element.size
-            x = floor(pos.x) / size.x
+            x = pos.x
             x = f_limit(x, 0, 1)
             if isinstance(element.menu, MenuSlider):
                 element.menu.value = x
         elif element.name == 'save-button-button':
+            self._beep()
             menu = self.option_menu
             settings = self.engine.settings
 
@@ -224,6 +232,17 @@ class ObjMainMenu(Entity):
                 settings.volume = volume.value
 
             settings.save()
+
+    def _beep(self):
+        self.engine.aud.sfx.play('beep.ogg')
+
+    def _rsleep(self, time: float, var: float = None):
+        if var is None:
+            var = 1/8
+        elif var > 1:
+            raise ValueError('Variance must be <= 1.')
+        s = time * (((random()-.5)*var)+1)
+        sleep(s)
 
 class ObjPauseMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data:dict):

@@ -2,8 +2,8 @@
 # Meant for converting old .lvl files to .json
 if __name__ != '__main__':
     from os import listdir
-    from engine.engine import Engine
-    from engine.types.vector import vec2d
+    from main.code.engine.engine import Engine
+    from main.code.engine.types.vector import vec2d
 
     engine = Engine(32, 60, vec2d(256, 256))
 
