@@ -52,9 +52,10 @@ class Music(Component):
 
     @volume.setter
     def volume(self, volume: float):
-        if 0 <= volume <= 1:
-            self._music_volume = volume
-            mixer.music.set_volume(self.volume * self.main_volume)
+        if 0.0 <= volume <= 1.0:
+            if volume != self.volume:
+                self._volume = volume
+                mixer.music.set_volume(self.volume * self.main_volume)
 
     def load(self, file: str):
         """Load music."""

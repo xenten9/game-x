@@ -251,6 +251,7 @@ class ObjPauseMenu(Entity):
         self.key = key
         self.name = name
         self.data = data
+        self.engine.aud.sfx.add('beep.ogg')
 
         # Title menu
         self.menu = Menu(engine, SIZE)
@@ -320,11 +321,17 @@ class ObjPauseMenu(Entity):
 
     def pressed(self, element: MenuElement, pos: vec2d):
         if element.name == 'resume-button':
+            self._beep()
             self.menu.visible = False
             self.engine.pause()
         elif element.name == 'reset-button':
+            self._beep()
             self.engine.lvl.reset()
             self.engine.pause()
         elif element.name == 'quit-button':
+            self._beep()
             self.engine.lvl.load('mainmenu')
             self.engine.pause()
+
+    def _beep(self):
+        self.engine.aud.sfx.play('beep.ogg')
