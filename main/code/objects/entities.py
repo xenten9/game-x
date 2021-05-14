@@ -148,7 +148,7 @@ class ObjMainMenu(Entity):
         # VOLUME SLIDER
         volume_slider = MenuSlider(engine, self.option_menu, 'volume-slider')
         volume_slider.size = vec2d(100, 24)
-        volume_slider.pos = SIZE/2 + vec2d(0, 24)# - vec2d(100, 24) / 2
+        volume_slider.pos = SIZE/2 + vec2d(0, 24)
         volume_slider.center = 5
 
         volume_slider.rect_slide.color = (64, 64, 64)

@@ -1,8 +1,6 @@
 """Handles loading and saving settings."""
 # Standard library
 from os import path
-
-# External libraries
 import json
 
 # Local imports
@@ -31,7 +29,7 @@ class Settings(Component):
 
     @volume.setter
     def volume(self, volume: float):
-        if 0 <= volume <= 1:
+        if 0.0 <= volume <= 1.0:
             self._volume = volume
             self.engine.aud.volume = volume
 
@@ -41,8 +39,7 @@ class Settings(Component):
         file.close()
 
         settings = json.loads(data)
-        if isinstance(settings['volume'], float):
-            self.volume = settings['volume']
+        self.volume = settings['volume']
 
         cprint('succesful settings load!', 'green')
 

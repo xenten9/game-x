@@ -27,8 +27,8 @@ class Mixer(Component):
     def volume(self, volume: float):
         if 0 <= volume <= 1:
             self._volume = volume
-            mixer.music.set_volume(self._volume * self.volume)
-            self.sfx.set_volume()
+            self.music.update_volume()
+            self.sfx.update_volume()
 
 class Music(Component):
     def __init__(self, engine: object, mix: Mixer):
@@ -56,6 +56,9 @@ class Music(Component):
             if volume != self.volume:
                 self._volume = volume
                 mixer.music.set_volume(self.volume * self.main_volume)
+
+    def update_volume(self):
+        mixer.music.set_volume(self.volume * self.main_volume)
 
     def load(self, file: str):
         """Load music."""
@@ -119,7 +122,7 @@ class SFX(Component):
     def main_volume(self) -> float:
         return self.mixer.volume
 
-    def set_volume(self):
+    def update_volume(self):
         for key in self.tracks:
             self.tracks[key].set_volume(self.tvolume[key] * self.main_volume)
 
@@ -130,8 +133,9 @@ class SFX(Component):
         except KeyError:
             sound = path.join(self.paths['sfx'], file)
             self.tracks[file] = mixer.Sound(sound)
-            self.tvolume[file] = volume * self.main_volume
-            self.tracks[file].set_volume(self.tvolume[file])
+            self.tvolume[file] = volume
+            vol = self.tvolume[file] * self.main_volume
+            self.tracks[file].set_volume(vol)
 
     def remove(self, file: str):
         """remove file from tracks."""
