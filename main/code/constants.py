@@ -4,12 +4,15 @@ from os import getpid, name as osname, system
 from psutil import Process
 
 # Local imports
-from .engine.types.vector import vec2d
+try:
+    from .engine.types.vector import vec2d
+    SIZE = vec2d(1024, 768)
+except ImportError:
+    SIZe = None
 
 # Constants
 FULLTILE = 32
 FPS = 60
-SIZE = vec2d(1024, 768)
 PROCESS = Process(getpid())
 TGREEN = '\033[92m' #GREEN
 TYELLOW = '\033[93m' #YELLOW
@@ -33,6 +36,8 @@ def cprint(text: str, color: str):
 # Clear the terminal
 def clear_terminal():
     if osname == 'nt':
+        print('\n'*4)
         system('cls')
     else:
+        print('\n'*4)
         system('clear')

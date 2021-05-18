@@ -208,4 +208,13 @@ class TileLayer(Component):
                 draw.rect(self.surface, color, rect)
             elif isinstance(tile_info, tuple):
                 tile = self.tile.get_image(*tile_info)
+                size = self.surface.get_size()
+                size = vec2d(*size) // 16
+                if x >= size.x or y >= size.y:
+                    print(y - size.y)
+                    new_size = vec2d(max(x + 1, size.x) * 16, max(y + 1, size.y) * 16)
+                    new_surface = Surface(new_size.ftup()).convert_alpha()
+                    new_surface.fill((0, 0, 0, 0))
+                    new_surface.blit(self.surface, (0, 0))
+                    self.surface = new_surface
                 self.surface.blit(tile, pos)

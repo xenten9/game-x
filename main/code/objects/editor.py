@@ -65,7 +65,8 @@ class ObjCursor(Entity):
             'spike',
             'spike-inv',
             'juke-box',
-            'main-menu']
+            'main-menu',
+            'walking-enemy']
 
         # Input keys
         self.keys = {

@@ -16,8 +16,11 @@ from ..constants import SIZE
 # Entities
 class Entity():
     """Base class for all game entities."""
-    def __init__(self, engine: Engine):
+    def __init__(self, engine: Engine, key: int, name: str, data: dict):
         self.engine = engine
+        self.key = key
+        self.name = name
+        self.data = data
 
     def post_init(self):
         pass
@@ -41,17 +44,14 @@ class Entity():
 class ObjJukeBox(Entity):
     """Responsible for sick beats."""
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
-        super().__init__(engine)
+        super().__init__(engine, key, name, data)
         engine.obj.instantiate_object(key, self)
-        self.key = key
-        self.name = name
-        self.data = data
 
         # Music vars
         current_music = engine.aud.music.get_current()
-        self.music = data['name']
-        self.loops = data['loops']
-        self.volume = data['volume']
+        self.music = self.data['name']
+        self.loops = self.data['loops']
+        self.volume = self.data['volume']
 
         if self.music is not None: # Add new music
             if current_music is None: # Start playing music
@@ -76,7 +76,7 @@ class ObjJukeBox(Entity):
 class ObjMainMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
         engine.obj.instantiate_object(key, self)
-        super().__init__(engine)
+        super().__init__(engine, key, name, data)
         self.key = key
         self.name = name
         self.data = data
@@ -247,7 +247,7 @@ class ObjMainMenu(Entity):
 class ObjPauseMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data:dict):
         engine.obj.instantiate_object(key, self)
-        super().__init__(engine)
+        super().__init__(engine, key, name, data)
         self.key = key
         self.name = name
         self.data = data

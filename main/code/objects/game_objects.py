@@ -19,15 +19,15 @@ from ..engine.types.vector import vec2d
 # Game objects
 class GameObject(Entity):
     """Class which all game objects inherit from."""
-    def __init__(self, engine: Engine, key: int, pos: vec2d,
-                 size: vec2d, name: str, origin: vec2d = vec2d(0, 0)):
-        super().__init__(engine)
-        self.key = key
+    def __init__(self, engine: Engine, key: int, name: str, data: dict,
+                 pos: vec2d, size: vec2d = vec2d(32, 32),
+                 origin: vec2d = vec2d(0, 0)):
+        super().__init__(engine, key, name, data)
         self.pos = pos
         self.size = size
-        self.name = name
         self.origin = origin
-        self.depth = 8
+
+        self.depth = 1
         engine.obj.instantiate_object(key, self)
         rel = origin
         w, h = size - vec2d(1, 1)
@@ -112,13 +112,24 @@ class GameObject(Entity):
         self.engine.obj.delete(self.key)
         self.engine.col.dy.remove(self.key)
 
-class ObjPlayer(GameObject):
+class Damageable():
+    def __init__(self):
+        self._hp: int = 1
+
+    @property
+    def hp(self) -> int:
+        return self._hp
+
+    @hp.setter
+    def hp(self, hp: int):
+        self._hp = hp
+
+class ObjPlayer(GameObject, Damageable):
     """Player game object."""
-    def __init__(self, engine: Engine, key: int, pos: vec2d,
-                 size: vec2d, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int,
+                 name: str, data: dict, pos: vec2d):
         # Game object initialization
-        super().__init__(engine, key, pos, size, name)
-        self.data = data
+        super().__init__(engine, key, name, data, pos, vec2d(32, 32))
 
         # Add dynamic collider
         engine.col.dy.add(key, self)
@@ -176,11 +187,11 @@ class ObjPlayer(GameObject):
         self.trail = []
         self.pause_menu = None
 
+        # Health
+        self.hp = 1
+
         # Audio
-        try:
-            engine.aud.sfx.tracks['boop.wav']
-        except KeyError:
-            engine.aud.sfx.add('boop.wav')
+        engine.aud.sfx.add('boop.wav')
 
     def post_init(self):
         # Pause menu
@@ -198,6 +209,8 @@ class ObjPlayer(GameObject):
         if paused:
             pass
         else:
+            if self.hp <= 0:
+                self._die()
             if self.mode == 0:
                 # Reset room
                 if self.key['reset'] == 1:
@@ -232,7 +245,7 @@ class ObjPlayer(GameObject):
             image.set_alpha(((image.get_alpha() + 1) // 2) - 1)
             draw.add(3, pos=self.trail[item], surface=image.copy())
 
-    def die(self):
+    def _die(self):
         self.engine.aud.sfx.play('boop.wav')
         self.engine.lvl.reset()
         return 'return'
@@ -385,14 +398,13 @@ class ObjPlayer(GameObject):
 
 class ObjButton(GameObject):
     """Button game object."""
-    def __init__(self, engine: Engine, key: int, pos: vec2d,
-                 size: vec2d, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int,
+                 name: str, data: dict, pos: vec2d):
         # GameObject initialization
-        super().__init__(engine, key, pos, size, name,
-                         origin=vec2d(0, FULLTILE-size[1]))
+        super().__init__(engine, key, name, data, pos, vec2d(32, 8),
+                         origin=vec2d(0, FULLTILE-8))
         engine.col.dy.add(key, self)
-        self.data = data
-        self.door_id = data['door']
+        self.door_id = self.data['door']
         self.set_frames('button0.png', 'button1.png', alpha=1)
 
     def collide(self, obj: GameObject):
@@ -404,13 +416,12 @@ class ObjButton(GameObject):
 
 class ObjDoor(GameObject):
     """Door game object."""
-    def __init__(self, engine: Engine, key: int, pos: vec2d,
-                 size: vec2d, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int,
+                 name: str, data: dict, pos: vec2d):
         # GameObject initialization
-        super().__init__(engine, key, pos, size, name)
+        super().__init__(engine, key, name, data, pos, vec2d(32, 32))
         engine.col.dy.add(key, self)
-        self.data = data
-        self.next_level = data['level']
+        self.next_level = self.data['level']
 
         # Images
         self.set_frames('door0.png', 'door1.png')
@@ -423,13 +434,12 @@ class ObjDoor(GameObject):
 
 class ObjGravOrb(GameObject):
     """GravOrb game object."""
-    def __init__(self, engine: Engine, key: int, pos: vec2d,
-                 size: vec2d, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int,
+                 name: str, data: dict, pos: vec2d):
         # GameObject initialization
-        super().__init__(engine, key, pos, size, name)
+        super().__init__(engine, key, name, data, pos, vec2d(32, 32))
         engine.col.dy.add(key, self)
-        self.data = data
-        self.grav = data['grav']
+        self.grav = self.data['grav']
 
         # Images
         if self.grav > 0:
@@ -466,32 +476,30 @@ class ObjGravOrb(GameObject):
 
 class ObjSpike(GameObject):
     """Spike game object."""
-    def __init__(self, engine: Engine, key: int, pos: vec2d,
-                 size: vec2d, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int,
+                 name: str, data: dict, pos: vec2d):
         # GameObject initialization
-        super().__init__(engine, key, pos, size, name,
-                         origin=vec2d(0, FULLTILE-size[1]))
-        self.name = name
-        self.data = data
+        super().__init__(engine, key, name, data, pos,
+                         vec2d(32, 4), origin=vec2d(0, FULLTILE-4))
         engine.col.dy.add(key, self)
+        self.damage = 4
 
         # Images
         self.set_frames('spike.png', alpha=1)
 
-    def collide(self, obj: ObjPlayer) -> Optional[str]:
+    def collide(self, obj: ObjPlayer):
         if isinstance(obj, ObjPlayer):
             if obj.vspd <= 0:
-                return obj.die()
+                obj.hp -= self.damage
 
 class ObjSpikeInv(GameObject):
     """Spike game object, but upside down."""
-    def __init__(self, engine: Engine, key: int, pos: vec2d,
-                 size: vec2d, name: str, data: dict):
+    def __init__(self, engine: Engine, key: int,
+                 name: str, data: dict, pos: vec2d):
         # GameObject initialization
-        super().__init__(engine, key, pos, size, name)
-        self.name = name
-        self.data = data
+        super().__init__(engine, key, name, data, pos, vec2d(32, 4))
         engine.col.dy.add(key, self)
+        self.damage = 4
 
         # Images
         self.set_frames('spike-inv.png', alpha=1)
@@ -499,4 +507,4 @@ class ObjSpikeInv(GameObject):
     def collide(self, obj: GameObject) -> Optional[str]:
         if isinstance(obj, ObjPlayer):
             if obj.vspd >= 0:
-                return obj.die()
+                obj.hp -= self.damage
