@@ -61,17 +61,17 @@ def copy_dir(src: str, dst: str):
 def main():
     # Get version
     version = get_version()
-    cwd = os.getcwd()
-    dist = os.path.join(cwd, 'dist')
+    dir_main = os.getcwd()
+    dir_dist = os.path.join(dir_main, 'dist')
 
     # Clean directory
-    version_folder = os.path.join(dist, version)
-    if not os.path.exists(version_folder):
-        os.mkdir(version_folder)
-    os_folder = os.path.join(version_folder, 'windows')
-    if os.path.exists(os_folder):
-        shutil.rmtree(os_folder)
-    os.mkdir(os_folder)
+    dir_version = os.path.join(dir_dist, version)
+    if not os.path.exists(dir_version):
+        os.mkdir(dir_version)
+    dir_os = os.path.join(dir_version, 'windows')
+    if os.path.exists(dir_os):
+        shutil.rmtree(dir_os)
+    os.mkdir(dir_os)
     cprint('~~Directory Cleaned~~\n', 'green')
 
     # Create executable
@@ -79,34 +79,34 @@ def main():
     print('Creating executable...')
     arguments = ['game.pyw', '--onefile', '--noconsole', '-n'+executable_name]
     PyInstaller.__main__.run(arguments)
-    executable = os.path.join(dist, executable_name + '.exe')
+    executable = os.path.join(dir_dist, executable_name + '.exe')
     cprint('~~EXECUTABLE CREATED~~\n', 'green')
 
     # Create folder based on system version
-    game_folder = os.path.join(os_folder, executable_name)
+    dir_game = os.path.join(dir_os, executable_name)
     print('Creating game folder...')
-    os.mkdir(game_folder)
+    os.mkdir(dir_game)
 
-    # Move assets
     print('Moving assets directory...')
-    src = os.path.join(cwd, 'assets')
-    dst = os.path.join(game_folder, 'assets')
-    copy_dir(src, dst)
+    dir_assets = os.path.join(dir_main, 'assets')
+    dir_new_assets = os.path.join(dir_game, 'assets')
+    copy_dir(dir_assets, dir_new_assets)
+
     print('Moving executable...')
-    shutil.copy(executable, game_folder)
+    shutil.copy(executable, dir_game)
     os.remove(executable)
     cprint('~~GAME FOLDER CREATED~~\n', 'green')
 
     # Compress folder to .7z
     print('Creating 7z file...')
-    with py7zr.SevenZipFile(game_folder+'.7z', 'w') as archive:
-        archive.writeall(game_folder, executable_name)
+    with py7zr.SevenZipFile(dir_game+'.7z', 'w') as archive:
+        archive.writeall(dir_game, executable_name)
     cprint('~~GAME FOLDER COMPRESSED TO 7Z~~', 'green')
 
     # Cleanup
     print('Cleaning up temp files...')
-    spec = os.path.join(cwd, executable_name+'.spec')
-    build = os.path.join(cwd, 'build', executable_name)
+    spec = os.path.join(dir_main, executable_name+'.spec')
+    build = os.path.join(dir_main, 'build', executable_name)
     if os.path.exists(spec):
         print('Removing: spec file - {}'.format(os.path.basename(spec)))
         os.remove(spec)

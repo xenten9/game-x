@@ -1,7 +1,7 @@
 """Handles rendering, loading and modifying tilemaps and tile layers."""
 # Standard library
 from os import path, listdir
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 # External libraries
 from pygame.image import load
@@ -206,12 +206,11 @@ class TileLayer(Component):
                 color = (0, 0, 0, 0)
                 rect = Rect((x, y), vec2d(1, 1) * halftile)
                 draw.rect(self.surface, color, rect)
-            elif isinstance(tile_info, tuple):
+            elif isinstance(tile_info, Tuple[int, int]):
                 tile = self.tile.get_image(*tile_info)
                 size = self.surface.get_size()
                 size = vec2d(*size) // 16
                 if x >= size.x or y >= size.y:
-                    print(y - size.y)
                     new_size = vec2d(max(x + 1, size.x) * 16, max(y + 1, size.y) * 16)
                     new_surface = Surface(new_size.ftup()).convert_alpha()
                     new_surface.fill((0, 0, 0, 0))

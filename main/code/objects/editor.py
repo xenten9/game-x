@@ -128,7 +128,7 @@ class ObjCursor(Entity):
             'remove': False,
             'Hremove': False,}
 
-    def update(self):
+    def update(self, paused: bool):
         """Update cursor pos and level changes."""
         # Get inputs
         self.get_inputs()

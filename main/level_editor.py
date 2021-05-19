@@ -131,120 +131,149 @@ class View(Camera):
 
     pos = property(_pos_get, _pos_set)
 
+class Game(Engine):
+    def __init__(self, fulltile: int, fps: int, size: vec2d,
+                 debug: bool = False, maindir: str = None):
+        # Initialize engine
+        super().__init__(fulltile, fps, size, create_objects,
+                         debug=debug, maindir=maindir)
+
+        if self.debug:
+            self.debug.menu.remove('rect')
+            ele = MenuText(self, self.debug.menu, 'curpos')
+            ele.pos = vec2d(0, 12*3)
+            ele = MenuText(self, self.debug.menu, 'mode')
+            ele.pos = vec2d(0, 12*4)
+            self.debug.time_record = {
+                'Update': 0.0,
+                'Draw': 0.0,
+                'Render': 0.0}
+
+        self.clock = Clock()
+        self.cursor = ObjCursor(self, vec2d(0, 0))
+        self.cam = View(self, SIZE)
+
+        # Load empty level
+        self.lvl.load('default')
+        self.tile.add_all()
+
+    def main_loop(self):
+        while self.run:
+            # Event handler
+            self.event_handler()
+
+            # Updating
+            self.update()
+            self.cursor.update(self.paused)
+
+            # Drawing
+            self.draw_all()
+            self.cursor.draw(self.draw)
+
+            # Rendering
+            self.render()
+
+            # Maintain FPS
+            self.clock.tick(FPS)
+            if self.debug:
+                self.debug.tick()
+
+    def event_handler(self):
+        """Handle events from pyevent."""
+        # Reset pressed inputs
+        self.inp.reset()
+        events = get_events()
+        for event in events:
+            if event.type == KEYDOWN:
+                if event.scancode == 41:
+                    self.end()
+                # For getting key id's
+                #print(event.scancode)
+                pass
+            self.inp.handle_events(event)
+            if event.type == QUIT:
+                self.end()
+                return
+
+    def draw_all(self):
+        # Setup
+        t = 0
+
+        if self.debug:
+            t = time()
+
+        # Draw all objects
+        self.draw.draw()
+
+        if self.debug:
+            # Draw debug menu
+            self.debug.menu.draw(self.draw)
+            self.debug.time_record['Draw'] += (time() - t)
+
+    def update(self):
+        """Update all objects and debug."""
+        # Setup
+        t = 0
+        debug = self.debug
+        obj = self.obj
+
+        if debug:
+            t = time()
+
+        # Update objects
+        obj.update_early()
+        obj.update()
+        obj.update_late()
+
+        if debug:
+            self.debug.time_record['Update'] += (time() - t)
+
+        # Update debug menu
+        if debug:
+            fps = debug.menu.get('fps')
+            fps.text = 'fps: {:.0f}'.format(self.clock.get_fps())
+
+            campos = debug.menu.get('campos')
+            campos.text = 'cam pos: {}'.format(self.cam.pos)
+
+            memory = debug.menu.get('memory')
+            mem = PROCESS.memory_info().rss
+            mb = mem // (10**6)
+            kb = (mem - (mb * 10**6)) // 10**3
+            memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
+
+            #volume = debug.menu.get('volume')
+            #vol = self.aud.volume
+            #mvol = self.aud.music.volume
+            #volume.text = 'volume: {}; music_volume: {}'.format(vol, mvol)
+
+    def render(self):
+        """Render all draw calls to screen."""
+        # Setup
+        t = 0
+
+        if self.debug:
+            t = time()
+
+        # Blank
+        self.win.blank()
+        self.cam.blank()
+
+        # Render
+        self.draw.render(self.cam)
+        self.win.render(self.cam)
+
+        # Update display
+        self.win.update()
+        if self.debug:
+            self.debug.time_record['Render'] += (time() - t)
 
 
 # Main application functions
 def main(debug: bool = False):
-    engine = Engine(FULLTILE, FPS, SIZE, debug, maindir=main_path)
+    game = Game(FULLTILE, FPS, SIZE, debug, maindir=main_path)
 
-    engine.debug.menu.remove('rect')
-    ele = MenuText(engine, engine.debug.menu, 'curpos')
-    ele.pos = vec2d(0, 12*3)
-    ele = MenuText(engine, engine.debug.menu, 'mode')
-    ele.pos = vec2d(0, 12*4)
-
-    engine.init_obj(create_objects)
-    cam = View(engine, SIZE)
-    engine.cam = cam
-
-    engine.lvl.load('default')
-    engine.tile.add_all()
-
-    editor(engine)
-
-def editor(engine: Engine):
-    cursor = ObjCursor(engine, vec2d(0, 0))
-    clock = Clock()
-    if engine.debug:
-        engine.debug.time_record = {
-            'Update': 0.0,
-            'Draw': 0.0,
-            'Render': 0.0}
-
-    while engine.run:
-        # Event handler
-        event_handle(engine)
-
-        # Updating
-        update(engine)
-        cursor.update()
-        update_debug(engine, clock)
-
-        # Drawing
-        draw(engine)
-        cursor.draw(engine.draw)
-
-        # Rendering
-        render(engine)
-
-        # Maintain FPS
-        clock.tick(FPS)
-        if engine.debug:
-            engine.debug.tick()
-
-def event_handle(engine: Engine):
-    """Handles events."""
-    engine.inp.reset()
-    events = get_events()
-    for event in events:
-        if event.type == KEYDOWN:
-            #print(event.scancode)
-            pass
-        engine.inp.handle_events(event)
-        if event.type == QUIT:
-            engine.end()
-            return
-    if engine.inp.kb.get_key_pressed(41):
-        engine.end()
-        return
-
-def update(engine: Engine):
-    t = 0
-    if engine.debug:
-        t = time()
-    engine.obj.update_early()
-    engine.obj.update()
-    engine.obj.update_late()
-    if engine.debug:
-        engine.debug.time_record['Update'] += (time() - t)
-
-def update_debug(engine: Engine, clock: Clock):
-    debug = engine.debug
-    if debug:
-        # Update debug menu
-        fps = debug.menu.get('fps')
-        fps.text = 'fps: {:.0f}'.format(clock.get_fps())
-
-        campos = debug.menu.get('campos')
-        campos.text = 'cam pos: {}'.format(engine.cam.pos)
-
-        memory = debug.menu.get('memory')
-        mem = PROCESS.memory_info().rss
-        mb = mem // (10**6)
-        kb = (mem - (mb * 10**6)) // 10**3
-        memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
-
-def draw(engine: Engine):
-    t = 0
-    if engine.debug:
-        t = time()
-    engine.draw.draw()
-    engine.debug.menu.draw(engine.draw)
-    engine.col.st.debug_draw(engine.draw)
-    if engine.debug:
-        engine.debug.time_record['Draw'] += (time() - t)
-
-def render(engine: Engine):
-    t = 0
-    if engine.debug:
-        t = time()
-    engine.win.blank()
-    engine.cam.blank()
-    engine.draw.render(engine.cam)
-    engine.win.render(engine.cam)
-    engine.win.update()
-    if engine.debug:
-        engine.debug.time_record['Render'] += (time() - t)
+    game.main_loop()
 
 
 

@@ -80,8 +80,7 @@ class GameObject(Entity):
 
         # Check for collisions
         for point in cpoints:
-            point += pos
-            if self.engine.col.st.get(point):
+            if self.engine.col.st.get(pos+point):
                 return True
         return False
 
@@ -188,10 +187,24 @@ class ObjPlayer(GameObject, Damageable):
         self.pause_menu = None
 
         # Health
-        self.hp = 1
+        self.iframes = 45
+        self.iframe = 0
+        self.hp = 5
+        self.damage = 4
+        self.iframe = 0
 
         # Audio
         engine.aud.sfx.add('boop.wav')
+
+    @property
+    def hp(self):
+        return self._hp
+
+    @hp.setter
+    def hp(self, hp: int):
+        if self.iframe == 0:
+            self._hp = hp
+            self.iframe = self.iframes
 
     def post_init(self):
         # Pause menu
@@ -209,6 +222,7 @@ class ObjPlayer(GameObject, Damageable):
         if paused:
             pass
         else:
+            self.iframe -= sign(self.iframe)
             if self.hp <= 0:
                 self._die()
             if self.mode == 0:
@@ -239,11 +253,26 @@ class ObjPlayer(GameObject, Damageable):
     def draw(self, draw: Draw):
         """Called every frame to draw each game object."""
         image = self.frames[self.frame]
-        image.set_alpha(255)
+        if self.iframe % 6 == 0:
+            image.set_alpha(255)
+        else:
+            image.set_alpha(63)
         draw.add(4, pos=self.pos, surface=image.copy())
         for item in range(1, len(self.trail)):
             image.set_alpha(((image.get_alpha() + 1) // 2) - 1)
             draw.add(3, pos=self.trail[item], surface=image.copy())
+
+    def _jump(self):
+        if self.grounded > 0:
+            if self.grav != 0:
+                self.vspd = -(self.hspd/8)**2
+            self.jump_delay = self.coyote
+            self.vspd -= self.jump_speed
+        elif self.grounded < 0:
+            if self.grav != 0:
+                self.vspd = (self.hspd/8)**2
+            self.jump_delay = self.coyote
+            self.vspd += self.jump_speed
 
     def _die(self):
         self.engine.aud.sfx.play('boop.wav')
@@ -327,16 +356,7 @@ class ObjPlayer(GameObject, Damageable):
         # Jumping
         if (self.grounded != 0 and self.key['jump'] > 0
             and self.jump_delay == 0):
-            if self.grounded > 0:
-                if self.grav != 0:
-                    self.vspd = -(self.hspd/8)**2
-                self.jump_delay = self.coyote
-                self.vspd -= self.jump_speed
-            elif self.grounded < 0:
-                if self.grav != 0:
-                    self.vspd = (self.hspd/8)**2
-                self.jump_delay = self.coyote
-                self.vspd += self.jump_speed
+            self._jump()
         else:
             self.jump_delay -= sign(self.jump_delay)
 
@@ -482,7 +502,7 @@ class ObjSpike(GameObject):
         super().__init__(engine, key, name, data, pos,
                          vec2d(32, 4), origin=vec2d(0, FULLTILE-4))
         engine.col.dy.add(key, self)
-        self.damage = 4
+        self.damage = 5
 
         # Images
         self.set_frames('spike.png', alpha=1)
@@ -499,7 +519,7 @@ class ObjSpikeInv(GameObject):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 4))
         engine.col.dy.add(key, self)
-        self.damage = 4
+        self.damage = 5
 
         # Images
         self.set_frames('spike-inv.png', alpha=1)

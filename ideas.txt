@@ -1,0 +1,46 @@
+~~LINUX BUILDER~~
+Automate building game versions for linux.
+
+~~LOOK FOR NEW AUDIO LIBRARIES~~
+Unsure what libraries there are available but if any are more functional
+than the pygame audio library than I would pick it. Although I might end
+up just building features ontop of the pygame audio library.
+
+Features that would help:
+    Audio looping
+    Multiple fading
+    Fading up and down in volume
+    Fading between volume levels
+    NOTE all of these are possible via upgrades to pygames audio.
+
+FUTURE IDEAS:
+~~MODS~~
+The general idea of mods would be they have specific
+names for their objects which wouldn't be parsed by another mod.
+
+Ex:
+NOTE to future modders when distributing the mod just include a series of
+directories with the top most being game-x/ that way people can just
+drag and drop and let the file system merge things together.
+
+# game-x/code/mods/totallycoolmod/enemies.py
+from ...objects.enemies import Enemy
+
+# Totally Cool Mod Walking Enemy
+# NOTE use prefixes based on the mod name to avoid interference.
+class ObjTCModEnemyWalking(Enemy):
+    def __init__(self, engine: Engine, key: int, name: str,
+                 data: dict, pos: vec2d):
+        super().__init__(...)
+        # <INSERT SUPER COOL CODE THING HERE>
+
+    def update(self, pause: bool):
+        # <MORE SUPER COOL CODE THINGS HERE>
+
+NOTE there would need to be some tools to load mods.
+Also NOTE there couldn't be much security as mods are just arbitrary
+python code which theoretically could do anything so be careful when
+running mods as with most things its risky.
+
+In future I will develop an example mod along side a mod loading system,
+however as it stands im prioritizing development of the main game.

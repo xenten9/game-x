@@ -32,5 +32,6 @@
 	["grav-orb", [128, 576], 28, {"grav": 0}], 
 	["grav-orb", [64, 704], 29, {"grav": 1}], 
 	["grav-orb", [384, 512], 30, {"grav": -1}], 
-	["juke-box", [1024, 768], 32, {"name": "resonant.wav", "loops": -1, "volume": 0.2}]
+	["juke-box", [1024, 768], 32, {"name": "resonant.wav", "loops": -1, "volume": 0.2}], 
+	["walking-enemy", [608, 512], 0, {}]
 ]

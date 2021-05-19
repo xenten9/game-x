@@ -25,15 +25,15 @@ class Entity():
     def post_init(self):
         pass
 
-    def update_early(self, pause: bool):
+    def update_early(self, paused: bool):
         """Update called first."""
         pass
 
-    def update(self, pause: bool):
+    def update(self, paused: bool):
         """Update called second."""
         pass
 
-    def update_late(self, pause: bool):
+    def update_late(self, paused: bool):
         """Update called last."""
         pass
 
@@ -179,7 +179,7 @@ class ObjMainMenu(Entity):
 
         return_button.button.call = self.pressed
 
-    def update(self, pause: bool):
+    def update(self, paused: bool):
         self.title_menu.get('start-button').update()
         self.title_menu.get('option-button').update()
         self.title_menu.get('quit-button').update()
@@ -311,7 +311,7 @@ class ObjPauseMenu(Entity):
 
         quit.button.call = self.pressed
 
-    def update(self, pause: bool):
+    def update(self, paused: bool):
         self.menu.get('resume').update()
         self.menu.get('reset').update()
         self.menu.get('quit').update()

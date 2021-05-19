@@ -5,7 +5,10 @@ if __name__ != '__main__':
     from main.code.engine.engine import Engine
     from main.code.engine.types.vector import vec2d
 
-    engine = Engine(32, 60, vec2d(256, 256))
+    def object_creator(*args, **kwargs):
+        pass
+
+    engine = Engine(32, 60, vec2d(256, 256), object_creator)
 
     for file in listdir(engine.paths['levels']):
         if file[-4:] == '.lvl':

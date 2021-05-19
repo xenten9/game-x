@@ -22,7 +22,9 @@ from .components.tile import TileMap
 from .components.debug import Debug
 
 class Engine():
-    def __init__(self, fulltile: int, fps: int, size: vec2d, debug: bool = False, maindir: str = None):
+    def __init__(self, fulltile: int, fps: int, size: vec2d,
+                 object_creator: Callable, object_limit: int = None,
+                 debug: bool = False, maindir: str = None):
         # Define constants
         self.FULLTILE = fulltile
         self.FPS = fps
@@ -82,7 +84,10 @@ class Engine():
         self._col = Collider(self)
         self._lvl = Level(self)
         self._tile = TileMap(self)
-        self._obj = None
+        if object_limit is None:
+            self._obj = ObjectHandler(self, object_creator)
+        else:
+            self._obj = ObjectHandler(self, object_creator, object_limit)
 
         # Settings
         self._set = Settings(self)
@@ -151,12 +156,6 @@ class Engine():
     @property
     def debug(self) -> Debug:
         return self._debug
-
-    def init_obj(self, object_creator: Callable, max_object: int = None):
-        if max_object is None:
-            self.obj = ObjectHandler(self, object_creator)
-        else:
-            self.obj = ObjectHandler(self, object_creator, max_object)
 
     def clear_ent(self):
         """Clears out all objects and colliders."""
