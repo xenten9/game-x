@@ -5,7 +5,7 @@ printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal
 from os import path, getcwd, sys
 from time import time
 import sys
-from typing import List
+from typing import List, Tuple
 
 # External libraries
 from pygame.constants import KEYDOWN, QUIT
@@ -159,7 +159,8 @@ class Game(Engine):
         super().__init__(fulltile, fps, size, create_objects,
                          debug=debug, maindir=maindir)
 
-        # Clock
+        # Objects
+        self.cam = View(self, SIZE)
         self.clock = Clock()
 
         # Debug menu expansiosn
@@ -292,22 +293,47 @@ class Game(Engine):
 def main(debug: bool = False):
     # Create engine object
     game = Game(FULLTILE, FPS, SIZE, debug, maindir=main_path)
-    game.cam = View(game, SIZE)
 
     # Run main game loop
     game.main_loop()
+
+# Parse arguments given to script
+def parse_args(args: List[str]) -> dict:
+    # Setup
+    script_name: str = args.pop(0)
+    out_args: dict = {}
+
+    # Default
+    out_args.setdefault('debug', True)
+
+    # Group args into declerator and value
+    new_args: List[Tuple[str, str]] = []
+    for i in range(len(args)//2):
+        new_args.append((args[2*i], args[2*i+1]))
+
+    # Parse args
+    for arg in new_args:
+        declerator, value = arg
+
+        # Debug
+        if declerator == '-d':
+            if value in ('False', 'false', '0'):
+                out_args['debug'] = False
+            else:
+                out_args['debug'] = True
+
+    # Return parsed args
+    return out_args
 
 
 
 # Run main
 if __name__ == '__main__':
+    # Setup
     debug = True
-    args = sys.argv
-    args.pop(0)
-    for i in range(len(args)//2):
-        declerator = args[2*i]
-        if declerator == '-d':
-            val = args[2*i + 1]
-            debug = False if val in ('False', '0') else True
 
-    main(debug=debug)
+    # Parse arguments
+    args = parse_args(sys.argv)
+
+    # Run main
+    main(**args)
