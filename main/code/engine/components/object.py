@@ -15,6 +15,7 @@ class ObjectHandler(Component):
         for item in range(self.pool_size):
             self.pool.add(item)
         self.obj = {}
+        self.sobj = {}
         self.visible = True
 
     # Update calls
@@ -24,6 +25,8 @@ class ObjectHandler(Component):
         for key in objcopy:
             if key in self.obj:
                 self.obj[key].update_early(self.engine.paused)
+        for key in self.sobj:
+            self.sobj[key].update_early(self.engine.paused)
 
     def update(self):
         """Update all GameObjects."""
@@ -31,6 +34,8 @@ class ObjectHandler(Component):
         for key in objcopy:
             if key in self.obj:
                 self.obj[key].update(self.engine.paused)
+        for key in self.sobj:
+            self.sobj[key].update(self.engine.paused)
 
     def update_late(self):
         """Update all GameObjects."""
@@ -38,6 +43,8 @@ class ObjectHandler(Component):
         for key in objcopy:
             if key in self.obj:
                 self.obj[key].update_late(self.engine.paused)
+        for key in self.sobj:
+            self.sobj[key].update_late(self.engine.paused)
 
     # Object creation
     def instantiate_key(self, key: int = None):

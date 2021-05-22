@@ -206,7 +206,7 @@ class TileLayer(Component):
                 color = (0, 0, 0, 0)
                 rect = Rect((x, y), vec2d(1, 1) * halftile)
                 draw.rect(self.surface, color, rect)
-            elif isinstance(tile_info, Tuple[int, int]):
+            elif isinstance(tile_info, tuple):
                 tile = self.tile.get_image(*tile_info)
                 size = self.surface.get_size()
                 size = vec2d(*size) // 16

@@ -5,15 +5,19 @@ from datetime import datetime
 
 # Local imports
 from .menu import Menu, MenuRect, MenuText
+from .draw import Draw
 from ..types.vector import vec2d
 from ..types.component import Component
+from ..types.entity import Entity
 
-class Debug(Component):
+class Debug(Component, Entity):
     def __init__(self, engine, debug):
         super().__init__(engine)
         self.debug = debug
 
         if self.debug:
+            self.engine.obj.sobj['debug'] = self
+
             # Menu vars
             self.menu = Menu(engine, vec2d(160, 60))
 
@@ -58,6 +62,9 @@ class Debug(Component):
 
     def __bool__(self):
         return self.debug
+
+    def draw(self, draw: Draw):
+        self.menu.draw(draw)
 
     def tick(self):
         """Called once every frame."""

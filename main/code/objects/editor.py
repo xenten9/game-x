@@ -14,7 +14,7 @@ from ..engine.types.vector import vec2d
 from ..engine.components.maths import f_loop
 from ..engine.components.draw import Draw
 from ..engine.components.tile import TileLayer
-from .entities import Entity
+from ..engine.types.entity import Entity
 from ..constants import FULLTILE
 
 class Object(Entity):
@@ -45,6 +45,7 @@ class ObjCursor(Entity):
         self.pos = pos
         self.color = (192, 192, 192)
         self.name = 'cursor'
+        self.engine.obj.sobj[self.name] = self
 
         # Modes
         self.mode = 0

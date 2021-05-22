@@ -10,12 +10,21 @@ class Draw(Component):
 
     def draw(self):
         """Tell each object to add to the draw roster."""
+        # Normal objects
         obj = self.engine.obj.obj
         for key in obj:
             obj[key].draw(self)
-        tile = self.engine.tile.layers
-        for layer in tile:
-            tile[layer].draw(self)
+
+        # Static objects
+        sobj = self.engine.obj.sobj
+        for key in sobj:
+            sobj[key].draw(self)
+
+        # Tile layers
+        layers = self.engine.tile.layers
+        for layer in layers:
+            layers[layer].draw(self)
+
 
     def add(self, depth: int, **kwargs):
         """Add an element to be drawn when called."""

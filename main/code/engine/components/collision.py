@@ -3,9 +3,11 @@
 from pygame import Rect, Surface, draw as pydraw
 
 # Local imports
+from .draw import Draw
 from ..types.vector import vec2d
 from ..types.component import Component
 from ..types.array import array2d
+from ..types.entity import Entity
 
 class Collider(Component):
     def __init__(self, engine: object):
@@ -14,7 +16,7 @@ class Collider(Component):
         self.st = StaticCollider(engine)
 
 # Handles static collision
-class StaticCollider(Component):
+class StaticCollider(Component, Entity):
     """Handles static collisions aligned to a grid."""
     def __init__(self, engine: object):
         super().__init__(engine)
@@ -53,7 +55,7 @@ class StaticCollider(Component):
     def toggle_visibility(self):
         self.visible = not self.visible
 
-    def debug_draw(self, draw: object):
+    def draw(self, draw: Draw):
         size = (vec2d(*self.array.size) * self.fulltile).ftup()
         surface = Surface(size).convert_alpha()
         surface.fill((0, 0, 0, 0))
@@ -67,7 +69,7 @@ class StaticCollider(Component):
                         rect = Rect(pos, size)
                         pydraw.rect(surface, color, rect)
             pos = vec2d(0, 0)
-            self.engine.draw.add(0, pos=pos, surface=surface)
+            draw.add(0, pos=pos, surface=surface)
 
     def minimize(self):
         self.array.minimize()

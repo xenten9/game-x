@@ -1,12 +1,6 @@
 """Level editing tool for Game-X."""
 # Standard Library
 from os import path, system, name as osname, sys, getcwd
-from time import time
-
-# External Libraries
-from pygame.constants import KEYDOWN, QUIT
-from pygame.time import Clock
-from pygame.event import get as get_events
 
 # Check if ran from an executable
 if getattr(sys, 'frozen', False):
@@ -47,6 +41,7 @@ if __name__ == '__main__':
         # If ran directly
         from main.code.engine.types.vector import vec2d
         from main.code.engine.engine import Engine
+        from main.code.application import Application
         from main.code.engine.components.camera import Camera
         from main.code.engine.components.menu import MenuText
         from main.code.constants import FULLTILE, FPS, SIZE, PROCESS
@@ -65,6 +60,7 @@ else:
         # If imported as module
         from .code.engine.types.vector import vec2d
         from .code.engine.engine import Engine
+        from main.code.application import Application
         from .code.engine.components.camera import Camera
         from .code.engine.components.menu import MenuText
         from .code.constants import FULLTILE, FPS, SIZE, PROCESS
@@ -131,7 +127,7 @@ class View(Camera):
 
     pos = property(_pos_get, _pos_set)
 
-class Game(Engine):
+class Game(Application):
     def __init__(self, fulltile: int, fps: int, size: vec2d,
                  debug: bool = False, maindir: str = None):
         # Initialize engine
@@ -144,129 +140,18 @@ class Game(Engine):
             ele.pos = vec2d(0, 12*3)
             ele = MenuText(self, self.debug.menu, 'mode')
             ele.pos = vec2d(0, 12*4)
-            self.debug.time_record = {
-                'Update': 0.0,
-                'Draw': 0.0,
-                'Render': 0.0}
 
-        self.clock = Clock()
-        self.cursor = ObjCursor(self, vec2d(0, 0))
+        # Create cursor and camera
+        ObjCursor(self, vec2d(0, 0))
         self.cam = View(self, SIZE)
+
+        # Add stcol to sobj
+        self.obj.sobj['stcol'] = self.col.st
 
         # Load empty level
         self.lvl.load('default')
         self.tile.add_all()
 
-    def main_loop(self):
-        while self.run:
-            # Event handler
-            self.event_handler()
-
-            # Updating
-            self.update()
-            self.cursor.update(self.paused)
-
-            # Drawing
-            self.draw_all()
-            self.cursor.draw(self.draw)
-
-            # Rendering
-            self.render()
-
-            # Maintain FPS
-            self.clock.tick(FPS)
-            if self.debug:
-                self.debug.tick()
-
-    def event_handler(self):
-        """Handle events from pyevent."""
-        # Reset pressed inputs
-        self.inp.reset()
-        events = get_events()
-        for event in events:
-            if event.type == KEYDOWN:
-                if event.scancode == 41:
-                    self.end()
-                # For getting key id's
-                #print(event.scancode)
-                pass
-            self.inp.handle_events(event)
-            if event.type == QUIT:
-                self.end()
-                return
-
-    def draw_all(self):
-        # Setup
-        t = 0
-
-        if self.debug:
-            t = time()
-
-        # Draw all objects
-        self.draw.draw()
-
-        if self.debug:
-            # Draw debug menu
-            self.debug.menu.draw(self.draw)
-            self.debug.time_record['Draw'] += (time() - t)
-
-    def update(self):
-        """Update all objects and debug."""
-        # Setup
-        t = 0
-        debug = self.debug
-        obj = self.obj
-
-        if debug:
-            t = time()
-
-        # Update objects
-        obj.update_early()
-        obj.update()
-        obj.update_late()
-
-        if debug:
-            self.debug.time_record['Update'] += (time() - t)
-
-        # Update debug menu
-        if debug:
-            fps = debug.menu.get('fps')
-            fps.text = 'fps: {:.0f}'.format(self.clock.get_fps())
-
-            campos = debug.menu.get('campos')
-            campos.text = 'cam pos: {}'.format(self.cam.pos)
-
-            memory = debug.menu.get('memory')
-            mem = PROCESS.memory_info().rss
-            mb = mem // (10**6)
-            kb = (mem - (mb * 10**6)) // 10**3
-            memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
-
-            #volume = debug.menu.get('volume')
-            #vol = self.aud.volume
-            #mvol = self.aud.music.volume
-            #volume.text = 'volume: {}; music_volume: {}'.format(vol, mvol)
-
-    def render(self):
-        """Render all draw calls to screen."""
-        # Setup
-        t = 0
-
-        if self.debug:
-            t = time()
-
-        # Blank
-        self.win.blank()
-        self.cam.blank()
-
-        # Render
-        self.draw.render(self.cam)
-        self.win.render(self.cam)
-
-        # Update display
-        self.win.update()
-        if self.debug:
-            self.debug.time_record['Render'] += (time() - t)
 
 
 # Main application functions

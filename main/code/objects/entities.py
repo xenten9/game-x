@@ -11,36 +11,11 @@ from ..engine.components.menu import MenuText, MenuRect
 from ..engine.components.menu import MenuButtonFull
 from ..engine.components.maths import f_limit
 from ..engine.types.vector import vec2d
+from ..engine.types.entity import Entity
 from ..constants import SIZE
 
+
 # Entities
-class Entity():
-    """Base class for all game entities."""
-    def __init__(self, engine: Engine, key: int, name: str, data: dict):
-        self.engine = engine
-        self.key = key
-        self.name = name
-        self.data = data
-
-    def post_init(self):
-        pass
-
-    def update_early(self, paused: bool):
-        """Update called first."""
-        pass
-
-    def update(self, paused: bool):
-        """Update called second."""
-        pass
-
-    def update_late(self, paused: bool):
-        """Update called last."""
-        pass
-
-    def draw(self, draw: Draw):
-        """Draw called in between back and foreground."""
-        pass
-
 class ObjJukeBox(Entity):
     """Responsible for sick beats."""
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
