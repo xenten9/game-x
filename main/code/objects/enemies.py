@@ -2,7 +2,6 @@
 from math import floor
 
 # Local imports
-from ..engine.components.draw import Draw
 from ..engine.types.vector import vec2d
 from ..engine.engine import Engine
 from .game_objects import GameObject, Damageable, ObjPlayer
@@ -55,17 +54,18 @@ class ObjWalkingEnemy(Enemy):
         else:
             self._move()
 
-    def collide(self, object):
-        if issubclass(object.__class__, Damageable):
-            if isinstance(object, ObjPlayer):
-                if object.vspd > 2.0:
-                    self.hp -= object.damage
-                    object.vspd = -object.jump_speed
+    def collide(self, obj):
+        if issubclass(obj.__class__, Damageable):
+            if isinstance(obj, ObjPlayer):
+                if obj.vspd > 2.0:
+                    self.hp -= obj.damage
+                    obj.vspd = -obj.jump_speed
+                    obj.jump_delay = obj.coyote // 2
                     self.delete()
-                else:
-                    object.hp -= self.damage
+                elif obj.jump_delay == 0:
+                    obj.hp -= self.damage
             else:
-                object.hp -= self.damage
+                obj.hp -= self.damage
 
     def _move(self):
         mspd = 1 if self.dir else -1

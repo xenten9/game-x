@@ -9,7 +9,7 @@ from numpy import sign
 from pygame import image
 
 # Local imports
-from ..constants import FULLTILE
+from ..constants import FULLTILE, cprint
 from .entities import Entity, ObjPauseMenu
 from ..engine.engine import Engine
 from ..engine.components.draw import Draw
@@ -424,14 +424,20 @@ class ObjButton(GameObject):
         super().__init__(engine, key, name, data, pos, vec2d(32, 8),
                          origin=vec2d(0, FULLTILE-8))
         engine.col.dy.add(key, self)
-        self.door_id = self.data['door']
+        try:
+            self.door_id = self.data['door']
+        except KeyError:
+            cprint('Door object not set for button!', 'red')
         self.set_frames('button0.png', 'button1.png', alpha=1)
 
     def collide(self, obj: GameObject):
         """When collided with by player, open the door."""
         if isinstance(obj, ObjPlayer):
             if self.frame == 0:
-                self.engine.obj.obj[self.door_id].frame = 1
+                try:
+                    self.engine.obj.obj[self.door_id].frame = 1
+                except AttributeError:
+                    cprint('Unable to find door!', 'red')
                 self.frame = 1
 
 class ObjDoor(GameObject):
@@ -441,7 +447,10 @@ class ObjDoor(GameObject):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
         engine.col.dy.add(key, self)
-        self.next_level = self.data['level']
+        try:
+            self.next_level = self.data['level']
+        except KeyError:
+            cprint('Door has no next level set!', 'red')
 
         # Images
         self.set_frames('door0.png', 'door1.png')
@@ -449,8 +458,11 @@ class ObjDoor(GameObject):
     def collide(self, obj: GameObject) -> Optional[str]:
         if isinstance(obj, ObjPlayer):
             if self.frame == 1:
-                self.engine.lvl.load(self.next_level)
-                return 'return'
+                try:
+                    self.engine.lvl.load(self.next_level)
+                    return 'return'
+                except AttributeError:
+                    cprint('Unable to load level!', 'red')
 
 class ObjGravOrb(GameObject):
     """GravOrb game object."""
