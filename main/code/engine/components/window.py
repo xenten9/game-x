@@ -1,6 +1,6 @@
 """Object for rendering to the screen."""
 # Standard library
-from pygame import display
+from pygame import display, HWSURFACE, DOUBLEBUF
 
 # Local imports
 from ..types.component import Component
@@ -12,7 +12,8 @@ class Window(Component):
     def __init__(self, engine, size: vec2d):
         super().__init__(engine)
         size = size.floor()
-        self.display = display.set_mode(size,vsync=1)
+        flags = HWSURFACE | DOUBLEBUF
+        self.display = display.set_mode(size, flags)
         self.size = size
 
     def render(self, camera: Camera):
@@ -22,7 +23,7 @@ class Window(Component):
 
     def update(self):
         """Update screen."""
-        display.update()
+        display.flip()
 
     def blank(self):
         """Blanks the screen in-between frames."""
