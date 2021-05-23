@@ -51,8 +51,8 @@ if __name__ == '__main__':
         from main.code.engine.components.maths import f_limit
         from main.code.engine.components.camera import Camera
         from main.code.engine.components.menu import MenuText
+        from main.code.engine.constants import cprint, clear_terminal
         from main.code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from main.code.constants import cprint, clear_terminal
         from main.code.objects import game_objects
         from main.code.objects import enemies
         from main.code.objects import entities
@@ -74,8 +74,8 @@ else:
         from .code.engine.components.maths import f_limit
         from .code.engine.components.camera import Camera
         from .code.engine.components.menu import MenuText
+        from .code.engine.constants import cprint, clear_terminal
         from .code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from .code.constants import cprint, clear_terminal
         from .code.objects import game_objects
         from .code.objects import enemies
         from .code.objects import entities

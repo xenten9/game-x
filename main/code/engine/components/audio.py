@@ -8,7 +8,7 @@ from pygame import mixer
 
 # Local imports
 from ..types.component import Component
-from ...constants import cprint
+from ..constants import cprint
 
 class Mixer(Component):
     """Handles all audio."""

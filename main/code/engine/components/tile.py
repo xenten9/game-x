@@ -12,7 +12,7 @@ from ..types.array import array2d
 from ..types.vector import vec2d
 from ..types.component import Component
 from .draw import Draw
-from ...constants import colorize
+from ..constants import colorize
 
 class TileMap(Component):
     """Handles background and foreground graphics."""

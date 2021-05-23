@@ -44,8 +44,8 @@ if __name__ == '__main__':
         from main.code.application import Application
         from main.code.engine.components.camera import Camera
         from main.code.engine.components.menu import MenuText
-        from main.code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from main.code.constants import cprint, clear_terminal
+        from main.code.constants import FULLTILE, FPS, SIZE
+        from main.code.engine.constants import cprint, clear_terminal
         from main.code.objects.editor import ObjCursor, Object
 
     except ModuleNotFoundError:
@@ -63,8 +63,8 @@ else:
         from main.code.application import Application
         from .code.engine.components.camera import Camera
         from .code.engine.components.menu import MenuText
-        from .code.constants import FULLTILE, FPS, SIZE, PROCESS
-        from .code.constants import cprint
+        from .code.constants import FULLTILE, FPS, SIZE
+        from .code.engine.constants import cprint, clear_terminal
         from .code.objects.editor import ObjCursor, Object
 
     except ModuleNotFoundError:
@@ -151,6 +151,13 @@ class Game(Application):
         # Load empty level
         self.lvl.load('default')
         self.tile.add_all()
+
+    def event_handler(self):
+        super().event_handler()
+
+        if self.inp.kb.get_key_pressed(41):
+            self.end()
+            return
 
 
 

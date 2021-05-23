@@ -4,7 +4,7 @@ from os import path
 import json
 
 # Local imports
-from ...constants import cprint
+from ..constants import cprint
 from ..types.component import Component
 
 class Settings(Component):

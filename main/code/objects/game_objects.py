@@ -9,9 +9,10 @@ from numpy import sign
 from pygame import image
 
 # Local imports
-from ..constants import FULLTILE, cprint
+from ..constants import FULLTILE
 from .entities import Entity, ObjPauseMenu
 from ..engine.engine import Engine
+from ..engine.constants import cprint
 from ..engine.components.draw import Draw
 from ..engine.components.maths import f_loop
 from ..engine.types.vector import vec2d

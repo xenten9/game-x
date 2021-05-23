@@ -6,7 +6,7 @@ from os import path, getcwd, mkdir
 import sys
 
 # Local imports
-from ..constants import colorize
+from .constants import colorize
 from .types.vector import vec2d
 from .components.settings import Settings
 from .components.window import Window

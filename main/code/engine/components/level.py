@@ -6,7 +6,7 @@ from typing import Union
 import json
 
 # Local imports
-from ...constants import colorize, cprint
+from ..constants import colorize, cprint
 from ..types.component import Component
 from ..types.vector import vec2d
 from ..types.component import Component
