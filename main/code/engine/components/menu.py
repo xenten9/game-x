@@ -1,7 +1,7 @@
 """Menu's for all manner of occasions."""
 # Standard library
 from __future__ import annotations
-from typing import Callable, Tuple
+from typing import Any, Callable, NoReturn
 
 # External libraries
 from pygame import Surface, Rect
@@ -18,7 +18,7 @@ class Menu(Component):
         self.size = size
         self.pos = pos
         self.visible = True
-        self.elements = {}
+        self.elements: dict[str, Any] = {}
         self.surface = Surface(self.size.ftup()).convert_alpha()
 
     def add(self, element: MenuElement):
@@ -187,7 +187,7 @@ class MenuText(MenuElementVisible):
         return self._color
 
     @color.setter
-    def color(self, color: Tuple[int, int, int]):
+    def color(self, color: tuple[int, int, int]):
         for value in color:
             if value < 0 or value > 255:
                 code = ['Colors must be bounded by 0-255',
@@ -248,7 +248,7 @@ class MenuButton(MenuElement):
         super().__init__(engine, menu, name)
         self._size = vec2d(0, 0)
         self._mkey = 1
-        self._call = None
+        self._call: Callable[[MenuButton, vec2d], None] = self.pressed
         self._held = False
         self._focus = False
         menu.add(self)
@@ -275,7 +275,7 @@ class MenuButton(MenuElement):
         return self._call
 
     @call.setter
-    def call(self, call: Callable):
+    def call(self, call: Callable[[MenuButton, vec2d], None]):
         self._call = call
 
     @property
@@ -321,6 +321,9 @@ class MenuButton(MenuElement):
         if Rect((0, 0), self.size.tup()).collidepoint(pos):
             return True
         return False
+
+    def pressed(self, button: MenuButton, pos: vec2d) -> None:
+        pass
 
 class MenuButtonFull(SubMenu):
     def __init__(self, engine, menu: Menu, name: str):
@@ -386,7 +389,7 @@ class MenuSlider(SubMenu):
         self.button = MenuButton(self._engine, self, name + '-button')
         self.button.held = True
         self._size = vec2d(0, 0)
-        self._value = 1
+        self._value: float = 1
 
     @property
     def visible(self):
@@ -427,7 +430,7 @@ class MenuSlider(SubMenu):
         self.button.size = self.size
 
     @property
-    def value(self):
+    def value(self) -> float:
         return self._value
 
     @value.setter

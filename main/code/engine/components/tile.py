@@ -1,11 +1,11 @@
 """Handles rendering, loading and modifying tilemaps and tile layers."""
 # Standard library
 from os import path, listdir
-from typing import Dict, List, Tuple
 
 # External libraries
 from pygame.image import load
-from pygame import Surface, Rect, draw
+from pygame import Rect, draw
+from pygame.surface import Surface
 
 # Local imports
 from ..types.array import array2d
@@ -18,9 +18,9 @@ class TileMap(Component):
     """Handles background and foreground graphics."""
     def __init__(self, engine: object):
         super().__init__(engine)
-        self.layers: Dict[str, TileLayer] = {}
-        self.tilemaps = {}
-        self.tilemaps_list = []
+        self.layers: dict[str, TileLayer] = {}
+        self.tilemaps: dict[int, list[Surface]] = {}
+        self.tilemaps_list: list[int] = []
         self.clear_cache()
 
     def add_tilemap(self, fname: str):
@@ -56,7 +56,7 @@ class TileMap(Component):
             print('tilemap {} does not exist'.format(map_id))
 
     def add_layer(self, name: str, size: vec2d,
-                  data: dict, grid: List[List] = None):
+                  data: dict, grid: list[list] = None):
         """Creates a layer."""
         self.layers[name] = TileLayer(
             self.engine, self, name, size, data, grid)
@@ -81,8 +81,8 @@ class TileMap(Component):
             code = ['Tilemap not found.',
                     'Tilemap dir: {}'.format(self.paths['tilemaps']),
                     'Tilemap id: {}'.format(map_id)]
-            code = '\n  ' + '\n  '.join(code)
-            raise FileNotFoundError(colorize(code, 'red'))
+            msg = '\n  ' + '\n  '.join(code)
+            raise FileNotFoundError(colorize(msg, 'red'))
         return self.tilemaps[map_id][tile_id]
 
     def add_all(self):
@@ -112,12 +112,12 @@ class TileMap(Component):
 class TileLayer(Component):
     """Layer containing all of the tiles in a lookup form."""
     def __init__(self, engine: object, tile_handler: TileMap, name: str,
-                 size: vec2d, data: dict, array: List[List] = None):
+                 size: vec2d, data: dict, array: list[list] = None):
         super().__init__(engine)
         self.tile = tile_handler
         self.name = name
-        self.size = size
-        self.array = array2d(size)
+        self.size = size.ftup()
+        self.array = array2d(self.size)
         if array is not None:
             self.array._array = array
         self.surface = Surface((0, 0))
@@ -156,10 +156,11 @@ class TileLayer(Component):
         if self.visible:
             if self.size != self.array.size:
                 self.size = self.array.size
-                surface = Surface(vec2d(*self.array.size) * self.fulltile)
-                surface = surface.convert_alpha()
-                surface.fill((0, 0, 0, 0))
-                surface.blit(self.surface, vec2d(0, 0))
+                surface_size = vec2d(*self.array.size) * self.fulltile
+                surface = Surface(surface_size.ftup())
+                asurface = surface.convert_alpha()
+                asurface.fill((0, 0, 0, 0))
+                asurface.blit(self.surface, vec2d(0, 0))
             surface = self.surface
             depth = self.depth
             if self.engine.parallax and self.parallax != vec2d(0, 0):
@@ -179,8 +180,8 @@ class TileLayer(Component):
     def cache(self):
         """Cache grid to surface."""
         halftile = (self.fulltile // 2)
-        size = self.size * halftile
-        self.surface = Surface(size).convert_alpha()
+        size = vec2d(*self.size) * halftile
+        self.surface = Surface(size.ftup()).convert_alpha()
         self.surface.fill((0, 0, 0, 0))
 
         # Iterate through grid
@@ -195,7 +196,7 @@ class TileLayer(Component):
     def cache_partial(self, pos: vec2d):
         """Cache tile to Surface."""
         halftile = self.fulltile // 2
-        x, y = (pos // halftile)
+        x, y = (pos // halftile).ftup()
         try:
             tile_info = self.array.get(x, y)
         except IndexError:
@@ -204,12 +205,11 @@ class TileLayer(Component):
             # Replace singular tile
             if tile_info is None:
                 color = (0, 0, 0, 0)
-                rect = Rect((x, y), vec2d(1, 1) * halftile)
+                rect = Rect((x, y), (vec2d(1, 1) * halftile).ftup())
                 draw.rect(self.surface, color, rect)
             elif isinstance(tile_info, tuple):
                 tile = self.tile.get_image(*tile_info)
-                size = self.surface.get_size()
-                size = vec2d(*size) // 16
+                size = vec2d(*self.surface.get_size()) // 16
                 if x >= size.x or y >= size.y:
                     new_size = vec2d(max(x + 1, size.x) * 16, max(y + 1, size.y) * 16)
                     new_surface = Surface(new_size.ftup()).convert_alpha()

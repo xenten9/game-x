@@ -1,13 +1,12 @@
 # Standard library
-import os
-from os import sys
-import shutil
+from os import walk, path, remove, makedirs, mkdir, getcwd
+import sys
+from shutil import copy as copydir, rmtree
 
 # External libraries
 import PyInstaller.__main__
-import py7zr
-from main.code.constants import cprint, clear_terminal
-clear_terminal()
+from py7zr import SevenZipFile
+from main.code.engine.constants import cprint, clear_terminal, colorize
 
 # Build instructions
 def get_version() -> str:
@@ -15,51 +14,66 @@ def get_version() -> str:
     # Get user input of version
     version = input('version: ')
 
-    # Check for suffix
+    if version == 'exit':
+        exit()
+
     if '-' in version:
         version_parts = version.split('-')
-        if len(version_parts) > 2:
-            raise ValueError('Too many parts')
-        prefix = version_parts[0]
-        suffix = version_parts[1]
-        if suffix not in ('alpha', 'beta'):
-            raise ValueError('Suffix must be in (alpha, beta)')
+        prefix, suffix = version_parts[0:2]
     else:
+        version_parts = [version]
         prefix = version
+        suffix = ''
 
-    # Check for v
-    if prefix[0] == 'v':
-        prefix = prefix[1:]
-    else:
-        raise ValueError('Version suffix must start with v')
 
-    # Check version number
-    prefix_parts = prefix.split('.')
-    if len(prefix_parts) != 3:
-        raise ValueError('Version number must have 3 numbers')
-    for part in prefix_parts:
+    # Check prefix
+    if prefix[0] != 'v':
+        msg = colorize('Prefix must start with v', 'red')
+        raise ValueError(msg)
+
+    version_numbers = prefix[1:].split('.')
+    if len(version_numbers) != 3:
+        msg = colorize('Prefix must be 3 numbers long', 'red')
+        raise ValueError(msg)
+
+    for num in version_numbers:
         try:
-            int(part)
-        except TypeError as e:
-            print('Version numbers must be integers')
-            raise e
+            int(num)
+        except (TypeError, ValueError) as error:
+            msg = colorize('Prefix must be integers', 'red')
+            raise ValueError(msg) from error
+
+
+    # Check suffix
+    if suffix is not '':
+        if suffix not in ('alpha', 'beta'):
+            msg = colorize('Suffix must be in the form (alpha, beta)', 'red')
+            raise ValueError(msg)
+
+        if len(version_parts) > 2:
+            msg = colorize('Version must be in form prefix-suffix', 'red')
+            raise ValueError(msg)
+
 
     # Proper version
     return version
 
 def copy_dir(src: str, dst: str):
-    for src_dir, _, files in os.walk(src):
+    for src_dir, _, files in walk(src):
         dst_dir = src_dir.replace(src, dst, 1)
-        if not os.path.exists(dst_dir):
-            os.makedirs(dst_dir)
-        for file_ in files:
-            src_file = os.path.join(src_dir, file_)
-            dst_file = os.path.join(dst_dir, file_)
-            if os.path.exists(dst_file):
-                os.remove(dst_file)
-            shutil.copy(src_file, dst_dir)
+        if not path.exists(dst_dir):
+            makedirs(dst_dir)
+        for file in files:
+            src_dir = path.join(src_dir, file)
+            dst_file = path.join(dst_dir, file)
+            if path.exists(dst_file):
+                remove(dst_file)
+            copydir(src_dir, dst_dir)
 
 def main():
+    # Clear the terminal
+    clear_terminal()
+
     # Get version
     osname = sys.platform
     if osname.startswith('win'):
@@ -67,22 +81,23 @@ def main():
     elif osname.startswith('linux'):
         os_platform = 'linux'
     else:
-        err = 'unable to build for systems other than win & linux'
-        raise RuntimeError(err)
+        msg = 'unable to build for systems other than win & linux'
+        msg = colorize(msg, 'red')
+        raise RuntimeError(msg)
 
     # Get directories and version
     version = get_version()
-    dir_main = os.getcwd()
-    dir_dist = os.path.join(dir_main, 'dist')
+    dir_main = getcwd()
+    dir_dist = path.join(dir_main, 'dist')
 
     # Clean directory
-    dir_version = os.path.join(dir_dist, version)
-    if not os.path.exists(dir_version):
-        os.mkdir(dir_version)
-    dir_os = os.path.join(dir_version, os_platform)
-    if os.path.exists(dir_os):
-        shutil.rmtree(dir_os)
-    os.mkdir(dir_os)
+    dir_version = path.join(dir_dist, version)
+    if not path.exists(dir_version):
+        mkdir(dir_version)
+    dir_os = path.join(dir_version, os_platform)
+    if path.exists(dir_os):
+        rmtree(dir_os)
+    mkdir(dir_os)
     cprint('~~Directory Cleaned~~\n', 'green')
 
     # Create executable
@@ -90,42 +105,48 @@ def main():
     print('Creating executable...')
     arguments = ['game.pyw', '--onefile', '--noconsole', '-n'+executable_name]
     PyInstaller.__main__.run(arguments)
-    executable = os.path.join(dir_dist, executable_name)
+    executable = path.join(dir_dist, executable_name)
     if os_platform == 'windows':
         executable += '.exe'
     cprint('~~EXECUTABLE CREATED~~\n', 'green')
 
     # Create folder based on system version
-    dir_game = os.path.join(dir_os, executable_name)
+    dir_game = path.join(dir_os, executable_name)
     print('Creating game folder...')
-    os.mkdir(dir_game)
+    mkdir(dir_game)
 
     print('Moving assets directory...')
-    dir_assets = os.path.join(dir_main, 'assets')
-    dir_new_assets = os.path.join(dir_game, 'assets')
+    dir_assets = path.join(dir_main, 'assets')
+    dir_new_assets = path.join(dir_game, 'assets')
     copy_dir(dir_assets, dir_new_assets)
 
     print('Moving executable...')
-    shutil.copy(executable, dir_game)
-    os.remove(executable)
+    copydir(executable, dir_game)
+    remove(executable)
     cprint('~~GAME FOLDER CREATED~~\n', 'green')
 
     # Compress folder to .7z
     print('Creating 7z file...')
-    with py7zr.SevenZipFile(dir_game+'.7z', 'w') as archive:
+    with SevenZipFile(dir_game+'.7z', 'w') as archive:
         archive.writeall(dir_game, executable_name)
     cprint('~~GAME FOLDER COMPRESSED TO 7Z~~', 'green')
 
     # Cleanup
     print('Cleaning up temp files...')
-    spec = os.path.join(dir_main, executable_name+'.spec')
-    build = os.path.join(dir_main, 'build', executable_name)
-    if os.path.exists(spec):
-        print('Removing: spec file - {}'.format(os.path.basename(spec)))
-        os.remove(spec)
-    if os.path.exists(build):
-        print('Removing: build folder - {}'.format(os.path.basename(build)))
-        shutil.rmtree(build)
+    spec = path.join(dir_main, executable_name+'.spec')
+    build = path.join(dir_main, 'build', executable_name)
+
+    # Remove spec files
+    if path.exists(spec):
+        msg = 'Removing: spec file - {}'.format(path.basename(spec))
+        cprint(msg, 'yellow')
+        remove(spec)
+
+    # Remove build files
+    if path.exists(build):
+        msg = 'Removing: build folder - {}'.format(path.basename(build))
+        cprint(msg, 'yellow')
+        rmtree(build)
 
     # Finalize
     text = '~~Version {} {}'.format(version, os_platform)

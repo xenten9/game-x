@@ -4,7 +4,7 @@ from typing import Callable
 
 # External libraries
 from pygame.time import Clock
-from pygame.locals import QUIT, KEYDOWN
+from pygame import QUIT, KEYDOWN
 from pygame.event import get as get_events
 
 # Local imports

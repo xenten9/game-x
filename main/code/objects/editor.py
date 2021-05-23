@@ -46,6 +46,7 @@ class ObjCursor(Entity):
         self.color = (192, 192, 192)
         self.name = 'cursor'
         self.engine.obj.sobj[self.name] = self
+        self.rel = vec2d(0, 0)
 
         # Modes
         self.mode = 0
@@ -70,7 +71,7 @@ class ObjCursor(Entity):
             'walking-enemy']
 
         # Input keys
-        self.keys = {
+        self.kkeys = {
             # Keyboard
             'save': (22,),
             'load': (15,),
@@ -98,7 +99,7 @@ class ObjCursor(Entity):
             'remove': (3,)}
 
         # input vars
-        self.key = {
+        self.kkey = {
             # Keyboard
             'save': False,
             'load': False,
@@ -135,24 +136,24 @@ class ObjCursor(Entity):
         self.get_inputs()
 
         # Change modes
-        if self.key['modeup'] or self.key['modedown']:
-            self.mode += self.key['modeup'] - self.key['modedown']
+        if self.kkey['modeup'] or self.kkey['modedown']:
+            self.mode += self.kkey['modeup'] - self.kkey['modedown']
             self.pos = self.pos.grid(FULLTILE)
         self.mode = f_loop(self.mode, 0, 2)
 
         # Reload # NOTE # use before saving level in order to shrink grids
-        if self.key['reload'] and self.key['Hcontrol']:
+        if self.kkey['reload'] and self.kkey['Hcontrol']:
             self.engine.col.st.minimize()
             for layer in self.engine.tile.layers:
                 layer = self.engine.tile.layers[layer]
                 layer.minimize()
 
         # Saving and loading
-        if (self.key['save'] and self.key['Hcontrol']
+        if (self.kkey['save'] and self.kkey['Hcontrol']
             and not self.mkey['Hplace']):
             self.engine.lvl.save()
             return
-        elif (self.key['load'] and self.key['Hcontrol']
+        elif (self.kkey['load'] and self.kkey['Hcontrol']
               and not self.mkey['Hplace']):
             self.engine.lvl.load()
             self.engine.tile.add_all()
@@ -167,8 +168,8 @@ class ObjCursor(Entity):
             self.mode2()
 
         # Move camera
-        hspd = (self.key['right'] - self.key['left']) * FULLTILE
-        vspd = (self.key['down'] - self.key['up']) * FULLTILE
+        hspd = (self.kkey['right'] - self.kkey['left']) * FULLTILE
+        vspd = (self.kkey['down'] - self.kkey['up']) * FULLTILE
 
         if self.engine.inp.ms.get_button_held(2):
             self.rel += self.engine.inp.ms.get_delta()
@@ -188,13 +189,13 @@ class ObjCursor(Entity):
 
     def get_inputs(self):
         """Register inputs and change variables."""
-        for key in self.key:
+        for key in self.kkey:
             if key[0] != 'H':
-                self.key[key] = self.engine.inp.kb.get_key_pressed(
-                    *self.keys[key])
+                self.kkey[key] = self.engine.inp.kb.get_key_pressed(
+                    *self.kkeys[key])
             else:
-                self.key[key] = self.engine.inp.kb.get_key_held(
-                    *self.keys[key[1:]])
+                self.kkey[key] = self.engine.inp.kb.get_key_held(
+                    *self.kkeys[key[1:]])
 
         for key in self.mkey:
             if key[0] != 'H':
@@ -207,18 +208,18 @@ class ObjCursor(Entity):
     def mode0(self):
         """Object mode."""
         # Changing selection
-        dobj = self.key['next'] - self.key['prev']
+        dobj = self.kkey['next'] - self.kkey['prev']
         if dobj != 0:
             self.obj_select += dobj
             length = len(self.object_names) - 1
             self.obj_select = f_loop(self.obj_select, 0, length)
 
         # Toggling objects
-        if self.key['f1']:
+        if self.kkey['f1']:
             self.engine.obj.toggle_visibility()
 
         # View/Edit data
-        if self.key['tab'] and self.selected_object != None:
+        if self.kkey['tab'] and self.selected_object != None:
             self.view_object_data()
 
         # Deselect object
@@ -226,7 +227,7 @@ class ObjCursor(Entity):
             self.selected_object = None
 
         # Place object
-        if self.mkey['Hplace'] and self.key['Hcontrol']:
+        if self.mkey['Hplace'] and self.kkey['Hcontrol']:
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
             pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey['place']:
@@ -246,7 +247,7 @@ class ObjCursor(Entity):
                 self.selected_object = self.get_overlaping_object()
 
         # Remove object
-        elif self.mkey['Hremove'] and self.key['Hcontrol']:
+        elif self.mkey['Hremove'] and self.kkey['Hcontrol']:
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
             pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey['remove']:
@@ -256,12 +257,12 @@ class ObjCursor(Entity):
     def mode1(self):
         """Tile mode."""
         # Layer selection
-        self.layer += self.key['nextlayer'] - self.key['prevlayer']
+        self.layer += self.kkey['nextlayer'] - self.kkey['prevlayer']
         length = len(self.engine.tile.layers)-1
 
         # Layer creation
         if self.layer > length or self.layer < 0:
-            if self.key['Hshift'] and self.key['Hcontrol']:
+            if self.kkey['Hshift'] and self.kkey['Hcontrol']:
                 name = self._get_data(
                     'Enter layer name: ', 'Name must be string',
                     '', str)
@@ -276,8 +277,8 @@ class ObjCursor(Entity):
                     self.layer -= 1
 
         # Layer deletion
-        if self.key['delete'] and length > 0:
-            if self.key['Hshift'] and self.key['Hcontrol']:
+        if self.kkey['delete'] and length > 0:
+            if self.kkey['Hshift'] and self.kkey['Hcontrol']:
                 layer = self._get_current_layer()
                 self.engine.tile.remove_layer(layer.name)
                 length -= 1
@@ -285,7 +286,7 @@ class ObjCursor(Entity):
         self.layer = f_loop(self.layer, 0, length)
 
         # Tilemap selection
-        dset = self.key['nextset'] - self.key['prevset']
+        dset = self.kkey['nextset'] - self.kkey['prevset']
         if dset != 0:
             self.tile_select = 0
             self.tilemap_select += dset
@@ -296,23 +297,23 @@ class ObjCursor(Entity):
             self.tilemap = self._get_current_tilemap()
 
         # Changing selection
-        dtile = (self.key['next'] - self.key['prev'])
+        dtile = (self.kkey['next'] - self.kkey['prev'])
         if dtile != 0:
             self.tile_select += dtile
             length = len(self.tilemap)-1
             self.tile_select = f_loop(self.tile_select, 0, length)
 
         # Toggling tile maps
-        if self.key['f1']:
+        if self.kkey['f1']:
             layer = list(self.engine.tile.layers.keys())[self.layer]
             self.engine.tile.layers[layer].toggle_visibility()
 
         # View/Edit data
-        if self.key['tab']:
+        if self.kkey['tab']:
             layer = self._get_current_layer()
-            if self.key['Hshift']:
+            if self.kkey['Hshift']:
                 text = self._get_data(
-                    'Enter Data Dict: ', 'Input must be Dict',
+                    'Enter data dict: ', 'Input must be of type dict',
                     'Data Successfully Written', dict)
                 if text is not None:
                     layer.data = text
@@ -324,7 +325,7 @@ class ObjCursor(Entity):
 
         # Mouse
         # Place tile
-        if self.mkey['Hplace'] and self.key['Hcontrol']:
+        if self.mkey['Hplace'] and self.kkey['Hcontrol']:
             # Update position
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
             pos = pos.grid(FULLTILE//2)
@@ -333,7 +334,7 @@ class ObjCursor(Entity):
                 self.place_tile()
 
         # Remove tile
-        elif self.mkey['Hremove'] and self.key['Hcontrol']:
+        elif self.mkey['Hremove'] and self.kkey['Hcontrol']:
             # Update position
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
             pos = pos.grid(FULLTILE//2)
@@ -343,7 +344,7 @@ class ObjCursor(Entity):
 
     def mode2(self):
         # Wall mode
-        if self.key['f1']:
+        if self.kkey['f1']:
             self.engine.col.st.toggle_visibility()
 
         # Place wall
@@ -399,7 +400,7 @@ class ObjCursor(Entity):
     def view_object_data(self):
         """Print object data or edit it if shift is held."""
         obj = self.selected_object
-        if self.key['Hshift']:
+        if self.kkey['Hshift']:
             text = ''
             while True:
                 text = input('Edit data? ')

@@ -1,8 +1,10 @@
 """Handles object instances."""
 # Standard library
-from typing import Callable
+from typing import Callable, Any
 
 # Local imports
+from ..constants import colorize
+from ..types.entity import Entity
 from ..types.component import Component
 
 class ObjectHandler(Component):
@@ -14,8 +16,8 @@ class ObjectHandler(Component):
         self.pool = set()
         for item in range(self.pool_size):
             self.pool.add(item)
-        self.obj = {}
-        self.sobj = {}
+        self.obj: dict[int, Any] = {}
+        self.sobj: dict[str, Any] = {}
         self.visible = True
 
     # Update calls
@@ -34,7 +36,8 @@ class ObjectHandler(Component):
         for key in objcopy:
             if key in self.obj:
                 self.obj[key].update(self.engine.paused)
-        for key in self.sobj:
+        sobjcopy = self.sobj.copy()
+        for key in sobjcopy:
             self.sobj[key].update(self.engine.paused)
 
     def update_late(self):
@@ -64,7 +67,12 @@ class ObjectHandler(Component):
 
     def instantiate_object(self, key: int, obj: object):
         """Add a ref. to a game object in the self.obj dictionary."""
-        self.obj[key] = obj
+        if issubclass(obj.__class__, Entity):
+            self.obj[key] = obj
+        else:
+            message = 'Object {} cannot be instantied'.format(obj)
+            message += 'It does not sublass to Entity'
+            raise TypeError(colorize(message, 'red'))
 
     def create_object(self, **kwargs):
         """Creates instances of objects and instantiates them."""
@@ -79,6 +87,10 @@ class ObjectHandler(Component):
     # Object deletion
     def delete(self, key: int):
         """Removes a ref. of a game object from the self.obj dictionary."""
+        try:
+            self.obj[key].delete()
+        except AttributeError:
+            pass
         del self.obj[key]
         self.pool.add(key)
 

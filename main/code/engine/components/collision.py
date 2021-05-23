@@ -1,4 +1,7 @@
 """Collision detection handlers."""
+# Standard library
+from typing import Any
+
 # External libraries
 from pygame import Rect, Surface, draw as pydraw
 
@@ -66,7 +69,7 @@ class StaticCollider(Component, Entity):
                 for y in range(self.array.height):
                     if self.array.get(x, y):
                         pos = vec2d(x, y) * self.fulltile
-                        rect = Rect(pos, size)
+                        rect = Rect(pos.ftup(), size)
                         pydraw.rect(surface, color, rect)
             pos = vec2d(0, 0)
             draw.add(0, pos=pos, surface=surface)
@@ -79,7 +82,10 @@ class DynamicCollider(Component):
     """Handles collisions with moving objects."""
     def __init__(self, engine: object):
         super().__init__(engine)
-        self.colliders = {}
+        self.colliders: dict[int, object] = {}
+
+    def get_colliders(self) -> list[Any]:
+        return [self.colliders[collider] for collider in self.colliders]
 
     def add(self, key: int, obj: object):
         """Adds a collider to self.colliders."""
@@ -91,21 +97,6 @@ class DynamicCollider(Component):
             del self.colliders[key]
         except KeyError:
             pass
-
-    def get_collision(self, pos: vec2d, size: vec2d, origin: vec2d, key: int = -1) -> list:
-        """Checks each collider to see if they overlap a rectangle."""
-        collide = []
-        pos = pos + origin
-        new_pos = pos.tup()
-        new_size = size.tup()
-        rect0 = Rect(new_pos, new_size)
-        for col in self.colliders:
-            if col != key:
-                cobj = self.colliders[col]
-                rect1 = Rect(cobj.pos + cobj.origin, cobj.size)
-                if rect0.colliderect(rect1):
-                    collide.append(cobj)
-        return collide
 
     def clear(self):
         """Remove all colliders."""

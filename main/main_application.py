@@ -2,16 +2,15 @@
 printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal clear
 
 # Standard library
-from os import path, getcwd, sys
+from os import path, getcwd
 import sys
-from typing import List, Tuple
 
 # Check if ran from an executable
 if getattr(sys, 'frozen', False):
-    main_path: str = path.dirname(sys.executable)
+    main_path = path.dirname(sys.executable)
 else:
-    def splitall(filepath: str) -> List[str]:
-        allparts = []
+    def splitall(filepath: str) -> list[str]:
+        allparts: list[str] = []
         while True:
             parts = path.split(filepath)
             if parts[0] == filepath:
@@ -24,7 +23,7 @@ else:
                 filepath = parts[0]
                 allparts.insert(0, parts[1])
         return allparts
-    main_path: str = getcwd()
+    main_path = getcwd()
     path_parts = splitall(main_path)
     root = path_parts[0]
     main_path = root
@@ -192,7 +191,7 @@ def main(debug: bool = False):
     game.main_loop()
 
 # Parse arguments given to script
-def parse_args(args: List[str]) -> dict:
+def parse_args(args: list[str]) -> dict:
     # Setup
     script_name: str = args.pop(0)
     out_args: dict = {}
@@ -201,7 +200,7 @@ def parse_args(args: List[str]) -> dict:
     out_args.setdefault('debug', True)
 
     # Group args into declerator and value
-    new_args: List[Tuple[str, str]] = []
+    new_args: list[tuple[str, str]] = []
     for i in range(len(args)//2):
         new_args.append((args[2*i], args[2*i+1]))
 

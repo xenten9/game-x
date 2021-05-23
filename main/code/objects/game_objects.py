@@ -2,11 +2,10 @@
 # Standard library
 from os import path
 from math import floor
-from typing import Optional, Tuple
-
 # External libraries
 from numpy import sign
-from pygame import image
+from pygame import image, Rect
+from pygame.surface import Surface
 
 # Local imports
 from ..constants import FULLTILE
@@ -16,6 +15,7 @@ from ..engine.constants import cprint
 from ..engine.components.draw import Draw
 from ..engine.components.maths import f_loop
 from ..engine.types.vector import vec2d
+from ..engine.constants import colorize
 
 # Game objects
 class GameObject(Entity):
@@ -24,6 +24,7 @@ class GameObject(Entity):
                  pos: vec2d, size: vec2d = vec2d(32, 32),
                  origin: vec2d = vec2d(0, 0)):
         super().__init__(engine, key, name, data)
+        self.engine = engine
         self.pos = pos
         self.size = size
         self.origin = origin
@@ -37,7 +38,7 @@ class GameObject(Entity):
                         vec2d(rel.x+w, rel.y+h),
                         vec2d(rel.x, rel.y+h))
         self._frame = 0
-        self.frames = []
+        self.frames: list[Surface] = []
 
     # Set current frames
     def set_frames(self, *fnames, alpha=0):
@@ -55,10 +56,12 @@ class GameObject(Entity):
                 code = ['Sprite image not found.',
                         'Images path: {}'.format(file_path),
                         'Engine sprite path: {}'.format(sprite_path)]
-                raise FileNotFoundError('\n  ' + '\n  '.join(code)) from error
+                code = '\n  ' + '\n  '.join(code)
+                code = colorize(code, 'red')
+                raise FileNotFoundError(code) from error
 
     @property
-    def frame(self):
+    def frame(self) -> int:
         """Frame getter."""
         return self._frame
 
@@ -71,7 +74,7 @@ class GameObject(Entity):
 
     # Collision
     def scollide(self, pos: vec2d = None,
-                 cpoints: Tuple[vec2d, vec2d, vec2d, vec2d] = None) -> bool:
+                 cpoints: tuple[vec2d, vec2d, vec2d, vec2d] = None) -> bool:
         """Check for static collisions."""
         # Match unspecified arguments
         if pos is None:
@@ -97,7 +100,20 @@ class GameObject(Entity):
         origin = self.origin
 
         # Check for collision
-        return self.engine.col.dy.get_collision(pos, size, origin, key)
+        colliders = self.engine.col.dy.get_colliders()
+        collide: list[object] = []
+        pos = pos + origin
+        new_pos = pos.tup()
+        new_size = size.tup()
+        self_rect = Rect(new_pos, new_size)
+        for cobj in colliders:
+            if cobj.key != key:
+                if issubclass(cobj.__class__, GameObject):
+                    cpos = (cobj.pos + cobj.origin).tup()
+                    other_rect = Rect(cpos, cobj.size.tup())
+                    if self_rect.colliderect(other_rect):
+                        collide.append(cobj)
+        return collide
 
     # Drawing sprites
     def draw(self, draw: Draw):
@@ -109,7 +125,6 @@ class GameObject(Entity):
     # Removing index in object handler
     def delete(self):
         """Called when object is deleted from Objects dictionary."""
-        self.engine.obj.delete(self.key)
         self.engine.col.dy.remove(self.key)
 
 class Damageable():
@@ -135,7 +150,7 @@ class ObjPlayer(GameObject, Damageable):
         engine.col.dy.add(key, self)
 
         # Controls
-        self.keys = {
+        self.kkeys = {
             'jump': (44, 26, 82),
             'left': (4, 80),
             'right': (7, 79),
@@ -144,14 +159,14 @@ class ObjPlayer(GameObject, Damageable):
             'pause': (41,)}
 
         # Key vars
-        self.key = {
-            'jump': 0,
-            'Hjump': 0,
-            'Hleft': 0,
-            'Hright': 0,
-            'Hrun': 0,
-            'reset': 0,
-            'pause': 0}
+        self.kkey = {
+            'jump': False,
+            'Hjump': False,
+            'Hleft': False,
+            'Hright': False,
+            'Hrun': False,
+            'reset': False,
+            'pause': False}
 
         # Ground
         self.hspd, self.vspd = 0, 0
@@ -177,15 +192,14 @@ class ObjPlayer(GameObject, Damageable):
         self.jump_lenience = 6
         self.jump_delay = 0
 
-        # State Machine
+        # State machine
         self.mode = 0
         self.campos = (0, 0)
         self.camspeed = (0.25, 0.25)
 
         # Sprite
         self.set_frames('player.png')
-        self.trail = []
-        self.pause_menu = None
+        self.trail: list[vec2d] = []
 
         # Health
         self.iframes = 45
@@ -197,6 +211,11 @@ class ObjPlayer(GameObject, Damageable):
         # Audio
         engine.aud.sfx.add('boop.wav')
 
+        # Pause menu
+        self.pause_menu = ObjPauseMenu(self.engine, 0, '', {})
+        self.engine.obj.sobj['pause-menu'] = self.pause_menu
+        self.pause_menu.menu.visible = False
+
     @property
     def hp(self):
         return self._hp
@@ -207,16 +226,10 @@ class ObjPlayer(GameObject, Damageable):
             self._hp = hp
             self.iframe = self.iframes
 
-    def post_init(self):
-        # Pause menu
-        key = self.engine.obj.instantiate_key()
-        self.pause_menu = ObjPauseMenu(self.engine, key, '', {})
-        self.pause_menu.menu.visible = False
-
     def update(self, paused: bool):
         """Called every frame for each game object."""
         self._get_inputs()
-        if self.key['pause']:
+        if self.kkey['pause']:
             self.engine.pause()
             v = self.pause_menu.menu.visible
             self.pause_menu.menu.visible = not v
@@ -228,7 +241,7 @@ class ObjPlayer(GameObject, Damageable):
                 self._die()
             if self.mode == 0:
                 # Reset room
-                if self.key['reset'] == 1:
+                if self.kkey['reset'] == 1:
                     self.engine.lvl.reset()
                     return
 
@@ -258,10 +271,13 @@ class ObjPlayer(GameObject, Damageable):
             image.set_alpha(255)
         else:
             image.set_alpha(63)
-        draw.add(4, pos=self.pos, surface=image.copy())
-        for item in range(1, len(self.trail)):
-            image.set_alpha(((image.get_alpha() + 1) // 2) - 1)
-            draw.add(3, pos=self.trail[item], surface=image.copy())
+        alpha = image.get_alpha()
+        if alpha is not None:
+            draw.add(4, pos=self.pos, surface=image.copy())
+            for item in range(1, len(self.trail)):
+                alpha = ((alpha + 1) // 2) - 1
+                image.set_alpha(alpha)
+                draw.add(3, pos=self.trail[item], surface=image.copy())
 
     def _jump(self):
         if self.grounded > 0:
@@ -281,19 +297,19 @@ class ObjPlayer(GameObject, Damageable):
         return 'return'
 
     def _get_inputs(self):
-        for key in self.key:
+        for key in self.kkey:
             if key[0] != 'H':
-                self.key[key] = self.engine.inp.kb.get_key_pressed(
-                    *self.keys[key])
+                self.kkey[key] = self.engine.inp.kb.get_key_pressed(
+                    *self.kkeys[key])
             else:
-                self.key[key] = self.engine.inp.kb.get_key_held(
-                    *self.keys[key[1:]])
+                self.kkey[key] = self.engine.inp.kb.get_key_held(
+                    *self.kkeys[key[1:]])
 
     def _movement(self):
         """Handle player movement."""
         # Veritcal controls
         self.jump -= sign(self.jump)
-        if (self.key['jump'] and self.jump <= 0):
+        if (self.kkey['jump'] and self.jump <= 0):
             self.jump = self.jump_lenience
 
         # Grounded
@@ -328,14 +344,14 @@ class ObjPlayer(GameObject, Damageable):
     def _horizontal_move(self):
         """Horizontal movement."""
         # Horizontal speed
-        move = (self.key['Hright'] - self.key['Hleft'])
+        move = (self.kkey['Hright'] - self.kkey['Hleft'])
         if self.grounded and self.grav != 0:
             if move != 0:
                 # Dynamic grounded
                 self.hspd *= self.ground_fric_dynamic
 
                 # Running
-                if self.key['Hrun']:
+                if self.kkey['Hrun']:
                     self.hspd += move * self.run_speed
                 else:
                     self.hspd += move * self.walk_speed
@@ -355,7 +371,7 @@ class ObjPlayer(GameObject, Damageable):
     def _vertical_move(self):
         """Vertical movement."""
         # Jumping
-        if (self.grounded != 0 and self.key['jump'] > 0
+        if (self.grounded != 0 and self.kkey['jump'] > 0
             and self.jump_delay == 0):
             self._jump()
         else:
@@ -364,7 +380,7 @@ class ObjPlayer(GameObject, Damageable):
         # Jump gravity
         if sign(self.vspd) == sign(self.grav):
             self.vspd += self.grav * self.fallgrav
-        elif self.key['Hjump']:
+        elif self.kkey['Hjump']:
             self.vspd += self.grav * self.jumpgrav
         else:
             self.vspd += self.grav
@@ -417,6 +433,10 @@ class ObjPlayer(GameObject, Damageable):
         dcam = (self.campos - self.engine.cam.pos) * self.camspeed
         self.engine.cam.pos = self.engine.cam.pos + dcam
 
+    def delete(self):
+        super().delete()
+        del self.engine.obj.sobj['pause-menu']
+
 class ObjButton(GameObject):
     """Button game object."""
     def __init__(self, engine: Engine, key: int,
@@ -456,7 +476,7 @@ class ObjDoor(GameObject):
         # Images
         self.set_frames('door0.png', 'door1.png')
 
-    def collide(self, obj: GameObject) -> Optional[str]:
+    def collide(self, obj: GameObject) -> str:
         if isinstance(obj, ObjPlayer):
             if self.frame == 1:
                 try:
@@ -464,6 +484,7 @@ class ObjDoor(GameObject):
                     return 'return'
                 except AttributeError:
                     cprint('Unable to load level!', 'red')
+        return ''
 
 class ObjGravOrb(GameObject):
     """GravOrb game object."""
@@ -505,7 +526,7 @@ class ObjGravOrb(GameObject):
                     obj.grav = obj.default_grav * -grav_mult
 
             # Remove self after collision with player
-            self.delete()
+            self.engine.obj.delete(self.key)
 
 class ObjSpike(GameObject):
     """Spike game object."""
@@ -537,7 +558,7 @@ class ObjSpikeInv(GameObject):
         # Images
         self.set_frames('spike-inv.png', alpha=1)
 
-    def collide(self, obj: GameObject) -> Optional[str]:
+    def collide(self, obj: GameObject):
         if isinstance(obj, ObjPlayer):
             if obj.vspd >= 0:
                 obj.hp -= self.damage

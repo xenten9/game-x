@@ -6,7 +6,7 @@ from .camera import Camera
 class Draw(Component):
     def __init__(self, engine: object):
         super().__init__(engine)
-        self.depths = {}
+        self.depths: dict[int, list] = {}
 
     def draw(self):
         """Tell each object to add to the draw roster."""

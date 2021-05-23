@@ -21,6 +21,9 @@ class Enemy(GameObject, Damageable):
             if self.hp <= 0:
                 self._die()
 
+    def delete(self):
+        self.engine.col.dy.remove(self.key)
+
     def _die(self):
         self.engine.obj.delete(self.key)
 
@@ -61,7 +64,6 @@ class ObjWalkingEnemy(Enemy):
                     self.hp -= obj.damage
                     obj.vspd = -obj.jump_speed
                     obj.jump_delay = obj.coyote // 2
-                    self.delete()
                 elif obj.jump_delay == 0:
                     obj.hp -= self.damage
             else:

@@ -1,13 +1,16 @@
 """Level editing tool for Game-X."""
-# Standard Library
-from os import path, system, name as osname, sys, getcwd
+printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal clear
+
+# Standard library
+from os import path, getcwd
+import sys
 
 # Check if ran from an executable
 if getattr(sys, 'frozen', False):
     main_path = path.dirname(sys.executable)
 else:
     def splitall(filepath: str) -> list:
-        allparts = []
+        allparts: list[str] = []
         while True:
             parts = path.split(filepath)
             if parts[0] == filepath:
@@ -32,7 +35,11 @@ else:
 
 # Add current directory to sys.path
 if main_path not in sys.path:
-    print('adding path: {}'.format(main_path))
+    printer.append('main path: {}'.format(main_path))
+    printer.append('sys.path: ')
+    for spath in sys.path:
+        printer.append('\t' + spath)
+    printer.append('adding path: {}'.format(main_path))
     sys.path.insert(0, main_path)
 
 # Local Imports
@@ -52,9 +59,10 @@ if __name__ == '__main__':
         print('Unable to find all modules.')
         print('sys path is: ')
         paths = sys.path
-        for path in paths:
-            print(path)
+        for spath in paths:
+            print(spath)
         exit()
+
 else:
     try:
         # If imported as module
@@ -68,19 +76,15 @@ else:
         from .code.objects.editor import ObjCursor, Object
 
     except ModuleNotFoundError:
-        print('unable to import modules relatively.')
+        printer.append('unable to import modules relatively.')
         exit()
 
 
 
-# Clear the terminal
-def clear_terminal():
-    if osname == 'nt':
-        system('cls')
-    else:
-        system('clear')
-
+# print succesful importing
 clear_terminal()
+for line in printer:
+    print(line)
 cprint('All imports finished.', 'green')
 
 # Object creation function
@@ -109,10 +113,6 @@ class View(Camera):
     """Camera like object which is limited to the inside of the level."""
     def __init__(self, engine: Engine, size: vec2d):
         super().__init__(engine, size)
-        self.keys = {
-            }
-        self.key = {
-            }
 
     def _pos_get(self) -> vec2d:
         return self._pos

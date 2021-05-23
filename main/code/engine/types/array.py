@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 from .vector import vec2d
 
 def f_is_list_empty(list: list):
@@ -8,9 +8,7 @@ def f_is_list_empty(list: list):
     return True
 
 class array2d():
-    def __init__(self, size: Union[vec2d, tuple]):
-        if isinstance(size, vec2d):
-            size = size.ftup()
+    def __init__(self, size: tuple[int, int]):
         self._array = [[None]*size[1] for _ in range(size[0])]
         self._size = size
 
@@ -27,18 +25,16 @@ class array2d():
         return self._array
 
     @array.setter
-    def array(self, array: List[list]):
+    def array(self, array: list[list]):
         self._array = array
         self._size = (len(array), len(array[0]))
 
     @property
-    def size(self):
+    def size(self) -> tuple[int, int]:
         return self._size
 
     @size.setter
-    def size(self, size: Union[vec2d, tuple]):
-        if isinstance(size, vec2d):
-            size = size.ftup()
+    def size(self, size: tuple[int, int]):
         new = array2d(size)
         for x in range(min(self.size[0], size[0])):
             for y in range(min(self.size[1], size[1])):

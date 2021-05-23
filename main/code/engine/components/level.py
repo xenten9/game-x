@@ -48,16 +48,16 @@ class Level(Component):
         if not isinstance(level_name, str):
             return
         level_name = path.join(self.paths['levels'], level_name)
-        a = open(level_name+'.json', 'r')
-        b = a.read()
-        a.close()
-        b = json.loads(b)
+        file = open(level_name+'.json', 'r')
+        contents = file.read()
+        file.close()
+        level_data: list[list] = json.loads(contents)
         obj_list = []
-        for c in b:
+        for obj in level_data:
             # Parse all objects in list
-            name = c[0]
+            name = obj[0]
             if name == 'tile-layer':
-                layername, array, data = c[1:4]
+                layername, array, data = obj[1:4]
                 for column, _ in enumerate(array):
                     for row, cell in enumerate(array[column]):
                         if cell is not None:
@@ -66,11 +66,11 @@ class Level(Component):
                 obj_list.append([name, layername, array, data])
 
             elif name == 'static-collider':
-                array = c[1]
+                array = obj[1]
                 obj_list.append([name, array])
 
             else: # Any game object
-                pos, key, data = c[1:4]
+                pos, key, data = obj[1:4]
                 pos = tuple(pos)
                 key = int(key)
                 data = dict(data)
@@ -138,10 +138,12 @@ class Level(Component):
         if level_name is None:
             while level_name in ('', None):
                 level_name = input('save level name? ')
-                if level_name in ('', None):
+                if level_name == '':
                     cprint('improper level name.', 'yellow')
                 elif level_name == 'exit':
                     return
+        if level_name is None:
+            raise ValueError(colorize('level name is None!', 'red'))
 
         # Compile level parts
         obj_list = []
@@ -199,18 +201,21 @@ class Level(Component):
         if not isinstance(level_name, str):
             return
         level_name = path.join(self.paths['levels'], level_name)
-        l = open(level_name+'.lvl', 'r')
-        q = l.readlines()
-        e = []
-        for item in q:
-            e.append(literal_eval(item))
-        a = open(level_name+'.json', 'w')
-        b = json.dumps(e)
-        b = b.replace('[["', '[\n\t["')
-        b = b.replace('}], ["', '}], \n\t["')
-        b = b.replace('}]]', '}]\n]')
-        a.write(b)
-        a.close()
+        file = open(level_name+'.lvl', 'r')
+        conents = file.readlines()
+        file.close()
+
+        level_data = []
+        for line in conents:
+            level_data.append(literal_eval(line))
+
+        json_level_data = json.dumps(level_data)
+        json_level_data = json_level_data.replace('[["', '[\n\t["')
+        json_level_data = json_level_data.replace('}], ["', '}], \n\t["')
+        json_level_data = json_level_data.replace('}]]', '}]\n]')
+        file = open(level_name+'.json', 'w')
+        file.write(json_level_data)
+        file.close()
 
     def reset(self):
         """Restart current level."""

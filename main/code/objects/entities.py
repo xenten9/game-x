@@ -13,7 +13,7 @@ from ..engine.components.maths import f_limit
 from ..engine.types.vector import vec2d
 from ..engine.types.entity import Entity
 from ..constants import SIZE
-
+from ..engine.constants import colorize
 
 # Entities
 class ObjJukeBox(Entity):
@@ -215,7 +215,7 @@ class ObjMainMenu(Entity):
         if var is None:
             var = 1/8
         elif var > 1:
-            raise ValueError('Variance must be <= 1.')
+            raise ValueError(colorize('Variance must be <= 1.', 'red'))
         s = time * (((random()-.5)*var)+1)
         sleep(s)
 

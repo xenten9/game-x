@@ -1,6 +1,6 @@
 """Handles game audio"""
 # Standard library
-from typing import Dict, Union
+from typing import Union
 from os import path
 
 # External libraries
@@ -35,7 +35,7 @@ class Music(Component):
         super().__init__(engine)
         self.mixer = mix
         self.music = None
-        self.music_queue = []
+        self.music_queue: list[tuple[str, int, float]] = []
         self.fading = False
         self.paused = False
         self._volume = 1.0
@@ -115,8 +115,8 @@ class SFX(Component):
     def __init__(self, engine: object, mix: Mixer):
         super().__init__(engine)
         self.mixer = mix
-        self.tracks: Dict[str, mixer.Sound] = {}
-        self.tvolume: Dict[str, float] = {}
+        self.tracks: dict[str, mixer.Sound] = {}
+        self.tvolume: dict[str, float] = {}
 
     @property
     def main_volume(self) -> float:

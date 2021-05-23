@@ -139,19 +139,11 @@ class Engine():
 
     @property
     def obj(self) -> ObjectHandler:
-        if self._obj is None:
-            msg = '\nObject handler accessed before creation.'
-            raise AttributeError(colorize(msg, 'red'))
-        else:
-            return self._obj
+        return self._obj
 
     @property
     def settings(self) -> Settings:
         return self._set
-
-    @obj.setter
-    def obj(self, obj: ObjectHandler):
-        self._obj = obj
 
     @property
     def debug(self) -> Debug:
