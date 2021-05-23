@@ -1,5 +1,6 @@
 # Standard library
 import os
+from os import sys
 import shutil
 
 # External libraries
@@ -60,6 +61,16 @@ def copy_dir(src: str, dst: str):
 
 def main():
     # Get version
+    osname = sys.platform
+    if osname.startswith('win'):
+        os_platform = 'windows'
+    elif osname.startswith('linux'):
+        os_platform = 'linux'
+    else:
+        err = 'unable to build for systems other than win & linux'
+        raise RuntimeError(err)
+
+    # Get directories and version
     version = get_version()
     dir_main = os.getcwd()
     dir_dist = os.path.join(dir_main, 'dist')
@@ -68,18 +79,20 @@ def main():
     dir_version = os.path.join(dir_dist, version)
     if not os.path.exists(dir_version):
         os.mkdir(dir_version)
-    dir_os = os.path.join(dir_version, 'windows')
+    dir_os = os.path.join(dir_version, os_platform)
     if os.path.exists(dir_os):
         shutil.rmtree(dir_os)
     os.mkdir(dir_os)
     cprint('~~Directory Cleaned~~\n', 'green')
 
     # Create executable
-    executable_name = 'game-x_'+version+'-windows'
+    executable_name = 'game-x_'+version+'-'+os_platform
     print('Creating executable...')
     arguments = ['game.pyw', '--onefile', '--noconsole', '-n'+executable_name]
     PyInstaller.__main__.run(arguments)
-    executable = os.path.join(dir_dist, executable_name + '.exe')
+    executable = os.path.join(dir_dist, executable_name)
+    if os_platform == 'windows':
+        executable += '.exe'
     cprint('~~EXECUTABLE CREATED~~\n', 'green')
 
     # Create folder based on system version
@@ -115,7 +128,7 @@ def main():
         shutil.rmtree(build)
 
     # Finalize
-    text = '~~Version {} windows'.format(version)
+    text = '~~Version {} {}'.format(version, os_platform)
     text += ': build created with no errors~~'
     cprint(text, 'green')
 
