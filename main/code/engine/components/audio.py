@@ -35,7 +35,7 @@ class Music(Component):
         super().__init__(engine)
         self.mixer = mix
         self.music = None
-        self.music_queue: list[tuple[str, int, float]] = []
+        self.music_queue = []
         self.fading = False
         self.paused = False
         self._volume = 1.0
@@ -90,7 +90,7 @@ class Music(Component):
 
     def queue(self, file: str, loops: int, volume: float):
         """Queue up a song."""
-        self.music_queue.append((file, loops, volume))
+        self.music_queue = (file, loops, volume)
 
     def get_current(self) -> Union[str, None]:
         """Unload music."""
@@ -102,8 +102,9 @@ class Music(Component):
         """Called when music ends."""
         self.music = None
         self.fading = False
-        if len(self.music_queue) > 0:
-            music = self.music_queue.pop(0)
+        if self.music_queue is not None:
+            music = self.music_queue
+            self.music_queue = None
             file = music[0]
             loops = music[1]
             volume = music[2]

@@ -23,23 +23,32 @@ class ObjJukeBox(Entity):
         engine.obj.instantiate_object(key, self)
 
         # Music vars
-        current_music = engine.aud.music.get_current()
+        music = engine.aud.music
+        current_music = music.get_current()
         self.music = self.data['name']
         self.loops = self.data['loops']
         self.volume = self.data['volume']
 
-        if self.music is not None: # Add new music
-            if current_music is None: # Start playing music
-                engine.aud.music.load(self.music)
-                engine.aud.music.volume = self.volume
-                engine.aud.music.play(self.loops)
+        if self.music is None:
+            if current_music is not None:
+                # Fade music
+                music.stop(1000)
+        else:
+            if music.fading:
+                # Replace next song
+                music.queue(self.music, self.loops, self.volume)
+            else:
+                if current_music is None:
+                    # Start playing music
+                    music.load(self.music)
+                    music.volume = self.volume
+                    music.play(self.loops)
 
-            elif current_music != self.music: # Queue up music
-                engine.aud.music.stop(1500)
-                engine.aud.music.queue(self.music, self.loops, self.volume)
+                elif current_music != self.music: # Queue up music
+                    music.stop(1500)
+                    music.queue(self.music, self.loops, self.volume)
 
-        elif current_music is not None: # Fade music
-            engine.aud.music.stop(1000)
+
 
     def update(self, paused: bool):
         if self.engine.aud.music.get_current() == self.music:
