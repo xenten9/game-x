@@ -10,7 +10,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
+#dist/ # disabled so that versions builds can sync across platforms
 downloads/
 eggs/
 .eggs/
