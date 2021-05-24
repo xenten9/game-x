@@ -1,7 +1,7 @@
 # Standard library
-from os import walk, path, remove, makedirs, mkdir, getcwd
+from os import path, remove, mkdir, getcwd
 import sys
-from shutil import copy as copydir, rmtree
+from shutil import copytree, rmtree, copy as shcopy
 
 # External libraries
 import PyInstaller.__main__
@@ -45,7 +45,7 @@ def get_version() -> str:
 
 
     # Check suffix
-    if suffix is not '':
+    if suffix != '':
         if suffix not in ('alpha', 'beta'):
             msg = colorize('Suffix must be in the form (alpha, beta)', 'red')
             raise ValueError(msg)
@@ -57,18 +57,6 @@ def get_version() -> str:
 
     # Proper version
     return version
-
-def copy_dir(src: str, dst: str):
-    for src_dir, _, files in walk(src):
-        dst_dir = src_dir.replace(src, dst, 1)
-        if not path.exists(dst_dir):
-            makedirs(dst_dir)
-        for file in files:
-            src_dir = path.join(src_dir, file)
-            dst_file = path.join(dst_dir, file)
-            if path.exists(dst_file):
-                remove(dst_file)
-            copydir(src_dir, dst_dir)
 
 def main():
     # Clear the terminal
@@ -118,10 +106,10 @@ def main():
     print('Moving assets directory...')
     dir_assets = path.join(dir_main, 'assets')
     dir_new_assets = path.join(dir_game, 'assets')
-    copy_dir(dir_assets, dir_new_assets)
+    copytree(dir_assets, dir_new_assets)
 
     print('Moving executable...')
-    copydir(executable, dir_game)
+    shcopy(executable, dir_game)
     remove(executable)
     cprint('~~GAME FOLDER CREATED~~\n', 'green')
 
