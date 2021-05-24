@@ -164,18 +164,25 @@ class Level(Component):
             info = [obj.name, obj.pos, key, obj.data]
             obj_list.append(info)
 
-        # Create file object and write dumped json to it
+        # Create json dump
         data = json.dumps(obj_list)
+
+        # Beautify
         data = data.replace('[["', '[\n\t["')
         data = data.replace('], ["', '], \n\t["')
         data = data.replace('}]]', '}]\n]')
+
+        # Write to file
         level = open(path.join(self.paths['levels'], level_name+'.json'), 'w')
         level.write(data)
         level.close()
         cprint('successful level save!', 'green')
 
     def convert(self, level_name: Union[str, None] = None):
-        # Get name
+        """Convert from depreceated .lvl format to .json
+            NOTE since this is depreceated it will be removed by v0.1.0-alpha
+        """
+        # Get file name
         if level_name is None:
             while level_name in ('', None):
                 level_name = input('load level name? ')
@@ -196,23 +203,29 @@ class Level(Component):
                         'level name: {}'.format(level_name),
                         'level not found']
                 raise FileNotFoundError(colorize('\n'.join(code), 'red'))
-
-        # Load lvl
         if not isinstance(level_name, str):
             return
+
+        # Load .lvl file
         level_name = path.join(self.paths['levels'], level_name)
         file = open(level_name+'.lvl', 'r')
         conents = file.readlines()
         file.close()
 
+        # Evaluate file
         level_data = []
         for line in conents:
             level_data.append(literal_eval(line))
 
+        # Create json dump
         json_level_data = json.dumps(level_data)
+
+        # Beautify
         json_level_data = json_level_data.replace('[["', '[\n\t["')
         json_level_data = json_level_data.replace('}], ["', '}], \n\t["')
         json_level_data = json_level_data.replace('}]]', '}]\n]')
+
+        # Write to file
         file = open(level_name+'.json', 'w')
         file.write(json_level_data)
         file.close()
