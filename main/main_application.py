@@ -1,27 +1,26 @@
-"""Game-X main application file[supports running directly and from root]."""
-printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal clear
-
+"""Game-X main application file[supports running directly and from root]."""\
 # Standard library
-from os import path, getcwd
 import sys
+from os import path, getcwd
+printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal clear
 
 # Check if ran from an executable
 if getattr(sys, 'frozen', False):
     main_path = path.dirname(sys.executable)
 else:
     def splitall(filepath: str) -> list[str]:
+        """Split file path into a list of all dirs."""
         allparts: list[str] = []
         while True:
             parts = path.split(filepath)
             if parts[0] == filepath:
                 allparts.insert(0, parts[0])
                 break
-            elif parts[1] == filepath:
+            if parts[1] == filepath:
                 allparts.insert(0, parts[1])
                 break
-            else:
-                filepath = parts[0]
-                allparts.insert(0, parts[1])
+            filepath = parts[0]
+            allparts.insert(0, parts[1])
         return allparts
     main_path = getcwd()
     path_parts = splitall(main_path)
@@ -62,7 +61,7 @@ if __name__ == '__main__':
         paths = sys.path
         for spath in paths:
             print('\t' + spath)
-        exit()
+        sys.exit()
 
 else:
     try:
@@ -81,7 +80,7 @@ else:
 
     except ModuleNotFoundError:
         printer.append('unable to import modules relatively.')
-        exit()
+        sys.exit()
 
 
 
@@ -150,6 +149,7 @@ class View(Camera):
     pos = property(pos_get, pos_set)
 
 class Game(Application):
+    """Class in which the game loop runs."""
     def __init__(self, fulltile: int, fps: int, size: vec2d,
                  debug: bool = False, maindir: str = None):
         # Initialize engine
@@ -222,9 +222,6 @@ def parse_args(args: list[str]) -> dict:
 
 # Run main
 if __name__ == '__main__':
-    # Setup
-    debug = True
-
     # Parse arguments
     args = parse_args(sys.argv)
 
