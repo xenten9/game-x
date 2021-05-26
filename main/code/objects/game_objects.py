@@ -431,10 +431,9 @@ class ObjPlayer(GameObject, Damageable):
         # Horizontal collision
         if self.scollide(pos + vec2d(hspd, 0)):
             pos = vec2d((pos.x//FULLTILE)*FULLTILE, pos.y)
-            if shspd == 1:
-                pos += vec2d(FULLTILE, 0)
-            while self.scollide(pos):
-                pos -= vec2d(FULLTILE*shspd, 0)
+            while not self.scollide(pos):
+                pos += vec2d(FULLTILE*shspd, 0)
+            pos -= vec2d(FULLTILE*shspd, 0)
             hspd = 0
 
         # Dynamic collision
@@ -451,8 +450,9 @@ class ObjPlayer(GameObject, Damageable):
             pos = vec2d(pos.x, (pos.y//FULLTILE)*FULLTILE)
             if svspd == 1:
                 pos += vec2d(0, FULLTILE)
-            while self.scollide(pos):
-                pos -= vec2d(0, FULLTILE*svspd)
+            while not self.scollide(pos):
+                pos += vec2d(0, FULLTILE*svspd)
+            pos -= vec2d(0, FULLTILE*svspd)
             vspd = 0
 
         # Dynamic collision

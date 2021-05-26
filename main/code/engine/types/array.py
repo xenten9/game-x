@@ -43,12 +43,12 @@ class array2d():
         self._size = size
 
     @property
-    def width(self):
-        return self._size[0]
+    def width(self) -> int:
+        return self.size[0]
 
     @property
-    def height(self):
-        return self._size[1]
+    def height(self) -> int:
+        return self.size[1]
 
     def minimize(self):
         width, height = self.size
