@@ -42,7 +42,7 @@ class ObjCursor(Entity):
     def __init__(self, engine: Engine, pos: vec2d):
         # Default variables
         self.engine = engine
-        self.pos = pos
+        self.pos: vec2d = pos
         self.color = (192, 192, 192)
         self.name = 'cursor'
         self.engine.obj.sobj[self.name] = self

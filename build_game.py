@@ -15,7 +15,7 @@ def get_version() -> str:
     version = input('version: ')
 
     if version == 'exit':
-        exit()
+        sys.exit()
 
     if '-' in version:
         version_parts = version.split('-')

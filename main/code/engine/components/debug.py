@@ -19,7 +19,7 @@ class Debug(Component, Entity):
             self.engine.obj.sobj['debug'] = self
 
             # Menu vars
-            self.menu = Menu(engine, vec2d(160, 60))
+            self.menu = Menu(engine)
 
             fps = MenuText(engine, self.menu, 'fps')
             fps.size = 12

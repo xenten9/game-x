@@ -1,8 +1,9 @@
-"""Game-X main application file[supports running directly and from root]."""\
+"""Game-X main application file[supports running directly and from root]."""
+printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal clear
+
 # Standard library
 import sys
 from os import path, getcwd
-printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal clear
 
 # Check if ran from an executable
 if getattr(sys, 'frozen', False):
@@ -163,8 +164,9 @@ class Game(Application):
         if self.debug:
             volume = MenuText(self, self.debug.menu, 'volume')
             volume.pos = vec2d(0, 12*3)
+            volume.depth = 16
             rect = self.debug.menu.get('rect')
-            rect.size = vec2d(190, 12*4)
+            rect.size = vec2d(190, 52)
 
         # Load main menu
         self.lvl.load('mainmenu')

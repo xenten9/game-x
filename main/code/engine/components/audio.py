@@ -35,7 +35,7 @@ class Music(Component):
         super().__init__(engine)
         self.mixer = mix
         self.music = None
-        self.music_queue = []
+        self.music_queue = None
         self.fading = False
         self.paused = False
         self._volume = 1.0

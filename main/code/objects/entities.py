@@ -1,21 +1,22 @@
 """All entities."""
 # Standard library
-from time import sleep
 from random import random
+from time import sleep
 
 # Local imports
-from ..engine.engine import Engine
-from ..engine.components.draw import Draw
-from ..engine.components.menu import Menu, MenuButton, MenuElement, MenuSlider
-from ..engine.components.menu import MenuText, MenuRect
-from ..engine.components.menu import MenuButtonFull
-from ..engine.components.maths import f_limit
-from ..engine.types.vector import vec2d
-from ..engine.types.entity import Entity
 from ..constants import SIZE
+from ..engine.components.draw import Draw
+from ..engine.components.maths import f_limit
+from ..engine.components.menu import (Menu, MenuButton, MenuButtonFull,
+                                      MenuElement, MenuRect, MenuSlider,
+                                      MenuText)
 from ..engine.constants import colorize
+from ..engine.engine import Engine
+from ..engine.types.entity import Entity
+from ..engine.types.vector import vec2d
 
-# Entities
+
+
 class ObjJukeBox(Entity):
     """Responsible for sick beats."""
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
@@ -67,7 +68,7 @@ class ObjMainMenu(Entity):
         self.engine.aud.sfx.add('beep.ogg')
 
         # Title menu
-        self.title_menu = Menu(engine, SIZE)
+        self.title_menu = Menu(engine)
 
         # TITLE
         title = MenuText(engine, self.title_menu, 'title')
@@ -118,7 +119,7 @@ class ObjMainMenu(Entity):
         quit_button.button.call = self.pressed
 
         # Option menu
-        self.option_menu = Menu(self.engine, SIZE)
+        self.option_menu = Menu(self.engine)
         self.option_menu.visible = False
 
         # TITLE
@@ -237,7 +238,7 @@ class ObjPauseMenu(Entity):
         self.engine.aud.sfx.add('beep.ogg')
 
         # Title menu
-        self.menu = Menu(engine, SIZE)
+        self.menu = Menu(engine)
 
         # BACKGROUND
         background = MenuRect(engine, self.menu, 'background')

@@ -4,7 +4,9 @@ from __future__ import annotations
 from typing import Any, Callable, NoReturn
 
 # External libraries
-from pygame import Surface, Rect
+from pygame import Rect
+from pygame.event import post
+from pygame.surface import Surface
 
 # Local imports
 from ..types.vector import vec2d
@@ -13,13 +15,10 @@ from .draw import Draw
 
 class Menu(Component):
     """Object used for menus."""
-    def __init__(self, engine: object, size: vec2d, pos: vec2d = vec2d(0, 0)):
+    def __init__(self, engine: object):
         super().__init__(engine)
-        self.size = size
-        self.pos = pos
         self.visible = True
         self.elements: dict[str, Any] = {}
-        self.surface = Surface(self.size.ftup()).convert_alpha()
 
     def add(self, element: MenuElement):
         """Add element to menu."""
@@ -36,19 +35,13 @@ class Menu(Component):
                 return self.elements[i]
         return None
 
-    def blank(self):
-        """Blank menu to be empty."""
-        self.surface.fill((0, 0, 0, 0))
-
     def draw(self, draw: Draw):
         """Draw all elements to menu."""
-        self.blank()
         if self.visible:
             for i in self.elements:
-                try:
-                    self.elements[i].draw(draw)
-                except AttributeError:
-                    pass
+                element = self.elements[i]
+                if issubclass(element.__class__, MenuElementVisible):
+                    element.draw(draw)
 
 class MenuElement():
     def __init__(self, engine, menu: Menu, name: str):
@@ -239,7 +232,7 @@ class MenuRect(MenuElementVisible):
         """Render rect to surface."""
         self.surface = Surface(self.size.ftup())
         if len(self.color) == 4:
-            self.surface = self.surface.convert_alpha() # type: ignore
+            self.surface = self.surface.convert_alpha()
         self.surface.fill(self.color)
 
 class MenuButton(MenuElement):
@@ -325,7 +318,7 @@ class MenuButton(MenuElement):
     def pressed(self, button: MenuButton, pos: vec2d) -> None:
         pass
 
-class MenuButtonFull(SubMenu):
+class MenuButtonFull(SubMenu, MenuElementVisible):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self.elements = {}
@@ -379,7 +372,7 @@ class MenuButtonFull(SubMenu):
         self.text.draw(draw)
         self.rect.draw(draw)
 
-class MenuSlider(SubMenu):
+class MenuSlider(SubMenu, MenuElementVisible):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self.elements = {}

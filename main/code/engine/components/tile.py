@@ -205,7 +205,7 @@ class TileLayer(Component):
             # Replace singular tile
             if tile_info is None:
                 color = (0, 0, 0, 0)
-                rect = Rect((x, y), (vec2d(1, 1) * halftile).ftup())
+                rect = Rect(pos.ftup(), (vec2d(1, 1) * halftile).ftup())
                 draw.rect(self.surface, color, rect)
             elif isinstance(tile_info, tuple):
                 tile = self.tile.get_image(*tile_info)

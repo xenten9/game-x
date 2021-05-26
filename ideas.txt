@@ -1,6 +1,3 @@
-~~LINUX BUILDER~~
-Automate building game versions for linux.
-
 ~~LOOK FOR NEW AUDIO LIBRARIES~~
 Unsure what libraries there are available but if any are more functional
 than the pygame audio library than I would pick it. Although I might end

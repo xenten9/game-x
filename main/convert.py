@@ -14,5 +14,5 @@ if __name__ != '__main__':
         if file[-4:] == '.lvl':
             engine.lvl.convert(file[:-4])
 else:
-    message = 'This file should not be refferenced or imported.'
-    raise NotImplementedError(message)
+    MSG = 'This file should not be refferenced or imported.'
+    raise NotImplementedError(MSG)
