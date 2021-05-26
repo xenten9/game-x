@@ -33,10 +33,11 @@ class ObjJukeBox(Entity):
             if current_music is not None:
                 # Fade music
                 music.stop(1000)
+                music.music_queue = None
         else:
             if music.fading:
                 # Replace next song
-                music.queue(self.music, self.loops, self.volume)
+                music.music_queue = None
             else:
                 if current_music is None:
                     # Start playing music
@@ -47,8 +48,6 @@ class ObjJukeBox(Entity):
                 elif current_music != self.music: # Queue up music
                     music.stop(1500)
                     music.queue(self.music, self.loops, self.volume)
-
-
 
     def update(self, paused: bool):
         if self.engine.aud.music.get_current() == self.music:

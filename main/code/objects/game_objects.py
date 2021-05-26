@@ -1,7 +1,7 @@
 """All game objects."""
 # Standard library
 from os import path
-from math import floor
+from math import ceil, floor
 # External libraries
 from numpy import sign
 from pygame import image, Rect
@@ -22,16 +22,15 @@ class GameObject(Entity):
     """Class which all game objects inherit from."""
     def __init__(self, engine: Engine, key: int, name: str, data: dict,
                  pos: vec2d, size: vec2d = vec2d(32, 32),
-                 origin: vec2d = vec2d(0, 0)):
+                 offset: vec2d = vec2d(0, 0)):
         super().__init__(engine, key, name, data)
         self.engine = engine
-        self.pos = pos
-        self.size = size
-        self.origin = origin
+        self.origin = offset
+        self.col = Collider(engine, pos, size, offset)
 
         self.depth = 1
         engine.obj.instantiate_object(key, self)
-        rel = origin
+        rel = offset
         w, h = size - vec2d(1, 1)
         self.cpoints = (vec2d(rel.x, rel.y),
                         vec2d(rel.x+w, rel.y),
@@ -39,6 +38,24 @@ class GameObject(Entity):
                         vec2d(rel.x, rel.y+h))
         self._frame = 0
         self.frames: list[Surface] = []
+
+    # Position
+    @property
+    def pos(self) -> vec2d:
+        return self.col.pos
+
+    @pos.setter
+    def pos(self, pos: vec2d):
+        self.col.pos = pos
+
+    # Size
+    @property
+    def size(self) -> vec2d:
+        return self.col.size
+
+    @size.setter
+    def size(self, size: vec2d):
+        self.col.size = size
 
     # Set current frames
     def set_frames(self, *fnames, alpha=0):
@@ -73,20 +90,9 @@ class GameObject(Entity):
         self._frame = frame
 
     # Collision
-    def scollide(self, pos: vec2d = None,
-                 cpoints: tuple[vec2d, vec2d, vec2d, vec2d] = None) -> bool:
+    def scollide(self, pos: vec2d = None) -> bool:
         """Check for static collisions."""
-        # Match unspecified arguments
-        if pos is None:
-            pos = self.pos
-        if cpoints is None:
-            cpoints = self.cpoints
-
-        # Check for collisions
-        for point in cpoints:
-            if self.engine.col.st.get(pos+point):
-                return True
-        return False
+        return self.col.scollide(pos)
 
     def dcollide(self, pos: vec2d = None, key: int = None) -> list:
         """Check for dynamic collisions.
@@ -103,14 +109,15 @@ class GameObject(Entity):
         colliders = self.engine.col.dy.get_colliders()
         collide: list[object] = []
         pos = pos + origin
-        new_pos = pos.tup()
-        new_size = size.tup()
-        self_rect = Rect(new_pos, new_size)
+        self_pos = pos.tup()
+        self_size = size.tup()
+        self_rect = Rect(self_pos, self_size)
         for cobj in colliders:
             if cobj.key != key:
                 if issubclass(cobj.__class__, GameObject):
-                    cpos = (cobj.pos + cobj.origin).tup()
-                    other_rect = Rect(cpos, cobj.size.tup())
+                    cpos: tuple[int, int] = (cobj.pos + cobj.origin).tup()
+                    csize: tuple[int, int] = cobj.size.tup()
+                    other_rect = Rect(cpos, csize)
                     if self_rect.colliderect(other_rect):
                         collide.append(cobj)
         return collide
@@ -126,6 +133,28 @@ class GameObject(Entity):
     def delete(self):
         """Called when object is deleted from Objects dictionary."""
         self.engine.col.dy.remove(self.key)
+
+class Collider():
+    def __init__(self, engine: Engine, pos: vec2d, size: vec2d, offset: vec2d = vec2d(0, 0)):
+        self.engine = engine
+        self.pos = pos
+        self.size = size
+        self.offset = offset
+        dpos = 1e-6 # Used to keep all points just before the size
+        w, h = (size - dpos)
+
+        self.cpoints = (vec2d(offset.x, offset.y),
+                        vec2d(offset.x+w, offset.y),
+                        vec2d(offset.x+w, offset.y+h),
+                        vec2d(offset.x, offset.y+h))
+
+    def scollide(self, pos: vec2d = None) -> bool:
+        if pos is None:
+            pos = self.pos
+        for point in self.cpoints:
+            if self.engine.col.st.get(pos + point):
+                return True
+        return False
 
 class Damageable():
     def __init__(self):
@@ -266,14 +295,22 @@ class ObjPlayer(GameObject, Damageable):
 
     def draw(self, draw: Draw):
         """Called every frame to draw each game object."""
+        # Get player sprite
         image = self.frames[self.frame]
+
+        # Blinking when invulnerable
         if self.iframe % 6 == 0:
             image.set_alpha(255)
         else:
             image.set_alpha(63)
+
+        # Draw sprites
         alpha = image.get_alpha()
         if alpha is not None:
+            # Draw player
             draw.add(4, pos=self.pos, surface=image.copy())
+
+            # Draw trail
             for item in range(1, len(self.trail)):
                 alpha = ((alpha + 1) // 2) - 1
                 image.set_alpha(alpha)
@@ -392,13 +429,15 @@ class ObjPlayer(GameObject, Damageable):
         svspd, shspd = sign(vspd), sign(hspd)
 
         # Horizontal collision
-        if self.scollide(vec2d(pos.x + hspd, pos.y)):
-            while self.scollide(vec2d(pos.x + hspd, pos.y)):
-                hspd -= shspd
-            pos = vec2d(floor(pos.x + hspd), pos.y)
+        if self.scollide(pos + vec2d(hspd, 0)):
+            pos = vec2d((pos.x//FULLTILE)*FULLTILE, pos.y)
+            if shspd == 1:
+                pos += vec2d(FULLTILE, 0)
+            while self.scollide(pos):
+                pos -= vec2d(FULLTILE*shspd, 0)
             hspd = 0
 
-        # Dynamic collisions
+        # Dynamic collision
         col = self.dcollide(pos=pos)
         for obj in col:
             try:
@@ -408,13 +447,15 @@ class ObjPlayer(GameObject, Damageable):
                 pass
 
         # Vertical collision
-        if self.scollide(vec2d(pos.x, pos.y + vspd)):
-            while self.scollide(vec2d(pos.x, pos.y + vspd)):
-                vspd -= svspd
-            pos = vec2d(pos.x, floor(pos.y + vspd))
+        if self.scollide(pos + vec2d(0, vspd)):
+            pos = vec2d(pos.x, (pos.y//FULLTILE)*FULLTILE)
+            if svspd == 1:
+                pos += vec2d(0, FULLTILE)
+            while self.scollide(pos):
+                pos -= vec2d(0, FULLTILE*svspd)
             vspd = 0
 
-        # Dynamic collisions
+        # Dynamic collision
         col = self.dcollide(pos=pos)
         for obj in col:
             try:
@@ -443,7 +484,7 @@ class ObjButton(GameObject):
                  name: str, data: dict, pos: vec2d):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 8),
-                         origin=vec2d(0, FULLTILE-8))
+                         offset=vec2d(0, FULLTILE-8))
         engine.col.dy.add(key, self)
         try:
             self.door_id = self.data['door']
@@ -534,7 +575,7 @@ class ObjSpike(GameObject):
                  name: str, data: dict, pos: vec2d):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos,
-                         vec2d(32, 4), origin=vec2d(0, FULLTILE-4))
+                         vec2d(32, 4), offset=vec2d(0, FULLTILE-4))
         engine.col.dy.add(key, self)
         self.damage = 5
 

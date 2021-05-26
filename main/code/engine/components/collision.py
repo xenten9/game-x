@@ -48,7 +48,6 @@ class StaticCollider(Component, Entity):
             else:
                 return False
         except IndexError:
-            #print('outside of static collider')
             return False
 
     def clear(self):

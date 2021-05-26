@@ -120,7 +120,7 @@ def create_objects(engine: Engine, **kwargs):
         key = kwargs['key']
         data = kwargs['data']
         key = engine.obj.instantiate_key(key)
-        if issubclass(obj_class, game_objects.GameObject) or issubclass(obj_class, enemies.Enemy):
+        if issubclass(obj_class, game_objects.GameObject):
             pos = kwargs['pos']
             obj_class(engine, key, name, data, pos)
         else:
