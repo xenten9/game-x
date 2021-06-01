@@ -103,7 +103,7 @@ def create_objects(engine: Engine, **kwargs):
 # Classes
 class Game(Application):
     def __init__(self):
-        super().__init__(32, 16, vec2d(512, 512), create_objects)
+        super().__init__(32, 16, vec2d(512, 512), create_objects, getcwd())
 
     def draw_all(self):
         super().draw_all()

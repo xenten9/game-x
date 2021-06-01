@@ -1,5 +1,8 @@
 # NOTE very jank and hardcoded [will likely recquire modifications to run]
 # Meant for converting old .lvl files to .json
+from os import getcwd
+
+
 if __name__ != "__main__":
     from os import listdir
     from main.code.engine.engine import Engine
@@ -8,7 +11,7 @@ if __name__ != "__main__":
     def object_creator(*args, **kwargs):
         pass
 
-    engine = Engine(32, 60, vec2d(256, 256), object_creator)
+    engine = Engine(32, 60, vec2d(256, 256), object_creator, getcwd())
 
     for file in listdir(engine.paths["levels"]):
         if file[-4:] == ".lvl":

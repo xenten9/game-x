@@ -33,9 +33,9 @@ class Engine:
         fps: int,
         size: vec2d,
         object_creator: Callable,
+        root: str,
         object_limit: int = None,
-        debug: bool = False,
-        maindir: str = None,
+        debug: bool = False
     ):
         # Define constants
         self.FULLTILE = fulltile
@@ -43,18 +43,12 @@ class Engine:
 
         # File paths
         self.paths: dict[str, str] = {}
-        if maindir is None:
-            if getattr(sys, "frozen", False):
-                self.paths["main"] = path.dirname(sys.executable)
-            else:
-                self.paths["main"] = getcwd()
-        else:
-            self.paths["main"] = maindir
-        if not path.exists(self.paths["main"]):
-            msg = "unable to locate main"
+        self.paths["root"] = root
+        if not path.exists(self.paths["root"]):
+            msg = f"ROOT: {root} DOES NOT EXIST"
             raise FileNotFoundError(colorize(msg, "red"))
-        self.paths["debug"] = path.join(self.paths["main"], "debug")
-        self.paths["assets"] = path.join(self.paths["main"], "assets")
+        self.paths["debug"] = path.join(self.paths["root"], "debug")
+        self.paths["assets"] = path.join(self.paths["root"], "assets")
         self.paths["sprites"] = path.join(self.paths["assets"], "sprites")
         self.paths["devsprites"] = path.join(
             self.paths["assets"], "devsprites"
@@ -63,9 +57,9 @@ class Engine:
         self.paths["tilemaps"] = path.join(self.paths["assets"], "tilemaps")
         self.paths["music"] = path.join(self.paths["assets"], "music")
         self.paths["sfx"] = path.join(self.paths["assets"], "sfx")
-        self.paths["settings"] = path.join(self.paths["main"], "settings")
+        self.paths["settings"] = path.join(self.paths["root"], "settings")
         for dirpath in self.paths:
-            if dirpath not in ("main", "debug"):
+            if dirpath not in ("root", "debug"):
                 if not path.exists(self.paths[dirpath]):
                     if dirpath == "settings":
                         mkdir(self.paths[dirpath])

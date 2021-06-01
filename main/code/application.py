@@ -18,12 +18,12 @@ class Application(Engine):
         fps: int,
         size: vec2d,
         object_creator: Callable,
+        root: str,
         debug: bool = False,
-        maindir: str = None,
     ):
         # Initialize engine
         super().__init__(
-            fulltile, fps, size, object_creator, debug=debug, maindir=maindir
+            fulltile, fps, size, object_creator, root, debug=debug
         )
 
         self.clock = Clock()

@@ -108,12 +108,12 @@ class Game(Application):
         fulltile: int,
         fps: int,
         size: vec2d,
+        root: str,
         debug: bool = False,
-        maindir: str = None,
     ):
         # Initialize engine
         super().__init__(
-            fulltile, fps, size, create_objects, debug=debug, maindir=maindir
+            fulltile, fps, size, create_objects, debug=debug, root=root
         )
 
         if self.debug:
@@ -151,7 +151,7 @@ def main(debug: bool = False):
     cprint("All imports finished.", "green")
 
     # Create engine object
-    game = Game(FULLTILE, FPS, SIZE, debug, maindir=root)
+    game = Game(FULLTILE, FPS, SIZE, root, debug=debug)
 
     # Run main game loop
     game.main_loop()

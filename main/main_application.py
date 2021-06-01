@@ -1,68 +1,38 @@
 """Game-X main application file."""
 printer = ["\033[36m# Game-X main_application.py"]
 
-
 import sys
-from os import getcwd, path, sep as ossep
+from os import getcwd, path
 
-# Try to get root
-root = ""
-try:
-    import git
-
-    def get_root_git():
-        git_repo = git.Repo(getcwd(), search_parent_directories=True)
-        git_root = str(git_repo.working_dir)
-        return git_root
-
-    try:
-        root = get_root_git()
-    except git.InvalidGitRepositoryError:
-        pass
-except ImportError:
-    pass
-
-
-def get_root(dir_name):
-    main_path = getcwd()
-    part = ""
-    while part != dir_name:
-        main_path, part = path.split(main_path)
-        if main_path == path.abspath(ossep):
-            MSG = "Unable to find root in path."
-            raise FileNotFoundError(MSG)
-    return path.join(main_path, part)
-
-
-if root == "":
-    if getattr(sys, "frozen", False):
-        root = path.dirname(sys.executable)
-    else:
-        # Try finding root by name
-        root = get_root("game-x")
-
+# Add root of executable
+if getattr(sys, "frozen", False):
+    root = path.dirname(sys.executable)
+    if root not in sys.path:
+        printer.append(f"adding path: {root}")
+        sys.path.insert(0, root)
+else:
+    root = getcwd()
 
 # Print out sys.path
 printer.append("sys.path: ")
 for spath in sys.path:
     printer.append("\t" + spath)
 
-# Add main_path if not in sys.path
-if root not in sys.path:
-    printer.append(f"adding path: {root}")
-    sys.path.insert(0, root)
-
-
-from main.code.application import Application
-from main.code.constants import FPS, FULLTILE, SIZE
-from main.code.engine.components.camera import Camera
-from main.code.engine.components.maths import f_limit
-from main.code.engine.components.menu import MenuText
-from main.code.engine.constants import clear_terminal, cprint
-from main.code.engine.engine import Engine
-from main.code.engine.types import vec2d
-from main.code.objects import enemies, entities, game_objects
-
+try:
+    from main.code.application import Application
+    from main.code.constants import FPS, FULLTILE, SIZE
+    from main.code.engine.components.camera import Camera
+    from main.code.engine.components.maths import f_limit
+    from main.code.engine.components.menu import MenuText
+    from main.code.engine.constants import clear_terminal, cprint
+    from main.code.engine.engine import Engine
+    from main.code.engine.types import vec2d
+    from main.code.objects import enemies, entities, game_objects
+except ModuleNotFoundError as error:
+    for line in printer:
+        print(line)
+    print("\033[0m")
+    raise error
 
 # Object creation function
 def create_objects(engine: Engine, **kwargs):
@@ -126,12 +96,12 @@ class Game(Application):
         fulltile: int,
         fps: int,
         size: vec2d,
+        root: str,
         debug: bool = False,
-        maindir: str = None,
     ):
         # Initialize engine
         super().__init__(
-            fulltile, fps, size, create_objects, debug=debug, maindir=maindir
+            fulltile, fps, size, create_objects, root, debug=debug
         )
 
         # Objects
@@ -171,7 +141,7 @@ def main(debug: bool = False):
     cprint("All imports finished.", "green")
 
     # Create engine object
-    game = Game(FULLTILE, FPS, SIZE, debug, maindir=root)
+    game = Game(FULLTILE, FPS, SIZE, root, debug)
 
     # Run main game loop
     game.main_loop()
