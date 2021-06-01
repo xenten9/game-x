@@ -1,18 +1,20 @@
 """Handles game audio"""
-# Standard library
+
 from typing import Union
 from os import path
 
-# External libraries
+
 from pygame import mixer
 
-# Local imports
-from ..types.component import Component
+
+from ..types import Component
 from ..constants import cprint
+
 
 class Mixer(Component):
     """Handles all audio."""
-    def __init__(self, engine: object):
+
+    def __init__(self, engine):
         super().__init__(engine)
         mixer.init(size=-16)
         self._volume = 1.0
@@ -30,8 +32,12 @@ class Mixer(Component):
             self.music.update_volume()
             self.sfx.update_volume()
 
+
 class Music(Component):
-    def __init__(self, engine: object, mix: Mixer):
+    """Play's music in game.
+    Can only play one song at a time."""
+
+    def __init__(self, engine, mix: Mixer):
         super().__init__(engine)
         self.mixer = mix
         self.music = None
@@ -62,7 +68,7 @@ class Music(Component):
 
     def load(self, file: str):
         """Load music."""
-        music = path.join(self.paths['music'], file)
+        music = path.join(self.paths["music"], file)
         mixer.music.load(music)
         self.music = file
 
@@ -112,8 +118,12 @@ class Music(Component):
             self.volume = volume
             self.play(loops)
 
+
 class SFX(Component):
-    def __init__(self, engine: object, mix: Mixer):
+    """Play's sound effects.
+    Can play multiple sounds at a time."""
+
+    def __init__(self, engine, mix: Mixer):
         super().__init__(engine)
         self.mixer = mix
         self.tracks: dict[str, mixer.Sound] = {}
@@ -132,7 +142,7 @@ class SFX(Component):
         try:
             self.tracks[file]
         except KeyError:
-            sound = path.join(self.paths['sfx'], file)
+            sound = path.join(self.paths["sfx"], file)
             self.tracks[file] = mixer.Sound(sound)
             self.tvolume[file] = volume
             vol = self.tvolume[file] * self.main_volume
@@ -143,7 +153,8 @@ class SFX(Component):
         try:
             del self.tracks[file]
         except KeyError:
-            cprint('file {} does not exist'.format(file), 'red')
+            msg = f"file {file} does not exist"
+            cprint(msg, "red")
 
     def play(self, file: str, loops: int = 0):
         """Play sfx."""

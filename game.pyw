@@ -1,11 +1,25 @@
 """Used to run main application outside of debug mode."""
-if __name__ != '__main__':
-    # If imported
-    from os import path
-    message = '{} should not be refferenced or imported.'.format(path.basename(__file__))
-    raise NotImplementedError(message)
+import os
+import sys
+from main.main_application import main
+import logging
+
+if __name__ == "__main__":
+    if getattr(sys, "frozen", False):
+        main_path = os.path.dirname(sys.executable)
+
+        logging.basicConfig(
+            filename=os.path.join(main_path, "log.txt"), level=logging.DEBUG
+        )
+        try:
+            main()
+        except Exception:
+            logging.error("A critical error occurred.", exc_info=True)
+
+    else:
+        main()
 
 else:
-    # If ran directly
-    from main.main_application import main
-    main()
+    FILE = os.path.basename(__file__)
+    msg = f"{FILE} should not be refferenced or imported."
+    raise NotImplementedError(msg)

@@ -1,32 +1,40 @@
-# Standard library
 from time import time
 from typing import Callable
 
-# External libraries
-from pygame.time import Clock
-from pygame import QUIT, KEYDOWN
+from pygame import KEYDOWN, QUIT
+from pygame.event import Event
 from pygame.event import get as get_events
+from pygame.time import Clock
 
-# Local imports
-from .engine.engine import Engine
-from .engine.types.vector import vec2d
 from .constants import FPS, PROCESS
+from .engine.engine import Engine
+from .engine.types import vec2d
+
 
 class Application(Engine):
-    def __init__(self, fulltile: int, fps: int, size: vec2d, object_creator: Callable,
-                 debug: bool = False, maindir: str = None):
+    def __init__(
+        self,
+        fulltile: int,
+        fps: int,
+        size: vec2d,
+        object_creator: Callable,
+        debug: bool = False,
+        maindir: str = None,
+    ):
         # Initialize engine
-        super().__init__(fulltile, fps, size, object_creator,
-                         debug=debug, maindir=maindir)
+        super().__init__(
+            fulltile, fps, size, object_creator, debug=debug, maindir=maindir
+        )
 
         self.clock = Clock()
 
         if self.debug:
             # Debug timing
             self.debug.time_record = {
-                'Update': 0.0,
-                'Draw': 0.0,
-                'Render': 0.0}
+                "Update": 0.0,
+                "Draw": 0.0,
+                "Render": 0.0,
+            }
 
     def main_loop(self):
         """Main loop."""
@@ -49,15 +57,16 @@ class Application(Engine):
             if self.debug:
                 self.debug.tick()
 
-    def event_handler(self):
+    def event_handler(self, events: list[Event] = None):
         """Handle events from pyevent."""
         # Reset pressed inputs
         self.inp.reset()
-        events = get_events()
+        if events is None:
+            events = get_events()
         for event in events:
             if event.type == KEYDOWN:
                 # For getting key id's
-                #print(event.scancode)
+                # print(event.scancode)
                 pass
             self.inp.handle_events(event)
             if event.type == QUIT:
@@ -75,7 +84,7 @@ class Application(Engine):
         self.draw.draw()
 
         if self.debug:
-            self.debug.time_record['Draw'] += (time() - t)
+            self.debug.time_record["Draw"] += time() - t
 
     def update(self):
         """Update all objects and debug."""
@@ -94,19 +103,19 @@ class Application(Engine):
 
         if debug:
             # Update debug menu
-            fps = debug.menu.get('fps')
-            fps.text = 'fps: {:.0f}'.format(self.clock.get_fps())
+            fps = debug.menu.get("fps")
+            fps.text = f"fps: {self.clock.get_fps():.0f}"
 
-            campos = debug.menu.get('campos')
-            campos.text = 'cam pos: {}'.format(self.cam.pos)
+            campos = debug.menu.get("campos")
+            campos.text = f"cam pos: {self.cam.pos}"
 
-            memory = debug.menu.get('memory')
+            memory = debug.menu.get("memory")
             mem = PROCESS.memory_info().rss
-            mb = mem // (10**6)
-            kb = (mem - (mb * 10**6)) // 10**3
-            memory.text = 'memory: {} MB, {} KB'.format(mb, kb)
+            mb = mem // (10 ** 6)
+            kb = (mem - (mb * 10 ** 6)) // 10 ** 3
+            memory.text = f"memory: {mb} MB, {kb} KB"
 
-            self.debug.time_record['Update'] += (time() - t)
+            self.debug.time_record["Update"] += time() - t
 
     def render(self):
         """Render all draw calls to screen."""
@@ -127,4 +136,4 @@ class Application(Engine):
         # Update display
         self.win.update()
         if self.debug:
-            self.debug.time_record['Render'] += (time() - t)
+            self.debug.time_record["Render"] += time() - t

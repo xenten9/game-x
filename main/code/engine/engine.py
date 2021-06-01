@@ -1,66 +1,82 @@
 """Game engine."""
-# Standard library
+
 from __future__ import annotations
-from typing import Callable
-from os import path, getcwd, mkdir
+
 import sys
+from os import getcwd, mkdir, path
+from typing import Callable
 
-# Local imports
+from .components import (
+    Mixer,
+    Camera,
+    Collider,
+    Debug,
+    Draw,
+    Font,
+    Input,
+    Level,
+    ObjectHandler,
+    Settings,
+    TileMap,
+    Window,
+)
 from .constants import colorize
-from .types.vector import vec2d
-from .components.settings import Settings
-from .components.window import Window
-from .components.input import Input
-from .components.audio import Mixer
-from .components.font import Font
-from .components.object import ObjectHandler
-from .components.collision import Collider
-from .components.draw import Draw
-from .components.level import Level
-from .components.camera import Camera
-from .components.tile import TileMap
-from .components.debug import Debug
+from .types import vec2d
 
-class Engine():
-    def __init__(self, fulltile: int, fps: int, size: vec2d,
-                 object_creator: Callable, object_limit: int = None,
-                 debug: bool = False, maindir: str = None):
+
+class Engine:
+    """Game engine which all components interact with."""
+
+    def __init__(
+        self,
+        fulltile: int,
+        fps: int,
+        size: vec2d,
+        object_creator: Callable,
+        object_limit: int = None,
+        debug: bool = False,
+        maindir: str = None,
+    ):
         # Define constants
         self.FULLTILE = fulltile
         self.FPS = fps
 
         # File paths
-        self.paths = {}
+        self.paths: dict[str, str] = {}
         if maindir is None:
-            if getattr(sys, 'frozen', False):
-                self.paths['main'] = path.dirname(sys.executable)
+            if getattr(sys, "frozen", False):
+                self.paths["main"] = path.dirname(sys.executable)
             else:
-                self.paths['main'] = getcwd()
+                self.paths["main"] = getcwd()
         else:
-            self.paths['main'] = maindir
-        if not path.exists(self.paths['main']):
-            msg = 'unable to locate main'
-            raise FileNotFoundError(colorize(msg, 'red'))
-        self.paths['debug'] = path.join(self.paths['main'], 'debug')
-        self.paths['assets'] = path.join(self.paths['main'], 'assets')
-        self.paths['sprites'] = path.join(self.paths['assets'], 'sprites')
-        self.paths['devsprites'] = path.join(self.paths['assets'], 'devsprites')
-        self.paths['levels'] = path.join(self.paths['assets'], 'levels')
-        self.paths['tilemaps'] = path.join(self.paths['assets'], 'tilemaps')
-        self.paths['music'] = path.join(self.paths['assets'], 'music')
-        self.paths['sfx'] = path.join(self.paths['assets'], 'sfx')
-        self.paths['settings'] = path.join(self.paths['main'], 'settings')
+            self.paths["main"] = maindir
+        if not path.exists(self.paths["main"]):
+            msg = "unable to locate main"
+            raise FileNotFoundError(colorize(msg, "red"))
+        self.paths["debug"] = path.join(self.paths["main"], "debug")
+        self.paths["assets"] = path.join(self.paths["main"], "assets")
+        self.paths["sprites"] = path.join(self.paths["assets"], "sprites")
+        self.paths["devsprites"] = path.join(
+            self.paths["assets"], "devsprites"
+        )
+        self.paths["levels"] = path.join(self.paths["assets"], "levels")
+        self.paths["tilemaps"] = path.join(self.paths["assets"], "tilemaps")
+        self.paths["music"] = path.join(self.paths["assets"], "music")
+        self.paths["sfx"] = path.join(self.paths["assets"], "sfx")
+        self.paths["settings"] = path.join(self.paths["main"], "settings")
         for dirpath in self.paths:
-            if dirpath not in ('main', 'debug'):
+            if dirpath not in ("main", "debug"):
                 if not path.exists(self.paths[dirpath]):
-                    if dirpath == 'settings':
+                    if dirpath == "settings":
                         mkdir(self.paths[dirpath])
-                    elif dirpath == 'debug':
+                    elif dirpath == "debug":
                         mkdir(self.paths[dirpath])
                     else:
-                        msg = 'unable to locate {} directory\n'.format(dirpath)
-                        msg += 'attempted path: {}\n'.format(self.paths[dirpath])
-                        raise FileNotFoundError(colorize(msg, 'red'))
+                        msg = (
+                            f"unable to locate {dirpath} directory\n"
+                            f"attempted path: {self.paths[dirpath]}\n"
+                        )
+                        raise FileNotFoundError(colorize(msg, "red"))
 
         # Parameters
         self.run = True

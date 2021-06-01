@@ -1,62 +1,72 @@
 """Loads and saves levels from disk."""
-# Standard library
-from os import path
-from ast import literal_eval
-from typing import Union
-import json
 
-# Local imports
+import json
+import uuid
+from ast import literal_eval
+from os import path
+from typing import Union
+
 from ..constants import colorize, cprint
-from ..types.component import Component
+from ..types import Component
 from ..types.vector import vec2d
-from ..types.component import Component
 from .tile import TileLayer
 
-# Handles level loading
+
 class Level(Component):
     """Object which loads and saves levels."""
-    def __init__(self, engine: object):
+
+    def __init__(self, engine):
         super().__init__(engine)
-        self.current_level = ''
+        self.current_level = ""
         self.size = vec2d(0, 0)
 
     def load(self, level_name: Union[str, None] = None):
         """Load level parts such as GameObjects and Tiles."""
         # Get level name
         if level_name is None:
-            while level_name in ('', None):
-                level_name = input('load level name? ')
-                if level_name in ('', None):
-                    cprint('improper level name.', 'yellow')
-                elif level_name == 'exit':
+            while level_name in ("", None):
+                level_name = input("Load level name? ")
+                if level_name in ("", None):
+                    cprint("Improper level name.", "yellow")
+                elif level_name == "exit":
                     return
                 else:
-                    level = path.join(self.paths['levels'], level_name+'.json')
+                    level = path.join(
+                        self.paths["levels"], level_name + ".json"
+                    )
                     if not path.exists(level):
                         level_name = None
-                        cprint('improper level name.', 'yellow')
+                        cprint("Level not found.", "yellow")
         else:
-            level = path.join(self.paths['levels'], level_name+'.json')
+            level = path.join(self.paths["levels"], level_name + ".json")
             if not path.exists(level):
-                code = ['LEVEL ERROR',
-                        'path: {}'.format(level),
-                        'level name: {}'.format(level_name),
-                        'level not found']
-                raise Exception(colorize('\n'.join(code), 'red'))
-
-        # Load level file
+                msg = (
+                    "LEVEL ERROR\n"
+                    f"path: {level}\n"
+                    f"level name: {level_name}\n"
+                    "level not found\n"
+                )
+                raise FileNotFoundError(colorize(msg, "red"))
         if not isinstance(level_name, str):
             return
-        level_name = path.join(self.paths['levels'], level_name)
-        file = open(level_name+'.json', 'r')
+
+        # Load level file
+        level_name = path.join(self.paths["levels"], level_name)
+        file = open(level_name + ".json", "r")
         contents = file.read()
         file.close()
+
+        # Parse level data
         level_data: list[list] = json.loads(contents)
         obj_list = []
+
+        # Go through all objects
         for obj in level_data:
             # Parse all objects in list
             name = obj[0]
-            if name == 'tile-layer':
+
+            # Tile layer
+            if name == "tile-layer":
                 layername, array, data = obj[1:4]
                 for column, _ in enumerate(array):
                     for row, cell in enumerate(array[column]):
@@ -65,11 +75,13 @@ class Level(Component):
                 data = dict(data)
                 obj_list.append([name, layername, array, data])
 
-            elif name == 'static-collider':
+            # Static collider
+            elif name == "static-collider":
                 array = obj[1]
                 obj_list.append([name, array])
 
-            else: # Any game object
+            # Any game object
+            else:
                 pos, key, data = obj[1:4]
                 pos = tuple(pos)
                 key = int(key)
@@ -85,39 +97,32 @@ class Level(Component):
         for arg in obj_list:
             name = arg[0]
 
-            # TILE LAYER
-            if name == 'tile-layer':
+            # Create tile layers
+            if name == "tile-layer":
                 layer_name, array, data = arg[1:4]
                 size = vec2d(len(array), len(array[0]))
                 self.engine.tile.add_layer(layer_name, size, data, array)
 
-            # STATIC COLLIDER
-            elif name == 'static-collider':
+            # Create static collider
+            elif name == "static-collider":
                 array = arg[1]
-                self.size = (vec2d(len(array), len(array[0]))
-                             * self.fulltile)
+                self.size = vec2d(len(array), len(array[0])) * self.fulltile
                 self.engine.col.st.array.array = array
-                self.engine.col.st.size = self.size // self.fulltile
 
                 # Update camera level size to bind camera position
                 try:
                     self.engine.cam.level_size
                 except AttributeError:
-                    msg = 'Camera has no variable: level_size'
-                    cprint(msg, 'yellow')
+                    msg = "Camera has no variable: level_size"
+                    cprint(msg, "yellow")
                 else:
                     self.engine.cam.level_size = self.size
 
-            # OBJECT
+            # Create object
             else:
                 pos, key, data = arg[1:4]
                 pos = vec2d(*pos)
-                args = {
-                    'name': name,
-                    'pos': pos,
-                    'data': data,
-                    'key': key
-                }
+                args = {"name": name, "pos": pos, "data": data, "key": key}
                 self.engine.obj.create_object(**args)
 
         # Render all layers after being built
@@ -126,7 +131,7 @@ class Level(Component):
 
         # Say level succesful level laod if level is no reloaded
         if self.current_level != level_name:
-            cprint('successful level load!', 'green')
+            cprint("successful level load!", "green")
 
         # Update current level
         self.current_level = level_name
@@ -136,14 +141,14 @@ class Level(Component):
         """Saves level to level path."""
         # Get level name
         if level_name is None:
-            while level_name in ('', None):
-                level_name = input('save level name? ')
-                if level_name == '':
-                    cprint('improper level name.', 'yellow')
-                elif level_name == 'exit':
+            while level_name in ("", None):
+                level_name = input("save level name? ")
+                if level_name == "":
+                    cprint("improper level name.", "yellow")
+                elif level_name == "exit":
                     return
         if level_name is None:
-            raise ValueError(colorize('level name is None!', 'red'))
+            raise ValueError(colorize("level name is None!", "red"))
 
         # Compile level parts
         obj_list = []
@@ -151,12 +156,12 @@ class Level(Component):
         # Write layers
         for name, layer in self.engine.tile.layers.items():
             if isinstance(layer, TileLayer):
-                info = ['tile-layer', name, layer.array._array, layer.data]
+                info = ["tile-layer", name, layer.array._array, layer.data]
                 obj_list.append(info)
 
         # Write stcol
         col = self.engine.col.st
-        info = ['static-collider', col.array.array]
+        info = ["static-collider", col.array.array]
         obj_list.append(info)
 
         # Write each object to file
@@ -165,50 +170,57 @@ class Level(Component):
             obj_list.append(info)
 
         # Create json dump
-        data = json.dumps(obj_list)
-
-        # Beautify
-        data = data.replace('[["', '[\n\t["')
-        data = data.replace('], ["', '], \n\t["')
-        data = data.replace('}]]', '}]\n]')
+        new_list = []
+        for item in obj_list:
+            new_list.append(NoIndent(item))
+        data = json.dumps(new_list, indent=4, cls=NoIndentEncoder)
+        data.replace(",\n", ", \n")
+        if data.endswith("]]") or data.endswith("}]"):
+            data = data[1:-1] + "\n" + data[-1]
 
         # Write to file
-        level = open(path.join(self.paths['levels'], level_name+'.json'), 'w')
+        level = open(
+            path.join(self.paths["levels"], level_name + ".json"), "w"
+        )
         level.write(data)
         level.close()
-        cprint('successful level save!', 'green')
+        cprint("successful level save!", "green")
 
     def convert(self, level_name: Union[str, None] = None):
         """Convert from depreceated .lvl format to .json
-            NOTE since this is depreceated it will be removed by v0.1.0-alpha
+        NOTE since this is depreceated it will be removed by v0.1.0-alpha
         """
         # Get file name
         if level_name is None:
-            while level_name in ('', None):
-                level_name = input('load level name? ')
-                if level_name in ('', None):
-                    cprint('improper level name.', 'yellow')
-                elif level_name == 'exit':
+            while level_name in ("", None):
+                level_name = input("load level name? ")
+                if level_name in ("", None):
+                    cprint("improper level name.", "yellow")
+                elif level_name == "exit":
                     return
                 else:
-                    level = path.join(self.paths['levels'], level_name+'.lvl')
+                    level = path.join(
+                        self.paths["levels"], level_name + ".lvl"
+                    )
                     if not path.exists(level):
                         level_name = None
-                        cprint('improper level name.', 'yellow')
+                        cprint("improper level name.", "yellow")
         else:
-            level = path.join(self.paths['levels'], level_name+'.lvl')
+            level = path.join(self.paths["levels"], level_name + ".lvl")
             if not path.exists(level):
-                code = ['LEVEL ERROR',
-                        'path: {}'.format(level),
-                        'level name: {}'.format(level_name),
-                        'level not found']
-                raise FileNotFoundError(colorize('\n'.join(code), 'red'))
+                msg = (
+                    "LEVEL ERROR\n"
+                    f"path: {level}\n"
+                    f"level name: {level_name}\n"
+                    "level not found\n"
+                )
+                raise FileNotFoundError(colorize(msg, "red"))
         if not isinstance(level_name, str):
             return
 
         # Load .lvl file
-        level_name = path.join(self.paths['levels'], level_name)
-        file = open(level_name+'.lvl', 'r')
+        level_name = path.join(self.paths["levels"], level_name)
+        file = open(level_name + ".lvl", "r")
         conents = file.readlines()
         file.close()
 
@@ -218,18 +230,43 @@ class Level(Component):
             level_data.append(literal_eval(line))
 
         # Create json dump
-        json_level_data = json.dumps(level_data)
-
-        # Beautify
-        json_level_data = json_level_data.replace('[["', '[\n\t["')
-        json_level_data = json_level_data.replace('}], ["', '}], \n\t["')
-        json_level_data = json_level_data.replace('}]]', '}]\n]')
+        json_level_data = json.dumps(level_data, indent=2)
 
         # Write to file
-        file = open(level_name+'.json', 'w')
+        file = open(level_name + ".json", "w")
         file.write(json_level_data)
         file.close()
 
     def reset(self):
         """Restart current level."""
         self.load(self.current_level)
+
+
+# Json encoding stuffs
+class NoIndent(object):
+    """Value wrapper."""
+
+    def __init__(self, value):
+        self.value = value
+
+
+class NoIndentEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        super(NoIndentEncoder, self).__init__(*args, **kwargs)
+        self.kwargs = dict(kwargs)
+        del self.kwargs["indent"]
+        self._replacement_map = {}
+
+    def default(self, o):
+        if isinstance(o, NoIndent):
+            key = uuid.uuid4().hex
+            self._replacement_map[key] = json.dumps(o.value, **self.kwargs)
+            return "@@%s@@" % (key,)
+        else:
+            return super(NoIndentEncoder, self).default(o)
+
+    def encode(self, o):
+        result = super(NoIndentEncoder, self).encode(o)
+        for k, v in iter(self._replacement_map.items()):
+            result = result.replace('"@@%s@@"' % (k,), v)
+        return result

@@ -1,21 +1,23 @@
 """Menu's for all manner of occasions."""
-# Standard library
-from __future__ import annotations
-from typing import Any, Callable, NoReturn
 
-# External libraries
+from __future__ import annotations
+from typing import Any, Callable
+
+
 from pygame import Rect
-from pygame.event import post
 from pygame.surface import Surface
 
-# Local imports
+
+from ..constants import colorize
 from ..types.vector import vec2d
-from ..types.component import Component
+from ..types import Component
 from .draw import Draw
+
 
 class Menu(Component):
     """Object used for menus."""
-    def __init__(self, engine: object):
+
+    def __init__(self, engine):
         super().__init__(engine)
         self.visible = True
         self.elements: dict[str, Any] = {}
@@ -43,7 +45,8 @@ class Menu(Component):
                 if issubclass(element.__class__, MenuElementVisible):
                     element.draw(draw)
 
-class MenuElement():
+
+class MenuElement:
     def __init__(self, engine, menu: Menu, name: str):
         self._engine = engine
         self._menu = menu
@@ -93,23 +96,24 @@ class MenuElement():
         if self.center == 1:
             return self.pos - vec2d(0, size.y)
         elif self.center == 2:
-            return self.pos - vec2d(size.x/2, size.y)
+            return self.pos - vec2d(size.x / 2, size.y)
         elif self.center == 3:
             return self.pos - size
         elif self.center == 4:
-            return self.pos - vec2d(0, size.y/2)
+            return self.pos - vec2d(0, size.y / 2)
         elif self.center == 5:
-            return self.pos - size/2
+            return self.pos - size / 2
         elif self.center == 6:
-            return self.pos - vec2d(size.x, size.y/2)
+            return self.pos - vec2d(size.x, size.y / 2)
         elif self.center == 7:
             return self.pos
         elif self.center == 8:
-            return self.pos - vec2d(size.x/2, 0)
+            return self.pos - vec2d(size.x / 2, 0)
         elif self.center == 9:
             return self.pos - vec2d(size.x, 0)
         else:
             return self.pos
+
 
 class MenuElementVisible(MenuElement):
     def __init__(self, engine, menu: Menu, name: str):
@@ -134,16 +138,19 @@ class MenuElementVisible(MenuElement):
             self.cache()
         draw.add(self.depth, pos=pos, surface=surface, gui=True)
 
+
 class SubMenu(MenuElement, Menu):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
 
+
 class MenuText(MenuElementVisible):
     """Text menu element."""
+
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self._size = 12
-        self._font = 'arial'
+        self._font = "arial"
         self._text = name
         self._color = (255, 0, 255)
         self.menu.add(self)
@@ -183,10 +190,12 @@ class MenuText(MenuElementVisible):
     def color(self, color: tuple[int, int, int]):
         for value in color:
             if value < 0 or value > 255:
-                code = ['Colors must be bounded by 0-255',
-                        'Colors: {}'.format(color),
-                        'Colors<type>: {}'.format(type(color))]
-                raise ValueError('\n'.join(code))
+                msg = (
+                    "Colors must be bounded by 0-255\n"
+                    f"Colors: {color}\n"
+                    f"Colors<type>: {type(color)}\n"
+                )
+                raise ValueError(colorize(msg, "red"))
         self._color = color
         self._cache = True
 
@@ -196,8 +205,10 @@ class MenuText(MenuElementVisible):
         render = font.render(self.text, 0, self.color)
         self.surface = render
 
+
 class MenuRect(MenuElementVisible):
     """Rectangle menu element."""
+
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self._size = vec2d(0, 0)
@@ -221,10 +232,12 @@ class MenuRect(MenuElementVisible):
     def color(self, color):
         for value in color:
             if value < 0 or value > 255:
-                code = ['Colors must be bounded by 0-255',
-                        'Color: {}'.format(color),
-                        'Color<type>: {}'.format(type(color))]
-                raise ValueError('\n'.join(code))
+                msg = (
+                    "Colors must be bounded by 0-255\n"
+                    f"Colors: {color}\n"
+                    f"Colors<type>: {type(color)}\n"
+                )
+                raise ValueError(colorize(msg, "red"))
         self._color = color
         self._cache = True
 
@@ -235,8 +248,10 @@ class MenuRect(MenuElementVisible):
             self.surface = self.surface.convert_alpha()
         self.surface.fill(self.color)
 
+
 class MenuButton(MenuElement):
     """Button menu element."""
+
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self._size = vec2d(0, 0)
@@ -289,9 +304,9 @@ class MenuButton(MenuElement):
 
     def update(self):
         """Returns a value in terms of size of the button.
-            If the button was pressed at the bottom right the coord
-            would be vec2d(1.0, 1.0), and top left vec2d(0.0, 0.0),
-            NOTE return are not bounded [0.0, 1.0] when held is enabled."""
+        If the button was pressed at the bottom right the coord
+        would be vec2d(1.0, 1.0), and top left vec2d(0.0, 0.0),
+        NOTE return are not bounded [0.0, 1.0] when held is enabled."""
         if self.menu.visible:
             pos = self._engine.inp.ms.get_button_pressed_pos(self.mkey)
             if pos is not None:
@@ -318,13 +333,14 @@ class MenuButton(MenuElement):
     def pressed(self, button: MenuButton, pos: vec2d) -> None:
         pass
 
+
 class MenuButtonFull(SubMenu, MenuElementVisible):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self.elements = {}
-        self.text = MenuText(self._engine, self, name + '-text')
-        self.rect = MenuRect(self._engine, self, name + '-rect')
-        self.button = MenuButton(self._engine, self, name + '-button')
+        self.text = MenuText(self._engine, self, name + "-text")
+        self.rect = MenuRect(self._engine, self, name + "-rect")
+        self.button = MenuButton(self._engine, self, name + "-button")
         self._size = vec2d(0, 0)
 
     @property
@@ -372,14 +388,15 @@ class MenuButtonFull(SubMenu, MenuElementVisible):
         self.text.draw(draw)
         self.rect.draw(draw)
 
+
 class MenuSlider(SubMenu, MenuElementVisible):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self.elements = {}
-        self.rect_slide = MenuRect(self._engine, self, name + '-rect-slide')
+        self.rect_slide = MenuRect(self._engine, self, name + "-rect-slide")
         self.rect_slide.depth = 12
-        self.rect_back = MenuRect(self._engine, self, name + '-rect-back')
-        self.button = MenuButton(self._engine, self, name + '-button')
+        self.rect_back = MenuRect(self._engine, self, name + "-rect-back")
+        self.button = MenuButton(self._engine, self, name + "-button")
         self.button.held = True
         self._size = vec2d(0, 0)
         self._value: float = 1

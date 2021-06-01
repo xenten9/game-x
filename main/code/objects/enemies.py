@@ -1,15 +1,22 @@
-# Standard library
 from math import floor
 
-# Local imports
-from ..engine.types.vector import vec2d
+
+from ..engine.types import vec2d
 from ..engine.engine import Engine
 from .game_objects import GameObject, Damageable, ObjPlayer
 
+
 class Enemy(GameObject, Damageable):
-    def __init__(self, engine: Engine, key: int, name: str, data: dict,
-                 pos: vec2d, size: vec2d = vec2d(32, 32),
-                 origin: vec2d = vec2d(0, 0)):
+    def __init__(
+        self,
+        engine: Engine,
+        key: int,
+        name: str,
+        data: dict,
+        pos: vec2d,
+        size: vec2d = vec2d(32, 32),
+        origin: vec2d = vec2d(0, 0),
+    ):
         super().__init__(engine, key, name, data, pos, size, origin)
         self.hp: int = 1
         self.damage = 1
@@ -27,9 +34,11 @@ class Enemy(GameObject, Damageable):
     def _die(self):
         self.engine.obj.delete(self.key)
 
+
 class ObjWalkingEnemy(Enemy):
-    def __init__(self, engine: Engine, key: int,
-                 name: str, data: dict, pos: vec2d):
+    def __init__(
+        self, engine: Engine, key: int, name: str, data: dict, pos: vec2d
+    ):
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
         self.data = data
         self.speed = vec2d(2, 0)
@@ -37,18 +46,18 @@ class ObjWalkingEnemy(Enemy):
         self.engine.col.dy.add(self.key, self)
 
         # Sprite
-        self.set_frames('walking-enemy.png')
+        self.set_frames("walking-enemy.png")
 
         # Health
         self.hp = 6
         self.damage = 1
 
         # Add sound
-        self.engine.aud.sfx.add('beep.ogg')
+        self.engine.aud.sfx.add("beep.ogg")
 
         # Check for ground
         if not self.scollide(pos + vec2d(0, 1)):
-            raise RuntimeError('Enemy not on ground')
+            raise RuntimeError("Enemy not on ground")
 
     def update(self, paused: bool):
         super().update(paused)

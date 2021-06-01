@@ -1,15 +1,21 @@
 """Handles object instances."""
-# Standard library
+
 from typing import Callable, Any
 
-# Local imports
 from ..constants import colorize
 from ..types.entity import Entity
-from ..types.component import Component
+from ..types import Component
+
 
 class ObjectHandler(Component):
     """Handles game objects."""
-    def __init__(self, engine: object, object_creator: Callable, max_objects: int = 2**14-1):
+
+    def __init__(
+        self,
+        engine,
+        object_creator: Callable,
+        max_objects: int = 2 ** 14 - 1,
+    ):
         super().__init__(engine)
         self.object_creator = object_creator
         self.pool_size = max_objects
@@ -60,9 +66,9 @@ class ObjectHandler(Component):
                 self.pool.remove(key)
                 return key
             else:
-                print('key {} is not in pool!'.format(key))
+                print(f"key {key} is not in pool!")
                 newkey = self.pool.pop()
-                print('supplementing key {} with {}!'.format(key, newkey))
+                print(f"supplementing key {key} with {newkey}!")
                 return newkey
 
     def instantiate_object(self, key: int, obj: object):
@@ -70,9 +76,9 @@ class ObjectHandler(Component):
         if issubclass(obj.__class__, Entity):
             self.obj[key] = obj
         else:
-            message = 'Object {} cannot be instantied'.format(obj)
-            message += 'It does not sublass to Entity'
-            raise TypeError(colorize(message, 'red'))
+            message = f"Object {obj} cannot be instantied"
+            message += "It does not sublass to Entity"
+            raise TypeError(colorize(message, "red"))
 
     def create_object(self, **kwargs):
         """Creates instances of objects and instantiates them."""

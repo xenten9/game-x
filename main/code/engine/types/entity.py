@@ -1,8 +1,9 @@
-# Local imports
 from ..components.draw import Draw
 
-class Entity():
+
+class Entity:
     """Base class for all game entities."""
+
     def __init__(self, engine, key: int, name: str, data: dict):
         self.engine = engine
         self.key = key
@@ -27,4 +28,3 @@ class Entity():
     def draw(self, draw: Draw):
         """Draw called in between back and foreground."""
         pass
-

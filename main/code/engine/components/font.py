@@ -1,17 +1,18 @@
 """Object for handling fonts."""
-# External libraries
+
 from pygame import font
 
-# Local imports
-from ..types.component import Component
+
+from ..types import Component
 
 # Initializing fonts
 font.init()
 
+
 class Font(Component):
     def __init__(self, engine):
         super().__init__(engine)
-        self.fonts = {'arial12': font.SysFont('arial', 12)}
+        self.fonts = {"arial12": font.SysFont("arial", 12)}
 
     def add(self, name: str, size: int):
         """Adds a font to self."""

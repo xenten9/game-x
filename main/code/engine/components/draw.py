@@ -1,10 +1,12 @@
 """Handles drawing objects to a camera."""
-# Local imports
-from ..types.component import Component
+
+from ..constants import colorize
+from ..types import Component
 from .camera import Camera
 
+
 class Draw(Component):
-    def __init__(self, engine: object):
+    def __init__(self, engine):
         super().__init__(engine)
         self.depths: dict[int, list] = {}
 
@@ -25,14 +27,15 @@ class Draw(Component):
         for layer in layers:
             layers[layer].draw(self)
 
-
     def add(self, depth: int, **kwargs):
         """Add an element to be drawn when called."""
         if not isinstance(depth, int):
-            code = ['Depth must be int',
-                    'Depth: {}'.format(depth),
-                    'Depth<type>:'.format(type(depth))]
-            raise TypeError('\n'.join(code))
+            msg = (
+                "Depth must be int\n"
+                f"Depth: {depth}\n"
+                f"Depth<type>: {type(depth)}\n"
+            )
+            raise TypeError(colorize(msg, "red"))
         try:
             self.depths[depth]
         except KeyError:
@@ -45,15 +48,15 @@ class Draw(Component):
             depth = self.depths[i]
             for kwargs in depth:
                 try:
-                    gui = kwargs['gui']
+                    gui = kwargs["gui"]
                 except KeyError:
                     gui = False
                 try:
-                    special = kwargs['special']
+                    special = kwargs["special"]
                 except KeyError:
                     special = 0
 
-                pos = kwargs['pos']
-                surface = kwargs['surface']
+                pos = kwargs["pos"]
+                surface = kwargs["surface"]
                 window.draw_surface(pos, surface, gui, special)
         self.depths = {}

@@ -1,5 +1,8 @@
 from typing import Union
+
+
 from .vector import vec2d
+
 
 def f_is_list_empty(list: list):
     for element in list:
@@ -7,18 +10,19 @@ def f_is_list_empty(list: list):
             return False
     return True
 
-class array2d():
+
+class array2d:
     def __init__(self, size: tuple[int, int]):
-        self._array = [[None]*size[1] for _ in range(size[0])]
+        self._array = [[None] * size[1] for _ in range(size[0])]
         self._size = size
 
     def __str__(self):
         string = []
-        string.append('[')
+        string.append("[")
         for y in range(self.height):
-            string.append('\t' + str(self.get_row(y)))
-        string.append(']')
-        return '\n'.join(string)
+            string.append("\t" + str(self.get_row(y)))
+        string.append("]")
+        return "\n".join(string)
 
     @property
     def array(self):
@@ -68,11 +72,11 @@ class array2d():
     def get(self, x: int, y: int):
         if self._bounded((x, y)):
             return self._array[x][y]
-        raise IndexError('no point ({}, {})'.format(x, y))
+        raise IndexError(f"no point ({x}, {y})")
 
     def set(self, x: int, y: int, value):
         if not self._bounded((x, y)):
-            self.size = (max(x+1, self.size[0]), max(y+1, self.size[1]))
+            self.size = (max(x + 1, self.size[0]), max(y + 1, self.size[1]))
         self._array[x][y] = value
 
     def delete(self, x: int, y: int):
@@ -82,17 +86,17 @@ class array2d():
     def get_column(self, x: int):
         if self._bounded((x, 0)):
             return self._array[x]
-        raise IndexError('no column {}'.format(x))
+        raise IndexError(f"no column {x}")
 
     def get_row(self, y: int):
         if self._bounded((0, y)):
             return [column[y] for column in self._array]
-        raise IndexError('no row {}'.format(y))
+        raise IndexError(f"no row {y}")
 
     def fill(self, value):
-        self._array = [[value]*self.height for _ in range(self.width)]
+        self._array = [[value] * self.height for _ in range(self.width)]
 
     def _bounded(self, point: Union[vec2d, tuple]):
-        if point[0]+1 <= self.size[0] and point[1]+1 <= self.size[1]:
+        if point[0] + 1 <= self.size[0] and point[1] + 1 <= self.size[1]:
             return True
         return False

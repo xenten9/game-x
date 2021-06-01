@@ -1,28 +1,47 @@
 """All game objects."""
-# Standard library
+
 from os import path
-from math import ceil, floor
-# External libraries
+
 from numpy import sign
-from pygame import image, Rect
+from pygame import image
 from pygame.surface import Surface
 
-# Local imports
+
 from ..constants import FULLTILE
 from .entities import Entity, ObjPauseMenu
 from ..engine.engine import Engine
 from ..engine.constants import cprint
 from ..engine.components.draw import Draw
 from ..engine.components.maths import f_loop
-from ..engine.types.vector import vec2d
+from ..engine.types import vec2d
 from ..engine.constants import colorize
+
+
+def rect_overlap(pos: vec2d, size: vec2d, opos: vec2d, osize: vec2d) -> bool:
+    if (
+        pos.x < opos.x + osize.x
+        and pos.x + size.x > opos.x
+        and pos.y < opos.y + osize.y
+        and pos.y + size.y > opos.y
+    ):
+        return True
+    return False
+
 
 # Game objects
 class GameObject(Entity):
     """Class which all game objects inherit from."""
-    def __init__(self, engine: Engine, key: int, name: str, data: dict,
-                 pos: vec2d, size: vec2d = vec2d(32, 32),
-                 offset: vec2d = vec2d(0, 0)):
+
+    def __init__(
+        self,
+        engine: Engine,
+        key: int,
+        name: str,
+        data: dict,
+        pos: vec2d,
+        size: vec2d = vec2d(32, 32),
+        offset: vec2d = vec2d(0, 0),
+    ):
         super().__init__(engine, key, name, data)
         self.engine = engine
         self.origin = offset
@@ -32,10 +51,12 @@ class GameObject(Entity):
         engine.obj.instantiate_object(key, self)
         rel = offset
         w, h = size - vec2d(1, 1)
-        self.cpoints = (vec2d(rel.x, rel.y),
-                        vec2d(rel.x+w, rel.y),
-                        vec2d(rel.x+w, rel.y+h),
-                        vec2d(rel.x, rel.y+h))
+        self.cpoints = (
+            vec2d(rel.x, rel.y),
+            vec2d(rel.x + w, rel.y),
+            vec2d(rel.x + w, rel.y + h),
+            vec2d(rel.x, rel.y + h),
+        )
         self._frame = 0
         self.frames: list[Surface] = []
 
@@ -58,24 +79,27 @@ class GameObject(Entity):
         self.col.size = size
 
     # Set current frames
-    def set_frames(self, *fnames, alpha=0):
+    def set_frames(self, *fnames, alpha: bool = False):
         """Frames setter."""
         self.frames = []
-        sprite_path = self.engine.paths['sprites']
+        sprite_path = self.engine.paths["sprites"]
         for file in fnames:
             file_path = path.join(sprite_path, file)
             try:
-                if alpha == 0:
-                    self.frames.append(image.load(file_path).convert())
-                elif alpha == 1:
+                if alpha:
                     self.frames.append(image.load(file_path).convert_alpha())
+                else:
+                    self.frames.append(image.load(file_path).convert())
+
             except FileNotFoundError as error:
-                code = ['Sprite image not found.',
-                        'Images path: {}'.format(file_path),
-                        'Engine sprite path: {}'.format(sprite_path)]
-                code = '\n  ' + '\n  '.join(code)
-                code = colorize(code, 'red')
-                raise FileNotFoundError(code) from error
+                msg = (
+                    "Sprite image not found."
+                    f"Images path: {file_path}"
+                    f"Engine sprite path: {sprite_path}"
+                )
+                msg = "\n\t" + "\t".join(msg)
+                msg = colorize(msg, "red")
+                raise FileNotFoundError(msg) from error
 
     @property
     def frame(self) -> int:
@@ -96,30 +120,31 @@ class GameObject(Entity):
 
     def dcollide(self, pos: vec2d = None, key: int = None) -> list:
         """Check for dynamic collisions.
-           Set key to -1 if you want to include self in collision"""
+        Set key to -1 if you want to include self in collision"""
         # Match unspecified arguments
         if key is None:
             key = self.key
         if pos is None:
             pos = self.pos
         size = self.size
-        origin = self.origin
+        pos += self.origin
 
-        # Check for collision
+        # Get colliders
         colliders = self.engine.col.dy.get_colliders()
         collide: list[object] = []
-        pos = pos + origin
-        self_pos = pos.tup()
-        self_size = size.tup()
-        self_rect = Rect(self_pos, self_size)
+
+        # Check for collisions
         for cobj in colliders:
             if cobj.key != key:
                 if issubclass(cobj.__class__, GameObject):
-                    cpos: tuple[int, int] = (cobj.pos + cobj.origin).tup()
-                    csize: tuple[int, int] = cobj.size.tup()
-                    other_rect = Rect(cpos, csize)
-                    if self_rect.colliderect(other_rect):
+                    # Get other's pos and size
+                    opos = cobj.pos + cobj.origin
+                    osize = cobj.size
+
+                    # Check for overlap
+                    if rect_overlap(pos, size, opos, osize):
                         collide.append(cobj)
+
         return collide
 
     # Drawing sprites
@@ -134,19 +159,28 @@ class GameObject(Entity):
         """Called when object is deleted from Objects dictionary."""
         self.engine.col.dy.remove(self.key)
 
-class Collider():
-    def __init__(self, engine: Engine, pos: vec2d, size: vec2d, offset: vec2d = vec2d(0, 0)):
+
+class Collider:
+    def __init__(
+        self,
+        engine: Engine,
+        pos: vec2d,
+        size: vec2d,
+        offset: vec2d = vec2d(0, 0),
+    ):
         self.engine = engine
         self.pos = pos
         self.size = size
         self.offset = offset
-        dpos = 1e-6 # Used to keep all points just before the size
-        w, h = (size - dpos)
+        dpos = 1e-6  # Used to keep all points just before the size
+        w, h = size - dpos
 
-        self.cpoints = (vec2d(offset.x, offset.y),
-                        vec2d(offset.x+w, offset.y),
-                        vec2d(offset.x+w, offset.y+h),
-                        vec2d(offset.x, offset.y+h))
+        self.cpoints = (
+            vec2d(offset.x, offset.y),
+            vec2d(offset.x + w, offset.y),
+            vec2d(offset.x + w, offset.y + h),
+            vec2d(offset.x, offset.y + h),
+        )
 
     def scollide(self, pos: vec2d = None) -> bool:
         if pos is None:
@@ -156,7 +190,8 @@ class Collider():
                 return True
         return False
 
-class Damageable():
+
+class Damageable:
     def __init__(self):
         self._hp: int = 1
 
@@ -168,10 +203,13 @@ class Damageable():
     def hp(self, hp: int):
         self._hp = hp
 
+
 class ObjPlayer(GameObject, Damageable):
     """Player game object."""
-    def __init__(self, engine: Engine, key: int,
-                 name: str, data: dict, pos: vec2d):
+
+    def __init__(
+        self, engine: Engine, key: int, name: str, data: dict, pos: vec2d
+    ):
         # Game object initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
 
@@ -180,22 +218,24 @@ class ObjPlayer(GameObject, Damageable):
 
         # Controls
         self.kkeys = {
-            'jump': (44, 26, 82),
-            'left': (4, 80),
-            'right': (7, 79),
-            'run': (225, 224),
-            'reset': (21,),
-            'pause': (41,)}
+            "jump": (44, 26, 82),
+            "left": (4, 80),
+            "right": (7, 79),
+            "run": (225, 224),
+            "reset": (21,),
+            "pause": (41,),
+        }
 
         # Key vars
         self.kkey = {
-            'jump': False,
-            'Hjump': False,
-            'Hleft': False,
-            'Hright': False,
-            'Hrun': False,
-            'reset': False,
-            'pause': False}
+            "jump": False,
+            "Hjump": False,
+            "Hleft": False,
+            "Hright": False,
+            "Hrun": False,
+            "reset": False,
+            "pause": False,
+        }
 
         # Ground
         self.hspd, self.vspd = 0, 0
@@ -224,10 +264,10 @@ class ObjPlayer(GameObject, Damageable):
         # State machine
         self.mode = 0
         self.campos = (0, 0)
-        self.camspeed = (0.25, 0.25)
+        self.camspeed = 0.25
 
         # Sprite
-        self.set_frames('player.png')
+        self.set_frames("player.png")
         self.trail: list[vec2d] = []
 
         # Health
@@ -238,11 +278,11 @@ class ObjPlayer(GameObject, Damageable):
         self.iframe = 0
 
         # Audio
-        engine.aud.sfx.add('boop.wav')
+        engine.aud.sfx.add("boop.wav")
 
         # Pause menu
-        self.pause_menu = ObjPauseMenu(self.engine, 0, '', {})
-        self.engine.obj.sobj['pause-menu'] = self.pause_menu
+        self.pause_menu = ObjPauseMenu(self.engine, 0, "", {})
+        self.engine.obj.sobj["pause-menu"] = self.pause_menu
         self.pause_menu.menu.visible = False
 
     @property
@@ -258,7 +298,7 @@ class ObjPlayer(GameObject, Damageable):
     def update(self, paused: bool):
         """Called every frame for each game object."""
         self._get_inputs()
-        if self.kkey['pause']:
+        if self.kkey["pause"]:
             self.engine.pause()
             v = self.pause_menu.menu.visible
             self.pause_menu.menu.visible = not v
@@ -268,20 +308,17 @@ class ObjPlayer(GameObject, Damageable):
             self.iframe -= sign(self.iframe)
             if self.hp <= 0:
                 self._die()
+                return
+
             if self.mode == 0:
                 # Reset room
-                if self.kkey['reset'] == 1:
+                if self.kkey["reset"] == 1:
                     self.engine.lvl.reset()
                     return
 
-                # Dynamic collisions
-                col = self.dcollide()
-                for obj in col:
-                    try:
-                        if obj.collide(self) == 'return':
-                            return
-                    except AttributeError:
-                        pass
+                # Dynamic collision
+                if self._dcol() == "return":
+                    return
 
                 # Move player
                 self._movement()
@@ -319,34 +356,35 @@ class ObjPlayer(GameObject, Damageable):
     def _jump(self):
         if self.grounded > 0:
             if self.grav != 0:
-                self.vspd = -(self.hspd/8)**2
+                self.vspd = -((self.hspd / 8) ** 2)
             self.jump_delay = self.coyote
             self.vspd -= self.jump_speed
         elif self.grounded < 0:
             if self.grav != 0:
-                self.vspd = (self.hspd/8)**2
+                self.vspd = (self.hspd / 8) ** 2
             self.jump_delay = self.coyote
             self.vspd += self.jump_speed
 
     def _die(self):
-        self.engine.aud.sfx.play('boop.wav')
+        self.engine.aud.sfx.play("boop.wav")
         self.engine.lvl.reset()
-        return 'return'
 
     def _get_inputs(self):
         for key in self.kkey:
-            if key[0] != 'H':
+            if key[0] != "H":
                 self.kkey[key] = self.engine.inp.kb.get_key_pressed(
-                    *self.kkeys[key])
+                    *self.kkeys[key]
+                )
             else:
                 self.kkey[key] = self.engine.inp.kb.get_key_held(
-                    *self.kkeys[key[1:]])
+                    *self.kkeys[key[1:]]
+                )
 
     def _movement(self):
         """Handle player movement."""
         # Veritcal controls
         self.jump -= sign(self.jump)
-        if (self.kkey['jump'] and self.jump <= 0):
+        if self.kkey["jump"] and self.jump <= 0:
             self.jump = self.jump_lenience
 
         # Grounded
@@ -356,17 +394,17 @@ class ObjPlayer(GameObject, Damageable):
         if self.grav >= 0 and self.scollide(self.pos + vec2d(0, 1)):
             self.jump_delay = 0
             if self.grav != 0:
-                self.grounded = self.coyote # Normal Gravity
+                self.grounded = self.coyote  # Normal Gravity
             else:
-                self.grounded = 1 # Zero Gravity
+                self.grounded = 1  # Zero Gravity
 
         # Ceiling
         if self.grav <= 0 and self.scollide(self.pos + vec2d(0, -1)):
             self.jump_delay = 0
             if self.grav != 0:
-                self.grounded = -self.coyote # Normal Gravity
+                self.grounded = -self.coyote  # Normal Gravity
             else:
-                self.grounded = -1 # Zero Gravity
+                self.grounded = -1  # Zero Gravity
 
         # Horizontal and vertical movement
         self._horizontal_move()
@@ -381,14 +419,14 @@ class ObjPlayer(GameObject, Damageable):
     def _horizontal_move(self):
         """Horizontal movement."""
         # Horizontal speed
-        move = (self.kkey['Hright'] - self.kkey['Hleft'])
+        move = self.kkey["Hright"] - self.kkey["Hleft"]
         if self.grounded and self.grav != 0:
             if move != 0:
                 # Dynamic grounded
                 self.hspd *= self.ground_fric_dynamic
 
                 # Running
-                if self.kkey['Hrun']:
+                if self.kkey["Hrun"]:
                     self.hspd += move * self.run_speed
                 else:
                     self.hspd += move * self.walk_speed
@@ -408,8 +446,11 @@ class ObjPlayer(GameObject, Damageable):
     def _vertical_move(self):
         """Vertical movement."""
         # Jumping
-        if (self.grounded != 0 and self.kkey['jump'] > 0
-            and self.jump_delay == 0):
+        if (
+            self.grounded != 0
+            and self.kkey["jump"] > 0
+            and self.jump_delay == 0
+        ):
             self._jump()
         else:
             self.jump_delay -= sign(self.jump_delay)
@@ -417,7 +458,7 @@ class ObjPlayer(GameObject, Damageable):
         # Jump gravity
         if sign(self.vspd) == sign(self.grav):
             self.vspd += self.grav * self.fallgrav
-        elif self.kkey['Hjump']:
+        elif self.kkey["Hjump"]:
             self.vspd += self.grav * self.jumpgrav
         else:
             self.vspd += self.grav
@@ -430,67 +471,75 @@ class ObjPlayer(GameObject, Damageable):
 
         # Horizontal collision
         if self.scollide(pos + vec2d(hspd, 0)):
-            pos = vec2d((pos.x//FULLTILE)*FULLTILE, pos.y)
+            pos = vec2d((pos.x // FULLTILE) * FULLTILE, pos.y)
             while not self.scollide(pos):
-                pos += vec2d(FULLTILE*shspd, 0)
-            pos -= vec2d(FULLTILE*shspd, 0)
+                pos += vec2d(FULLTILE * shspd, 0)
+            pos -= vec2d(FULLTILE * shspd, 0)
             hspd = 0
 
         # Dynamic collision
-        col = self.dcollide(pos=pos)
-        for obj in col:
-            try:
-                if obj.collide(self) == 'return':
-                    return
-            except AttributeError:
-                pass
+        if self._dcol(pos) == "return":
+            return
 
         # Vertical collision
         if self.scollide(pos + vec2d(0, vspd)):
-            pos = vec2d(pos.x, (pos.y//FULLTILE)*FULLTILE)
+            pos = vec2d(pos.x, (pos.y // FULLTILE) * FULLTILE)
             if svspd == 1:
                 pos += vec2d(0, FULLTILE)
             while not self.scollide(pos):
-                pos += vec2d(0, FULLTILE*svspd)
-            pos -= vec2d(0, FULLTILE*svspd)
+                pos += vec2d(0, FULLTILE * svspd)
+            pos -= vec2d(0, FULLTILE * svspd)
             vspd = 0
 
         # Dynamic collision
-        col = self.dcollide(pos=pos)
-        for obj in col:
-            try:
-                if obj.collide(self) == 'return':
-                    return
-            except AttributeError:
-                pass
+        if self._dcol(pos) == "return":
+            return
 
         self.pos = pos
         self.hspd = hspd
         self.vspd = vspd
 
+    def _dcol(self, pos=None):
+        col = self.dcollide(pos)
+        for obj in col:
+            try:
+                return obj.collide(self)
+            except AttributeError:
+                pass
+
     def _move_cam(self):
         """Move Camera."""
-        self.campos = self.pos + self.engine.cam.size * -1/2
+        self.campos = self.pos + self.engine.cam.size * -1 / 2
         dcam = (self.campos - self.engine.cam.pos) * self.camspeed
         self.engine.cam.pos = self.engine.cam.pos + dcam
 
     def delete(self):
         super().delete()
-        del self.engine.obj.sobj['pause-menu']
+        del self.engine.obj.sobj["pause-menu"]
+
 
 class ObjButton(GameObject):
     """Button game object."""
-    def __init__(self, engine: Engine, key: int,
-                 name: str, data: dict, pos: vec2d):
+
+    def __init__(
+        self, engine: Engine, key: int, name: str, data: dict, pos: vec2d
+    ):
         # GameObject initialization
-        super().__init__(engine, key, name, data, pos, vec2d(32, 8),
-                         offset=vec2d(0, FULLTILE-8))
+        super().__init__(
+            engine,
+            key,
+            name,
+            data,
+            pos,
+            vec2d(32, 8),
+            offset=vec2d(0, FULLTILE - 8),
+        )
         engine.col.dy.add(key, self)
         try:
-            self.door_id = self.data['door']
+            self.door_id = self.data["door"]
         except KeyError:
-            cprint('Door object not set for button!', 'red')
-        self.set_frames('button0.png', 'button1.png', alpha=1)
+            cprint("Door object not set for button!", "red")
+        self.set_frames("button0.png", "button1.png", alpha=True)
 
     def collide(self, obj: GameObject):
         """When collided with by player, open the door."""
@@ -499,50 +548,56 @@ class ObjButton(GameObject):
                 try:
                     self.engine.obj.obj[self.door_id].frame = 1
                 except AttributeError:
-                    cprint('Unable to find door!', 'red')
+                    cprint("Unable to find door!", "red")
                 self.frame = 1
+
 
 class ObjDoor(GameObject):
     """Door game object."""
-    def __init__(self, engine: Engine, key: int,
-                 name: str, data: dict, pos: vec2d):
+
+    def __init__(
+        self, engine: Engine, key: int, name: str, data: dict, pos: vec2d
+    ):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
         engine.col.dy.add(key, self)
         try:
-            self.next_level = self.data['level']
+            self.next_level = self.data["level"]
         except KeyError:
-            cprint('Door has no next level set!', 'red')
+            cprint("Door has no next level set!", "red")
 
         # Images
-        self.set_frames('door0.png', 'door1.png')
+        self.set_frames("door0.png", "door1.png")
 
     def collide(self, obj: GameObject) -> str:
         if isinstance(obj, ObjPlayer):
             if self.frame == 1:
                 try:
                     self.engine.lvl.load(self.next_level)
-                    return 'return'
+                    return "return"
                 except AttributeError:
-                    cprint('Unable to load level!', 'red')
-        return ''
+                    cprint("Unable to load level!", "red")
+        return ""
+
 
 class ObjGravOrb(GameObject):
     """GravOrb game object."""
-    def __init__(self, engine: Engine, key: int,
-                 name: str, data: dict, pos: vec2d):
+
+    def __init__(
+        self, engine: Engine, key: int, name: str, data: dict, pos: vec2d
+    ):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
         engine.col.dy.add(key, self)
-        self.grav = self.data['grav']
+        self.grav = self.data["grav"]
 
         # Images
         if self.grav > 0:
-            self.set_frames('grav-orb0.png', alpha=1)
+            self.set_frames("grav-orb0.png", alpha=True)
         elif self.grav == 0:
-            self.set_frames('grav-orb1.png', alpha=1)
+            self.set_frames("grav-orb1.png", alpha=True)
         elif self.grav < 1:
-            self.set_frames('grav-orb2.png', alpha=1)
+            self.set_frames("grav-orb2.png", alpha=True)
 
     def collide(self, obj: GameObject):
         if isinstance(obj, ObjPlayer):
@@ -569,35 +624,48 @@ class ObjGravOrb(GameObject):
             # Remove self after collision with player
             self.engine.obj.delete(self.key)
 
+
 class ObjSpike(GameObject):
     """Spike game object."""
-    def __init__(self, engine: Engine, key: int,
-                 name: str, data: dict, pos: vec2d):
+
+    def __init__(
+        self, engine: Engine, key: int, name: str, data: dict, pos: vec2d
+    ):
         # GameObject initialization
-        super().__init__(engine, key, name, data, pos,
-                         vec2d(32, 4), offset=vec2d(0, FULLTILE-4))
+        super().__init__(
+            engine,
+            key,
+            name,
+            data,
+            pos,
+            vec2d(32, 4),
+            offset=vec2d(0, FULLTILE - 4),
+        )
         engine.col.dy.add(key, self)
         self.damage = 5
 
         # Images
-        self.set_frames('spike.png', alpha=1)
+        self.set_frames("spike.png", alpha=True)
 
     def collide(self, obj: ObjPlayer):
         if isinstance(obj, ObjPlayer):
             if obj.vspd <= 0:
                 obj.hp -= self.damage
 
+
 class ObjSpikeInv(GameObject):
     """Spike game object, but upside down."""
-    def __init__(self, engine: Engine, key: int,
-                 name: str, data: dict, pos: vec2d):
+
+    def __init__(
+        self, engine: Engine, key: int, name: str, data: dict, pos: vec2d
+    ):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 4))
         engine.col.dy.add(key, self)
         self.damage = 5
 
         # Images
-        self.set_frames('spike-inv.png', alpha=1)
+        self.set_frames("spike-inv.png", alpha=True)
 
     def collide(self, obj: GameObject):
         if isinstance(obj, ObjPlayer):

@@ -1,27 +1,28 @@
 """Collision detection handlers."""
-# Standard library
+
 from typing import Any
 
-# External libraries
 from pygame import Rect, Surface, draw as pydraw
 
-# Local imports
 from .draw import Draw
 from ..types.vector import vec2d
-from ..types.component import Component
-from ..types.array import array2d
+from ..types import Component
+from ..types import array2d
 from ..types.entity import Entity
 
+
 class Collider(Component):
-    def __init__(self, engine: object):
+    def __init__(self, engine):
         super().__init__(engine)
         self.dy = DynamicCollider(engine)
         self.st = StaticCollider(engine)
 
+
 # Handles static collision
 class StaticCollider(Component, Entity):
     """Handles static collisions aligned to a grid."""
-    def __init__(self, engine: object):
+
+    def __init__(self, engine):
         super().__init__(engine)
         self.array = array2d((16, 16))
         self.visible = True
@@ -29,13 +30,13 @@ class StaticCollider(Component, Entity):
     def add(self, pos: vec2d):
         """Add a wall at a given position."""
         pos //= self.fulltile
-        x, y = pos
+        x, y = pos.ftup()
         self.array.set(x, y, True)
 
     def remove(self, pos: vec2d):
         """Remove a wall at a given position."""
         pos //= self.fulltile
-        x, y = pos
+        x, y = pos.ftup()
         self.array.delete(x, y)
 
     def get(self, pos: vec2d) -> bool:
@@ -76,10 +77,12 @@ class StaticCollider(Component, Entity):
     def minimize(self):
         self.array.minimize()
 
+
 # Handles Dynamic collisions
 class DynamicCollider(Component):
     """Handles collisions with moving objects."""
-    def __init__(self, engine: object):
+
+    def __init__(self, engine):
         super().__init__(engine)
         self.colliders: dict[int, object] = {}
 

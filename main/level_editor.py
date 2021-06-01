@@ -1,116 +1,90 @@
-"""Level editing tool for Game-X."""
-printer = ['\033[36m# Game-X main_application.py'] # For printing after terminal clear
+"""Game-X Level editing tool."""
+printer = ["\033[36m# Game-X level_editor.py"]
 
-# Standard library
-from os import path, getcwd
 import sys
+from os import getcwd, path, sep as ossep
 
-# Check if ran from an executable
-if getattr(sys, 'frozen', False):
-    main_path = path.dirname(sys.executable)
-else:
-    def splitall(filepath: str) -> list:
-        allparts: list[str] = []
-        while True:
-            parts = path.split(filepath)
-            if parts[0] == filepath:
-                allparts.insert(0, parts[0])
-                break
-            elif parts[1] == filepath:
-                allparts.insert(0, parts[1])
-                break
-            else:
-                filepath = parts[0]
-                allparts.insert(0, parts[1])
-        return allparts
+# Try to get root
+root = ""
+try:
+    import git
 
+    def get_root_git():
+        git_repo = git.Repo(getcwd(), search_parent_directories=True)
+        git_root = str(git_repo.working_dir)
+        return git_root
+
+    try:
+        root = get_root_git()
+    except git.InvalidGitRepositoryError:
+        pass
+except ImportError:
+    pass
+
+
+def get_root(dir_name):
     main_path = getcwd()
-    path_parts = splitall(main_path)
-    root = path_parts[0]
-    main_path = root
-    for part in path_parts[1:]:
-        main_path = path.join(main_path, part)
-        if part == 'game-x':
-            break
-
-# Add current directory to sys.path
-if main_path not in sys.path:
-    printer.append('main path: {}'.format(main_path))
-    printer.append('sys.path: ')
-    for spath in sys.path:
-        printer.append('\t' + spath)
-    printer.append('adding path: {}'.format(main_path))
-    sys.path.insert(0, main_path)
-
-# Local Imports
-if __name__ == '__main__':
-    try:
-        # If ran directly
-        from main.code.engine.types.vector import vec2d
-        from main.code.engine.engine import Engine
-        from main.code.application import Application
-        from main.code.engine.components.camera import Camera
-        from main.code.engine.components.menu import MenuText
-        from main.code.constants import FULLTILE, FPS, SIZE
-        from main.code.engine.constants import cprint, clear_terminal
-        from main.code.objects.editor import ObjCursor, Object
-
-    except ModuleNotFoundError:
-        print('Unable to find all modules.')
-        print('sys path is: ')
-        paths = sys.path
-        for spath in paths:
-            print(spath)
-        exit()
-
-else:
-    try:
-        # If imported as module
-        from .code.engine.types.vector import vec2d
-        from .code.engine.engine import Engine
-        from main.code.application import Application
-        from .code.engine.components.camera import Camera
-        from .code.engine.components.menu import MenuText
-        from .code.constants import FULLTILE, FPS, SIZE
-        from .code.engine.constants import cprint, clear_terminal
-        from .code.objects.editor import ObjCursor, Object
-
-    except ModuleNotFoundError:
-        printer.append('unable to import modules relatively.')
-        exit()
+    part = ""
+    while part != dir_name:
+        main_path, part = path.split(main_path)
+        if main_path == path.abspath(ossep):
+            MSG = "Unable to find root in path."
+            raise FileNotFoundError(MSG)
+    return path.join(main_path, part)
 
 
+if root == "":
+    if getattr(sys, "frozen", False):
+        root = path.dirname(sys.executable)
+    else:
+        # Try finding root by name
+        root = get_root("game-x")
 
-# print succesful importing
-clear_terminal()
-for line in printer:
-    print(line)
-cprint('All imports finished.', 'green')
+# Print out sys.path
+printer.append("sys.path: ")
+for spath in sys.path:
+    printer.append("\t" + spath)
+
+# Add main_path if not in sys.path
+if root not in sys.path:
+    printer.append(f"adding path: {root}")
+    sys.path.insert(0, root)
+
+
+from main.code.application import Application
+from main.code.constants import FPS, FULLTILE, SIZE
+from main.code.engine.components.camera import Camera
+from main.code.engine.components.menu import MenuText
+from main.code.engine.constants import clear_terminal, cprint
+from main.code.engine.engine import Engine
+from main.code.engine.types import vec2d
+from main.code.objects.editor import ObjCursor, Object
+
 
 # Object creation function
 def create_objects(engine: Engine, **kwargs):
     """Takes in a set of keywords and uses them to make an object.
-        engine: engine which contains game components.
+    engine: engine which contains game components.
 
-        Required kwargs:
-        name: name of the object being created.
+    Required kwargs:
+    name: name of the object being created.
 
-        Dependent kwargs:
-        key: id of the key when created
-        pos: position of the created object.
-        data: dictionary containing kwargs for __init__."""
-    name = kwargs['name']
-    key = kwargs['key']
+    Dependent kwargs:
+    key: id of the key when created
+    pos: position of the created object.
+    data: dictionary containing kwargs for __init__."""
+    name = kwargs["name"]
+    key = kwargs["key"]
     key = engine.obj.instantiate_key(key)
-    pos = kwargs['pos']
-    data = kwargs['data']
+    pos = kwargs["pos"]
+    data = kwargs["data"]
     Object(engine, name, key, pos, data)
-
 
 
 # Special
 class View(Camera):
     """Camera like object which is limited to the inside of the level."""
+
     def __init__(self, engine: Engine, size: vec2d):
         super().__init__(engine, size)
 
@@ -127,29 +101,37 @@ class View(Camera):
 
     pos = property(_pos_get, _pos_set)
 
+
 class Game(Application):
-    def __init__(self, fulltile: int, fps: int, size: vec2d,
-                 debug: bool = False, maindir: str = None):
+    def __init__(
+        self,
+        fulltile: int,
+        fps: int,
+        size: vec2d,
+        debug: bool = False,
+        maindir: str = None,
+    ):
         # Initialize engine
-        super().__init__(fulltile, fps, size, create_objects,
-                         debug=debug, maindir=maindir)
+        super().__init__(
+            fulltile, fps, size, create_objects, debug=debug, maindir=maindir
+        )
 
         if self.debug:
-            self.debug.menu.remove('rect')
-            ele = MenuText(self, self.debug.menu, 'curpos')
-            ele.pos = vec2d(0, 12*3)
-            ele = MenuText(self, self.debug.menu, 'mode')
-            ele.pos = vec2d(0, 12*4)
+            self.debug.menu.remove("rect")
+            ele = MenuText(self, self.debug.menu, "curpos")
+            ele.pos = vec2d(0, 12 * 3)
+            ele = MenuText(self, self.debug.menu, "mode")
+            ele.pos = vec2d(0, 12 * 4)
 
         # Create cursor and camera
         ObjCursor(self, vec2d(0, 0))
         self.cam = View(self, SIZE)
 
         # Add stcol to sobj
-        self.obj.sobj['stcol'] = self.col.st
+        self.obj.sobj["stcol"] = self.col.st
 
         # Load empty level
-        self.lvl.load('default')
+        self.lvl.load("default")
         self.tile.add_all()
 
     def event_handler(self):
@@ -160,15 +142,21 @@ class Game(Application):
             return
 
 
-
 # Main application functions
 def main(debug: bool = False):
-    game = Game(FULLTILE, FPS, SIZE, debug, maindir=main_path)
+    # Print out printer lines
+    clear_terminal()
+    for line in printer:
+        print(line)
+    cprint("All imports finished.", "green")
 
+    # Create engine object
+    game = Game(FULLTILE, FPS, SIZE, debug, maindir=root)
+
+    # Run main game loop
     game.main_loop()
 
 
-
 # Run main
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(True)

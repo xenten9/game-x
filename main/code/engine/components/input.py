@@ -1,18 +1,22 @@
 """Input handlers for mouse and keyboard."""
-# Standard library
+
 from typing import Union
 
-# External libraries
-from pygame.constants import (KEYDOWN, KEYUP, MOUSEMOTION,
-                              MOUSEBUTTONUP, MOUSEBUTTONDOWN)
+from pygame.constants import (
+    KEYDOWN,
+    KEYUP,
+    MOUSEMOTION,
+    MOUSEBUTTONUP,
+    MOUSEBUTTONDOWN,
+)
 from pygame.event import Event
 
-# Local imports
-from ..types.component import Component
+from ..types import Component
 from ..types.vector import vec2d
 
+
 class Input(Component):
-    def __init__(self, engine: object):
+    def __init__(self, engine):
         super().__init__(engine)
         self.kb = Keyboard()
         self.ms = Mouse()
@@ -52,9 +56,11 @@ class Input(Component):
         self.kb.reset()
         self.ms.reset()
 
+
 # keyboard inputs
-class Keyboard():
+class Keyboard:
     """Record all of the keyoard inputs whether pressed or held."""
+
     def __init__(self):
         # define dictionarys for keyboard lookup and storage
         self.key_held = {}
@@ -99,9 +105,11 @@ class Keyboard():
         """Resets inputs."""
         self.key_pressed = {}
 
+
 # mouse inputs
-class Mouse():
+class Mouse:
     """Used to get mouse inputs and movement."""
+
     def __init__(self):
         self.button_pressed = {}
         self.button_pressed_pos = {}

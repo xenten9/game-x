@@ -1,40 +1,45 @@
 """Camera objects for containing information for the screen."""
-# External libraries
+
 from pygame import Surface
 
-# Local imports
 from ..types.vector import vec2d
+from ..types import Component
 
-class Camera():
+
+class Camera(Component):
     """Camera object for defining viewframe."""
+
     def __init__(self, engine, size: vec2d):
-        self.engine = engine
+        super().__init__(engine)
         self.size = size
+        self.level_size = size
         self._pos = vec2d(0, 0)
         self._surface = Surface(size.ftup())
 
-    def pos_get(self) -> vec2d:
+    @property
+    def pos(self) -> vec2d:
         return self._pos
 
-    def pos_set(self, pos: vec2d):
-        """Position setter."""
+    @pos.setter
+    def pos(self, pos: vec2d):
         self._pos = pos
-
-    pos = property(pos_get, pos_set)
 
     @property
     def surface(self):
         return self._surface
 
-    def draw_surface(self, pos: vec2d, surface: Surface,
-                   gui: bool = False, special_flags=0):
+    def draw_surface(
+        self, pos: vec2d, surface: Surface, gui: bool = False, special_flags=0
+    ):
         """Draws a surface at a position."""
         if gui:
-            self._surface.blit(surface, pos,
-                               special_flags=special_flags)
+            self._surface.blit(
+                surface, pos.ftup(), special_flags=special_flags
+            )
         else:
-            self._surface.blit(surface, pos - self.pos,
-                               special_flags=special_flags)
+            self._surface.blit(
+                surface, (pos - self.pos).ftup(), special_flags=special_flags
+            )
 
     def blank(self):
         """Blanks the screen"""

@@ -3,8 +3,8 @@
 from os import getpid
 from psutil import Process
 
-# Local imports
-from .engine.types.vector import vec2d
+
+from .engine.types import vec2d
 
 # Constants
 PROCESS = Process(getpid())

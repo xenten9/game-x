@@ -1,22 +1,22 @@
 """Handles rendering, loading and modifying tilemaps and tile layers."""
-# Standard library
-from os import path, listdir
 
-# External libraries
-from pygame.image import load
+from os import listdir, path
+
 from pygame import Rect, draw
+from pygame.image import load
 from pygame.surface import Surface
 
-# Local imports
-from ..types.array import array2d
-from ..types.vector import vec2d
-from ..types.component import Component
-from .draw import Draw
 from ..constants import colorize
+from ..types import array2d
+from ..types import Component
+from ..types.vector import vec2d
+from .draw import Draw
+
 
 class TileMap(Component):
     """Handles background and foreground graphics."""
-    def __init__(self, engine: object):
+
+    def __init__(self, engine):
         super().__init__(engine)
         self.layers: dict[str, TileLayer] = {}
         self.tilemaps: dict[int, list[Surface]] = {}
@@ -26,7 +26,7 @@ class TileMap(Component):
     def add_tilemap(self, fname: str):
         """Adds a new tilemap to the tile_maps dictionary."""
         # Get image
-        tile_set = load(path.join(self.paths['tilemaps'], fname)).convert()
+        tile_set = load(path.join(self.paths["tilemaps"], fname)).convert()
         new_tile_map = []
         half = self.fulltile // 2
 
@@ -36,9 +36,9 @@ class TileMap(Component):
             surface = Surface((half, half))
 
             # Write section of image to surface
-            surface.blit(tile_set, (0, 0),
-                         area=Rect((xpos * (half), 0),
-                                   (half, half)))
+            surface.blit(
+                tile_set, (0, 0), area=Rect((xpos * (half), 0), (half, half))
+            )
 
             # Add surface to tilemap
             new_tile_map.append(surface)
@@ -53,40 +53,44 @@ class TileMap(Component):
         try:
             del self.tilemaps[map_id]
         except KeyError:
-            print('tilemap {} does not exist'.format(map_id))
+            print(f"tilemap {map_id} does not exist")
 
-    def add_layer(self, name: str, size: vec2d,
-                  data: dict, grid: list[list] = None):
+    def add_layer(
+        self, name: str, size: vec2d, data: dict, grid: list[list] = None
+    ):
         """Creates a layer."""
         self.layers[name] = TileLayer(
-            self.engine, self, name, size, data, grid)
+            self.engine, self, name, size, data, grid
+        )
 
     def remove_layer(self, name: str):
         """Removes an existing layer."""
         try:
             del self.layers[name]
         except KeyError:
-            print('layer {} does not exist'.format(name))
+            print(f"layer {name} does not exist")
 
     def get_image(self, map_id: int, tile_id: int):
         """Gets tile image."""
         try:
             self.tilemaps[map_id]
         except KeyError:
-            directory = listdir(self.paths['tilemaps'])
+            directory = listdir(self.paths["tilemaps"])
             for file in directory:
                 if int(file[0]) == map_id:
                     self.add_tilemap(file)
                     return self.tilemaps[map_id][tile_id]
-            code = ['Tilemap not found.',
-                    'Tilemap dir: {}'.format(self.paths['tilemaps']),
-                    'Tilemap id: {}'.format(map_id)]
-            msg = '\n  ' + '\n  '.join(code)
-            raise FileNotFoundError(colorize(msg, 'red'))
+            msg = (
+                "Tilemap not found.\n"
+                f"Tilemap dir: {self.paths['tilemaps']}\n"
+                f"Tilemap id: {map_id}\n"
+            )
+            raise FileNotFoundError(colorize(msg, "red"))
         return self.tilemaps[map_id][tile_id]
 
     def add_all(self):
-        directory = listdir(self.paths['tilemaps'])
+        """Load all of the tilemaps."""
+        directory = listdir(self.paths["tilemaps"])
         for file in directory:
             try:
                 if int(file[0]):
@@ -95,57 +99,70 @@ class TileMap(Component):
                 pass
 
     def clear_cache(self):
+        """Unload all tile maps."""
         self.tilemaps = {}
         self.tilemaps_list = []
         try:
-            self.add_tilemap('0-null.png')
+            self.add_tilemap("0-null.png")
         except FileNotFoundError:
-            code = ['Tilemap not found.',
-                    'Tilemap dir: {}'.format(self.paths['tilemaps']),
-                    'Tilemap name: {}'.format('0-null.png')]
-            raise FileNotFoundError('\n  ' + '\n  '.join(code))
+            msg = (
+                "Tilemap not found.\n"
+                f"Tilemap dir: {self.paths['tilemaps']}\n"
+                "Tilemap id: 0-null.png\n"
+            )
+            raise FileNotFoundError(colorize(msg, "red"))
 
     def clear_ent(self):
+        """Clear all tile layers."""
         self.layers = {}
 
-# Layer with tiles
+
 class TileLayer(Component):
     """Layer containing all of the tiles in a lookup form."""
-    def __init__(self, engine: object, tile_handler: TileMap, name: str,
-                 size: vec2d, data: dict, array: list[list] = None):
+
+    def __init__(
+        self,
+        engine,
+        tile_handler: TileMap,
+        name: str,
+        size: vec2d,
+        data: dict,
+        array: list[list] = None,
+    ):
         super().__init__(engine)
         self.tile = tile_handler
         self.name = name
         self.size = size.ftup()
         self.array = array2d(self.size)
         if array is not None:
-            self.array._array = array
+            self.array.array = array
         self.surface = Surface((0, 0))
         self.visible = True
         self.data = data
         try:
-            self.parallax = vec2d(1, 1) - vec2d(*data['parallax'])
+            self.parallax = vec2d(1, 1) - vec2d(*data["parallax"])
         except KeyError:
             self.parallax = vec2d(0, 0)
         try:
-            self.depth = data['depth']
+            self.depth = data["depth"]
         except KeyError:
             self.depth = 0
 
     def update(self):
+        """Update the depth value."""
         try:
-            self.depth = self.data['depth']
+            self.depth = self.data["depth"]
         except KeyError:
             pass
 
     def place(self, pos: vec2d, tilemap_id: int, tile_id: int):
         """Add tiles to grid on the layer."""
-        x, y = pos // (self.fulltile // 2)
+        x, y = (pos // (self.fulltile // 2)).ftup()
         self.array.set(x, y, (tilemap_id, tile_id))
 
     def remove(self, pos: vec2d):
         """Remove tiles from the grid on the grid."""
-        x, y = pos // (self.fulltile // 2)
+        x, y = (pos // (self.fulltile // 2)).ftup()
         try:
             self.array.delete(x, y)
         except IndexError:
@@ -160,7 +177,7 @@ class TileLayer(Component):
                 surface = Surface(surface_size.ftup())
                 asurface = surface.convert_alpha()
                 asurface.fill((0, 0, 0, 0))
-                asurface.blit(self.surface, vec2d(0, 0))
+                asurface.blit(self.surface, (0, 0))
             surface = self.surface
             depth = self.depth
             if self.engine.parallax and self.parallax != vec2d(0, 0):
@@ -179,7 +196,7 @@ class TileLayer(Component):
 
     def cache(self):
         """Cache grid to surface."""
-        halftile = (self.fulltile // 2)
+        halftile = self.fulltile // 2
         size = vec2d(*self.size) * halftile
         self.surface = Surface(size.ftup()).convert_alpha()
         self.surface.fill((0, 0, 0, 0))
@@ -191,7 +208,7 @@ class TileLayer(Component):
                 if isinstance(cell, tuple):
                     tile = self.tile.get_image(*cell)
                     pos = vec2d(x, y) * halftile
-                    self.surface.blit(tile, pos)
+                    self.surface.blit(tile, pos.ftup())
 
     def cache_partial(self, pos: vec2d):
         """Cache tile to Surface."""
@@ -211,9 +228,11 @@ class TileLayer(Component):
                 tile = self.tile.get_image(*tile_info)
                 size = vec2d(*self.surface.get_size()) // 16
                 if x >= size.x or y >= size.y:
-                    new_size = vec2d(max(x + 1, size.x) * 16, max(y + 1, size.y) * 16)
+                    new_size = vec2d(
+                        max(x + 1, size.x) * 16, max(y + 1, size.y) * 16
+                    )
                     new_surface = Surface(new_size.ftup()).convert_alpha()
                     new_surface.fill((0, 0, 0, 0))
                     new_surface.blit(self.surface, (0, 0))
                     self.surface = new_surface
-                self.surface.blit(tile, pos)
+                self.surface.blit(tile, pos.ftup())

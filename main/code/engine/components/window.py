@@ -1,19 +1,21 @@
 """Object for rendering to the screen."""
-# Standard library
+
 from pygame import display, HWSURFACE, DOUBLEBUF
 
-# Local imports
-from ..types.component import Component
+
+from ..types import Component
 from ..types.vector import vec2d
 from .camera import Camera
 
+
 class Window(Component):
     """Handles graphics."""
+
     def __init__(self, engine, size: vec2d):
         super().__init__(engine)
         size = size.floor()
         flags = HWSURFACE | DOUBLEBUF
-        self.display = display.set_mode(size, flags)
+        self.display = display.set_mode(size.ftup(), flags)
         self.size = size
 
     def render(self, camera: Camera):
