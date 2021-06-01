@@ -19,7 +19,7 @@ are:
 
 # making a build of the game
 The requirements in order to run:
-    build_game.py
+    ~/build_game.py
 are:
     pyinstaller==4.3
     py7zr==0.16.1
