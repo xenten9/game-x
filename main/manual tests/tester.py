@@ -1,44 +1,17 @@
-from os import path, getcwd, sep as ossep
+"""Game-X Level testing tool."""
+printer = ["\033[36m# Game-X tester.py"]
+
 import sys
+from os import getcwd, path
 
-printer = ["### tester.py"]
-
-# Try to get root
-root = ""
-try:
-    import git
-
-    def get_root_git():
-        git_repo = git.Repo(getcwd(), search_parent_directories=True)
-        git_root = str(git_repo.working_dir)
-        return git_root
-
-    try:
-        root = get_root_git()
-    except git.InvalidGitRepositoryError:
-        pass
-except ImportError:
-    pass
-
-
-def get_root(dir_name):
-    main_path = getcwd()
-    part = ""
-    while part != dir_name:
-        main_path, part = path.split(main_path)
-        if main_path == path.abspath(ossep):
-            MSG = "Unable to find root in path."
-            raise FileNotFoundError(MSG)
-    return path.join(main_path, part)
-
-
-if root == "":
-    if getattr(sys, "frozen", False):
-        root = path.dirname(sys.executable)
-    else:
-        # Try finding root by name
-        root = get_root("game-x")
-
+# Add root of executable
+if getattr(sys, "frozen", False):
+    root = path.dirname(sys.executable)
+    if root not in sys.path:
+        printer.append(f"adding path: {root}")
+        sys.path.insert(0, root)
+else:
+    root = getcwd()
 
 # Print out sys.path
 printer.append("sys.path: ")
@@ -49,6 +22,7 @@ for spath in sys.path:
 if root not in sys.path:
     printer.append(f"adding path: {root}")
     sys.path.insert(0, root)
+
 
 from main.code.application import Application
 from main.code.engine.engine import Engine

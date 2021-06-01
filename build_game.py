@@ -5,6 +5,7 @@ from shutil import copytree, rmtree, copy as shcopy
 import PyInstaller.__main__
 from py7zr import SevenZipFile
 from main.code.engine.constants import cprint, clear_terminal, colorize
+import re
 
 # Build instructions
 def get_version() -> str:
@@ -15,43 +16,11 @@ def get_version() -> str:
     if version == "exit":
         sys.exit()
 
-    if "-" in version:
-        version_parts = version.split("-")
-        prefix, suffix = version_parts[0:2]
+    reg = r"(v[0-9]\.[0-9]\.[0-9])+(-alpha|-beta)?"
+    if re.fullmatch(reg, version):
+        return version
     else:
-        version_parts = [version]
-        prefix = version
-        suffix = ""
-
-    # Check prefix
-    if prefix[0] != "v":
-        msg = colorize("Prefix must start with v", "red")
-        raise ValueError(msg)
-
-    version_numbers = prefix[1:].split(".")
-    if len(version_numbers) != 3:
-        msg = colorize("Prefix must be 3 numbers long", "red")
-        raise ValueError(msg)
-
-    for num in version_numbers:
-        try:
-            int(num)
-        except (TypeError, ValueError) as error:
-            msg = colorize("Prefix must be integers", "red")
-            raise ValueError(msg) from error
-
-    # Check suffix
-    if suffix != "":
-        if suffix not in ("alpha", "beta"):
-            msg = colorize("Suffix must be in the form (alpha, beta)", "red")
-            raise ValueError(msg)
-
-        if len(version_parts) > 2:
-            msg = colorize("Version must be in form prefix-suffix", "red")
-            raise ValueError(msg)
-
-    # Proper version
-    return version
+        raise ValueError("Improper version string")
 
 
 def main():

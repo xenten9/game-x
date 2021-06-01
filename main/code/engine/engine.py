@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import sys
-from os import getcwd, mkdir, path
+from os import mkdir, path
 from typing import Callable
 
 from .components import (
@@ -35,7 +34,7 @@ class Engine:
         object_creator: Callable,
         root: str,
         object_limit: int = None,
-        debug: bool = False
+        debug: bool = False,
     ):
         # Define constants
         self.FULLTILE = fulltile
