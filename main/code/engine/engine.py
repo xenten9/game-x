@@ -46,6 +46,7 @@ class Engine:
         if not path.exists(self.paths["root"]):
             msg = f"ROOT: {root} DOES NOT EXIST"
             raise FileNotFoundError(colorize(msg, "red"))
+
         self.paths["debug"] = path.join(self.paths["root"], "debug")
         self.paths["assets"] = path.join(self.paths["root"], "assets")
         self.paths["sprites"] = path.join(self.paths["assets"], "sprites")

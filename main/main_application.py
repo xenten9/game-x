@@ -38,8 +38,7 @@ except ModuleNotFoundError as error:
 def create_objects(engine: Engine, **kwargs):
     """Takes in a set of keywords and uses them to make an object."""
     # Setup
-    name: str = kwargs["name"]
-    cname: str = name
+    cname: str = kwargs["name"]
 
     # Classify the name
     parts = cname.split("-")
@@ -55,20 +54,21 @@ def create_objects(engine: Engine, **kwargs):
             except AttributeError:
                 # NOTE here is where mods would be implemented.
                 # SEE ~/game-x/ideas.txt
-                msg = f"Unable to find: {cname}"
+                msg = f"Unable to find class: {cname}"
                 cprint(msg, "red")
                 return
 
     # Instantiate the class
-    if issubclass(obj_class, entities.Entity):
-        key = kwargs["key"]
-        data = kwargs["data"]
-        key = engine.obj.instantiate_key(key)
-        if issubclass(obj_class, game_objects.GameObject):
-            pos = kwargs["pos"]
-            obj_class(engine, key, name, data, pos)
+    sc_entity = issubclass(obj_class, entities.Entity)
+    sc_game_object = issubclass(obj_class, game_objects.GameObject)
+
+    if sc_entity:
+        kwargs["key"] = engine.obj.instantiate_key(kwargs["key"])
+        if sc_game_object:
+            obj_class(engine, **kwargs)
         else:
-            obj_class(engine, key, name, data)
+            del kwargs["pos"]
+            obj_class(engine, **kwargs)
 
 
 # Special

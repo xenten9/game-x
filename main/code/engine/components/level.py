@@ -2,13 +2,11 @@
 
 import json
 import uuid
-from ast import literal_eval
 from os import path
 from typing import Union
 
 from ..constants import colorize, cprint
-from ..types import Component
-from ..types.vector import vec2d
+from ..types import Component, vec2d
 from .tile import TileLayer
 
 
@@ -185,57 +183,6 @@ class Level(Component):
         level.write(data)
         level.close()
         cprint("successful level save!", "green")
-
-    def convert(self, level_name: Union[str, None] = None):
-        """Convert from depreceated .lvl format to .json
-        NOTE since this is depreceated it will be removed by v0.1.0-alpha
-        """
-        # Get file name
-        if level_name is None:
-            while level_name in ("", None):
-                level_name = input("load level name? ")
-                if level_name in ("", None):
-                    cprint("improper level name.", "yellow")
-                elif level_name == "exit":
-                    return
-                else:
-                    level = path.join(
-                        self.paths["levels"], level_name + ".lvl"
-                    )
-                    if not path.exists(level):
-                        level_name = None
-                        cprint("improper level name.", "yellow")
-        else:
-            level = path.join(self.paths["levels"], level_name + ".lvl")
-            if not path.exists(level):
-                msg = (
-                    "LEVEL ERROR\n"
-                    f"path: {level}\n"
-                    f"level name: {level_name}\n"
-                    "level not found\n"
-                )
-                raise FileNotFoundError(colorize(msg, "red"))
-        if not isinstance(level_name, str):
-            return
-
-        # Load .lvl file
-        level_name = path.join(self.paths["levels"], level_name)
-        file = open(level_name + ".lvl", "r")
-        conents = file.readlines()
-        file.close()
-
-        # Evaluate file
-        level_data = []
-        for line in conents:
-            level_data.append(literal_eval(line))
-
-        # Create json dump
-        json_level_data = json.dumps(level_data, indent=2)
-
-        # Write to file
-        file = open(level_name + ".json", "w")
-        file.write(json_level_data)
-        file.close()
 
     def reset(self):
         """Restart current level."""
