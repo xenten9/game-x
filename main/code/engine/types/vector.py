@@ -8,8 +8,10 @@ class vec2d:
         self.x = x
         self.y = y
 
-    # def __new__(cls, x, y):
-    #    return cls(x, y)
+    def __eq__(self, other) -> bool:
+        if self.x == other.x and self.y == other.y:
+            return True
+        return False
 
     def __len__(self):
         return 2

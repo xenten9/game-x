@@ -39,10 +39,7 @@ def create_objects(engine: Engine, **kwargs):
     """Takes in a set of keywords and uses them to make an object.
     engine: engine which contains game components.
 
-    Required kwargs:
     name: name of the object being created.
-
-    Dependent kwargs:
     key: id of the key when created
     pos: position of the created object.
     data: dictionary containing kwargs for __init__."""

@@ -2,7 +2,8 @@
 
 from ast import literal_eval
 from os import path
-from typing import Optional
+import sys
+from typing import Optional, Union
 
 
 from numpy import sign
@@ -106,6 +107,7 @@ class ObjCursor(Entity):
             "right": (7, 79),
             "up": (26, 82),
             "down": (22, 81),
+            "fill": (40,),
         }
 
         self.mkeys = {"place": (1,), "remove": (3,)}
@@ -135,6 +137,7 @@ class ObjCursor(Entity):
             "right": False,
             "up": False,
             "down": False,
+            "fill": False,
         }
 
         self.mkey = {
@@ -290,6 +293,7 @@ class ObjCursor(Entity):
             if pos != self.pos or self.mkey["place"]:
                 self.pos = pos
                 self._place_object()
+
         # Select and move object
         elif self.mkey["Hplace"]:
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
@@ -443,23 +447,45 @@ class ObjCursor(Entity):
                 print(f"data: {layer.data}")
 
         # Mouse
-        # Place tile
-        if self.mkey["Hplace"] and self.kkey["Hcontrol"]:
+        if self.mkey["Hplace"] or self.mkey["Hremove"]:
             # Update position
             pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
             pos = pos.grid(FULLTILE // 2)
-            if self.pos != pos or self.mkey["place"]:
-                self.pos = pos
-                self._place_tile()
 
-        # Remove tile
-        elif self.mkey["Hremove"] and self.kkey["Hcontrol"]:
-            # Update position
-            pos = self.engine.inp.ms.get_pos() + self.engine.cam.pos
-            pos = pos.grid(FULLTILE // 2)
-            if self.pos != pos or self.mkey["remove"]:
+            # Place tile
+            if self.mkey["Hplace"] and self.kkey["Hcontrol"]:
+                if self.pos != pos or self.mkey["place"]:
+                    self.pos = pos
+                    self._place_tile()
+
+            # Remove tile
+            elif self.mkey["Hremove"] and self.kkey["Hcontrol"]:
+                if self.pos != pos or self.mkey["remove"]:
+                    self.pos = pos
+                    self._remove_tile()
+
+            else:
                 self.pos = pos
-                self._remove_tile()
+
+        # Fill
+        if self.kkey["fill"]:
+            layer = self._get_current_layer()
+            if self.kkey["Hshift"]:
+                new = None
+            else:
+                new = (self.tilemap_id, self.tilemap_select)
+            try:
+                old = layer.array.get(*(self.pos // (FULLTILE // 2)).ftup())
+            except IndexError:
+                print('Fill point outside of domain')
+                return
+            if new != old:
+                try:
+                    print('Recursive fill start')
+                    self._fill(layer, *(self.pos // (FULLTILE // 2)).ftup(), old, new, 0)
+                except RecursionError:
+                    print('Exceeded recursion depth')
+                    raise
 
     def _place_tile(self):
         """Places tile under cursor."""
@@ -484,6 +510,28 @@ class ObjCursor(Entity):
 
     def _get_current_tile(self) -> Surface:
         return self.tilemap[self.tile_select]
+
+    def _fill(
+        self,
+        layer: TileLayer,
+        x: int,
+        y: int,
+        old: Union[tuple[int, int], None],
+        new: Union[tuple[int, int], None],
+        depth: int,
+    ):
+        try:
+            tile = layer.array.get(x, y)
+        except IndexError:
+            return
+        if tile != old:
+            return
+        layer.array.set(x, y, new)
+        layer.cache_partial(vec2d(x, y)*(FULLTILE//2))
+        self._fill(layer, x + 1, y, old, new, depth)  # Right
+        self._fill(layer, x - 1, y, old, new, depth)  # Left
+        self._fill(layer, x, y + 1, old, new, depth)  # Down
+        self._fill(layer, x, y - 1, old, new, depth)  # Up
 
     # Wall
     def wall_mode(self):
