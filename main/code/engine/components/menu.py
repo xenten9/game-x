@@ -8,10 +8,9 @@ from pygame import Rect
 from pygame.surface import Surface
 
 
-from ..constants import colorize
-from ..types.vector import vec2d
-from ..types import Component
-from .draw import Draw
+from main.code.engine.constants import colorize
+from main.code.engine.types import vec2d, Component
+from main.code.engine.components.output_handler import Draw
 
 
 class Menu(Component):
@@ -19,8 +18,16 @@ class Menu(Component):
 
     def __init__(self, engine):
         super().__init__(engine)
-        self.visible = True
+        self._visible = True
         self.elements: dict[str, Any] = {}
+
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, visible: bool):
+        self._visible = visible
 
     def add(self, element: MenuElement):
         """Add element to menu."""
@@ -46,9 +53,9 @@ class Menu(Component):
                     element.draw(draw)
 
 
-class MenuElement:
+class MenuElement(Component):
     def __init__(self, engine, menu: Menu, name: str):
-        self._engine = engine
+        super().__init__(engine)
         self._menu = menu
         self._name = name
         self._pos = vec2d(0, 0)
@@ -201,8 +208,8 @@ class MenuText(MenuElementVisible):
 
     def cache(self):
         """Render text to surface."""
-        font = self._engine.font.get(self.font, self.size)
-        render = font.render(self.text, 0, self.color)
+        font = self.engine.assets.font.get(self.font, self.size)
+        render = font.render(self.text, False, self.color)
         self.surface = render
 
 
@@ -308,7 +315,7 @@ class MenuButton(MenuElement):
         would be vec2d(1.0, 1.0), and top left vec2d(0.0, 0.0),
         NOTE return are not bounded [0.0, 1.0] when held is enabled."""
         if self.menu.visible:
-            pos = self._engine.inp.ms.get_button_pressed_pos(self.mkey)
+            pos = self.engine.input.ms.get_button_pressed_pos(self.mkey)
             if pos is not None:
                 if self.collide(pos):
                     if self.held:
@@ -317,8 +324,8 @@ class MenuButton(MenuElement):
                         pos = pos - self.get_cpos(self.size)
                         self.call(self, pos / self.size)
             if self.focus:
-                if self._engine.inp.ms.get_button_held(self.mkey):
-                    pos = self._engine.inp.ms.get_pos()
+                if self.engine.input.ms.get_button_held(self.mkey):
+                    pos = self.engine.input.ms.get_pos()
                     pos = pos - self.get_cpos(self.size)
                     self.call(self, pos / self.size)
                 else:
@@ -338,14 +345,18 @@ class MenuButtonFull(SubMenu, MenuElementVisible):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self.elements = {}
-        self.text = MenuText(self._engine, self, name + "-text")
-        self.rect = MenuRect(self._engine, self, name + "-rect")
-        self.button = MenuButton(self._engine, self, name + "-button")
+        self.text = MenuText(self.engine, self, name + "-text")
+        self.rect = MenuRect(self.engine, self, name + "-rect")
+        self.button = MenuButton(self.engine, self, name + "-button")
         self._size = vec2d(0, 0)
 
     @property
-    def visible(self):
+    def visible(self) -> bool:
         return self.menu.visible
+
+    # @visible.setter
+    # def visible(self, visible: bool):
+    #    self.menu.visible = visible
 
     @property
     def pos(self):
@@ -393,10 +404,10 @@ class MenuSlider(SubMenu, MenuElementVisible):
     def __init__(self, engine, menu: Menu, name: str):
         super().__init__(engine, menu, name)
         self.elements = {}
-        self.rect_slide = MenuRect(self._engine, self, name + "-rect-slide")
+        self.rect_slide = MenuRect(self.engine, self, name + "-rect-slide")
         self.rect_slide.depth = 12
-        self.rect_back = MenuRect(self._engine, self, name + "-rect-back")
-        self.button = MenuButton(self._engine, self, name + "-button")
+        self.rect_back = MenuRect(self.engine, self, name + "-rect-back")
+        self.button = MenuButton(self.engine, self, name + "-button")
         self.button.held = True
         self._size = vec2d(0, 0)
         self._value: float = 1

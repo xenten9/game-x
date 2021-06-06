@@ -21,7 +21,7 @@ for spath in sys.path:
 try:
     from main.code.application import Application
     from main.code.constants import FPS, FULLTILE, SIZE
-    from main.code.engine.components.camera import Camera
+    from main.code.engine.components.output_handler import Camera
     from main.code.engine.components.maths import f_limit
     from main.code.engine.components.menu import MenuText
     from main.code.engine.constants import clear_terminal, cprint
@@ -63,13 +63,13 @@ def create_objects(engine: Engine, **kwargs):
     sc_game_object = issubclass(obj_class, game_objects.GameObject)
 
     if sc_entity:
-        kwargs["key"] = engine.obj.instantiate_key(kwargs["key"])
+        kwargs["key"] = engine.objects.ent._check_key(kwargs["key"])
         if sc_game_object:
-            obj_class(engine, **kwargs)
+            obj = obj_class(engine, **kwargs)
         else:
             del kwargs["pos"]
-            obj_class(engine, **kwargs)
-
+            obj = obj_class(engine, **kwargs)
+        engine.objects.ent.add(obj, kwargs["key"])
 
 # Special
 class View(Camera):
@@ -116,7 +116,7 @@ class Game(Application):
             rect.size = vec2d(190, 52)
 
         # Load main menu
-        self.lvl.load("mainmenu")
+        self.objects.level.load("mainmenu")
 
     def update(self):
         """Update all objecsts and menu's."""
@@ -126,8 +126,8 @@ class Game(Application):
         debug = self.debug
         if debug:
             volume = debug.menu.get("volume")
-            vol = self.aud.volume
-            mvol = self.aud.music.volume
+            vol = self.output.audio.volume
+            mvol = self.output.audio.music.volume
             volume.text = f"volume: {vol}; music_volume: {mvol}"
 
 

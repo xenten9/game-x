@@ -1,17 +1,24 @@
-"""Handles game audio"""
-
-from typing import Union
 from os import path
+from typing import Union
+
+from main.code.engine.constants import colorize, cprint
+from main.code.engine.types import Component, vec2d
+from pygame import DOUBLEBUF, HWSURFACE, display, mixer
+from pygame.surface import Surface
+
+DRAW = tuple[Surface, vec2d, bool, int]
 
 
-from pygame import mixer
+class OutputHandler(Component):
+    def __init__(self, engine, window_size: vec2d):
+        super().__init__(engine)
+        self.audio = Audio(engine)
+        self.draw = Draw(engine)
+        self.window = Window(engine, window_size)
+        self.cam = Camera(engine, window_size)
 
 
-from ..types import Component
-from ..constants import cprint
-
-
-class Mixer(Component):
+class Audio(Component):
     """Handles all audio."""
 
     def __init__(self, engine):
@@ -37,9 +44,9 @@ class Music(Component):
     """Play's music in game.
     Can only play one song at a time."""
 
-    def __init__(self, engine, mix: Mixer):
+    def __init__(self, engine, audio: Audio):
         super().__init__(engine)
-        self.mixer = mix
+        self.audio = audio
         self.music = None
         self.music_queue = None
         self.fading = False
@@ -50,7 +57,7 @@ class Music(Component):
 
     @property
     def main_volume(self):
-        return self.mixer.volume
+        return self.audio.volume
 
     @property
     def volume(self):
@@ -123,15 +130,15 @@ class SFX(Component):
     """Play's sound effects.
     Can play multiple sounds at a time."""
 
-    def __init__(self, engine, mix: Mixer):
+    def __init__(self, engine, audio: Audio):
         super().__init__(engine)
-        self.mixer = mix
+        self.audio = audio
         self.tracks: dict[str, mixer.Sound] = {}
         self.tvolume: dict[str, float] = {}
 
     @property
     def main_volume(self) -> float:
-        return self.mixer.volume
+        return self.audio.volume
 
     def update_volume(self):
         for key in self.tracks:
@@ -169,3 +176,112 @@ class SFX(Component):
 
     def clear(self):
         self.tracks = {}
+
+
+class Camera(Component):
+    """Camera object for defining viewframe."""
+
+    def __init__(self, engine, size: vec2d):
+        super().__init__(engine)
+        self.size = size
+        self.level_size = size
+        self._pos = vec2d(0, 0)
+        self._surface = Surface(size.ftup())
+
+    @property
+    def pos(self) -> vec2d:
+        return self._pos
+
+    @pos.setter
+    def pos(self, pos: vec2d):
+        self._pos = pos
+
+    @property
+    def surface(self):
+        return self._surface
+
+    def draw_surface(
+        self,
+        surface: Surface,
+        pos: vec2d,
+        gui: bool = False,
+        special_flags: int = 0,
+    ):
+        """Draws a surface at a position."""
+        if gui:
+            self._surface.blit(
+                surface, pos.ftup(), special_flags=special_flags
+            )
+        else:
+            self._surface.blit(
+                surface, (pos - self.pos).ftup(), special_flags=special_flags
+            )
+
+    def blank(self):
+        """Blanks the screen"""
+        self._surface.fill((255, 255, 255))
+
+
+class Draw(Component):
+    def __init__(self, engine):
+        super().__init__(engine)
+        self.depths: dict[int, list[DRAW]] = {}
+
+    def add(
+        self,
+        depth: int,
+        surface: Surface,
+        pos: vec2d,
+        gui: bool = False,
+        special_flags: int = 0,
+    ):
+        """Add an element to be drawn when called."""
+        if not isinstance(depth, int):
+            msg = (
+                "Depth must be int\n"
+                f"Depth: {depth}\n"
+                f"Depth<type>: {type(depth)}\n"
+            )
+            raise TypeError(colorize(msg, "red"))
+        try:
+            self.depths[depth]
+        except KeyError:
+            self.depths[depth] = []
+        self.depths[depth].append((surface, pos, gui, special_flags))
+
+    def render(self, window: Camera):
+        """Render all depths."""
+        # Sort depths
+        depths = sorted(self.depths)
+        for i in depths:
+            depth = self.depths[i]
+
+            for draw in depth:
+                window.draw_surface(*draw)
+
+        self.depths = {}
+
+
+class Window(Component):
+    """Object for rendering to the screen."""
+
+    def __init__(self, engine, size: vec2d):
+        super().__init__(engine)
+        display.init()
+        size = size.floor()
+        flags = HWSURFACE | DOUBLEBUF
+        self.display = display.set_mode(size.ftup(), flags)
+        self.size = size
+
+    def render(self, camera: Camera):
+        """Renders camera surface to screen."""
+        surface = camera.surface
+        self.display.blit(surface, (0, 0))
+
+    def update(self):
+        """Update screen."""
+        display.flip()
+
+    def blank(self):
+        """Blanks the screen in-between frames."""
+        self.display.fill((255, 255, 255))

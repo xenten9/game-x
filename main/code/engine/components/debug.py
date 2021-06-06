@@ -3,11 +3,10 @@
 from os import path, mkdir
 from datetime import datetime
 
-from .menu import Menu, MenuRect, MenuText
-from .draw import Draw
-from ..types.vector import vec2d
-from ..types import Component
-from ..types.entity import Entity
+from main.code.engine.components.menu import Menu, MenuRect, MenuText
+from main.code.engine.components.output_handler import Draw
+from main.code.engine.types import Component, vec2d
+from main.code.engine.types.entity import Entity
 
 
 class Debug(Component, Entity):
@@ -16,7 +15,7 @@ class Debug(Component, Entity):
         self.debug = debug
 
         if self.debug:
-            self.engine.obj.sobj["debug"] = self
+            self.engine.objects.ent.sobj["debug"] = self
 
             # Menu vars
             self.menu = Menu(engine)

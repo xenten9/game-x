@@ -1,11 +1,13 @@
-from ..components.draw import Draw
+from main.code.engine.components.output_handler import Draw
 
 
 class Entity:
     """Base class for all game entities."""
 
     def __init__(self, engine, key: int, name: str, data: dict):
-        self.engine = engine
+        from main.code.engine.engine import Engine
+
+        self.engine: Engine = engine
         self.key = key
         self.name = name
         self.data = data

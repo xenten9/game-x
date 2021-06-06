@@ -66,7 +66,7 @@ def create_objects(engine: Engine, **kwargs):
     if issubclass(obj_class, entities.Entity):
         key = kwargs["key"]
         data = kwargs["data"]
-        key = engine.obj.instantiate_key(key)
+        key = engine.objects.ent._check_key(key)
         if issubclass(obj_class, game_objects.GameObject):
             pos = kwargs["pos"]
             obj_class(engine, key, name, data, pos)
@@ -81,7 +81,7 @@ class Game(Application):
 
     def draw_all(self):
         super().draw_all()
-        self.col.st.draw(self.draw)
+        self.objects.col.st.draw(self.output.draw)
 
 
 class TestCol(game_objects.GameObject):
@@ -114,11 +114,11 @@ class TestCol(game_objects.GameObject):
     def get_inputs(self):
         for key in self.kkey:
             if key[0] != "H":
-                self.kkey[key] = self.engine.inp.kb.get_key_pressed(
+                self.kkey[key] = self.engine.input.kb.get_key_pressed(
                     *self.kkeys[key]
                 )
             else:
-                self.kkey[key] = self.engine.inp.kb.get_key_held(
+                self.kkey[key] = self.engine.input.kb.get_key_held(
                     *self.kkeys[key[1:]]
                 )
 
@@ -149,9 +149,9 @@ class TestCol(game_objects.GameObject):
 def main():
     game = Game()
 
-    game.lvl.load("test-level")
+    game.objects.level.load("test-level")
 
-    key = game.obj.instantiate_key()
+    key = game.objects.ent._get_key()
     TestCol(game, key)
 
     game.main_loop()

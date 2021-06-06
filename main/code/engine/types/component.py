@@ -9,4 +9,5 @@ class Component:
 
         self.engine: Engine = engine
         self.fulltile: int = self.engine.FULLTILE
+        self.halftile: int = self.engine.FULLTILE // 2
         self.paths: dict[str, str] = self.engine.paths

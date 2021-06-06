@@ -11,7 +11,7 @@ from ..constants import FULLTILE
 from .entities import Entity, ObjPauseMenu
 from ..engine.engine import Engine
 from ..engine.constants import cprint
-from ..engine.components.draw import Draw
+from ..engine.components.output_handler import Draw
 from ..engine.components.maths import f_loop
 from ..engine.types import vec2d
 from ..engine.constants import colorize
@@ -48,7 +48,6 @@ class GameObject(Entity):
         self.col = Collider(engine, pos, size, offset)
 
         self.depth = 1
-        engine.obj.instantiate_object(key, self)
         rel = offset
         w, h = size - vec2d(1, 1)
         self.cpoints = (
@@ -130,7 +129,7 @@ class GameObject(Entity):
         pos += self.origin
 
         # Get colliders
-        colliders = self.engine.col.dy.get_colliders()
+        colliders = self.engine.objects.col.dy.get_colliders()
         collide: list[object] = []
 
         # Check for collisions
@@ -157,7 +156,8 @@ class GameObject(Entity):
     # Removing index in object handler
     def delete(self):
         """Called when object is deleted from Objects dictionary."""
-        self.engine.col.dy.remove(self.key)
+        self.engine.objects.ent.delete(self.key)
+        self.engine.objects.col.dy.remove(self.key)
 
 
 class Collider:
@@ -186,7 +186,7 @@ class Collider:
         if pos is None:
             pos = self.pos
         for point in self.cpoints:
-            if self.engine.col.st.get(pos + point):
+            if self.engine.objects.col.st.get(pos + point):
                 return True
         return False
 
@@ -214,7 +214,7 @@ class ObjPlayer(GameObject, Damageable):
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
 
         # Add dynamic collider
-        engine.col.dy.add(key, self)
+        engine.objects.col.dy.add(key, self)
 
         # Controls
         self.kkeys = {
@@ -278,11 +278,11 @@ class ObjPlayer(GameObject, Damageable):
         self.iframe = 0
 
         # Audio
-        engine.aud.sfx.add("boop.wav")
+        engine.output.audio.sfx.add("boop.wav")
 
         # Pause menu
         self.pause_menu = ObjPauseMenu(self.engine, 0, "", {})
-        self.engine.obj.sobj["pause-menu"] = self.pause_menu
+        self.engine.objects.ent.sobj["pause-menu"] = self.pause_menu
         self.pause_menu.menu.visible = False
 
     @property
@@ -313,7 +313,7 @@ class ObjPlayer(GameObject, Damageable):
             if self.mode == 0:
                 # Reset room
                 if self.kkey["reset"] == 1:
-                    self.engine.lvl.reset()
+                    self.engine.objects.level.reset()
                     return
 
                 # Dynamic collision
@@ -366,17 +366,17 @@ class ObjPlayer(GameObject, Damageable):
             self.vspd += self.jump_speed
 
     def _die(self):
-        self.engine.aud.sfx.play("boop.wav")
-        self.engine.lvl.reset()
+        self.engine.output.audio.sfx.play("boop.wav")
+        self.engine.objects.level.reset()
 
     def _get_inputs(self):
         for key in self.kkey:
             if key[0] != "H":
-                self.kkey[key] = self.engine.inp.kb.get_key_pressed(
+                self.kkey[key] = self.engine.input.kb.get_key_pressed(
                     *self.kkeys[key]
                 )
             else:
-                self.kkey[key] = self.engine.inp.kb.get_key_held(
+                self.kkey[key] = self.engine.input.kb.get_key_held(
                     *self.kkeys[key[1:]]
                 )
 
@@ -515,7 +515,7 @@ class ObjPlayer(GameObject, Damageable):
 
     def delete(self):
         super().delete()
-        del self.engine.obj.sobj["pause-menu"]
+        del self.engine.objects.ent.sobj["pause-menu"]
 
 
 class ObjButton(GameObject):
@@ -534,7 +534,7 @@ class ObjButton(GameObject):
             vec2d(32, 8),
             offset=vec2d(0, FULLTILE - 8),
         )
-        engine.col.dy.add(key, self)
+        engine.objects.col.dy.add(key, self)
         try:
             self.door_id = self.data["door"]
         except KeyError:
@@ -546,7 +546,7 @@ class ObjButton(GameObject):
         if isinstance(obj, ObjPlayer):
             if self.frame == 0:
                 try:
-                    self.engine.obj.obj[self.door_id].frame = 1
+                    self.engine.objects.ent.obj[self.door_id].frame = 1
                 except AttributeError:
                     cprint("Unable to find door!", "red")
                 self.frame = 1
@@ -560,7 +560,7 @@ class ObjDoor(GameObject):
     ):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
-        engine.col.dy.add(key, self)
+        engine.objects.col.dy.add(key, self)
         try:
             self.next_level = self.data["level"]
         except KeyError:
@@ -573,7 +573,7 @@ class ObjDoor(GameObject):
         if isinstance(obj, ObjPlayer):
             if self.frame == 1:
                 try:
-                    self.engine.lvl.load(self.next_level)
+                    self.engine.objects.level.load(self.next_level)
                     return "return"
                 except AttributeError:
                     cprint("Unable to load level!", "red")
@@ -588,7 +588,7 @@ class ObjGravOrb(GameObject):
     ):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 32))
-        engine.col.dy.add(key, self)
+        engine.objects.col.dy.add(key, self)
         self.grav = self.data["grav"]
 
         # Images
@@ -622,7 +622,7 @@ class ObjGravOrb(GameObject):
                     obj.grav = obj.default_grav * -grav_mult
 
             # Remove self after collision with player
-            self.engine.obj.delete(self.key)
+            self.delete()
 
 
 class ObjSpike(GameObject):
@@ -641,7 +641,7 @@ class ObjSpike(GameObject):
             vec2d(32, 4),
             offset=vec2d(0, FULLTILE - 4),
         )
-        engine.col.dy.add(key, self)
+        engine.objects.col.dy.add(key, self)
         self.damage = 5
 
         # Images
@@ -661,7 +661,7 @@ class ObjSpikeInv(GameObject):
     ):
         # GameObject initialization
         super().__init__(engine, key, name, data, pos, vec2d(32, 4))
-        engine.col.dy.add(key, self)
+        engine.objects.col.dy.add(key, self)
         self.damage = 5
 
         # Images

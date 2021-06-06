@@ -1,26 +1,20 @@
 """Game engine."""
 
 from __future__ import annotations
+from main.code.engine.components.output_handler import OutputHandler
 
 from os import mkdir, path
 from typing import Callable
 
-from .components import (
-    Mixer,
-    Camera,
-    Collider,
-    Debug,
-    Draw,
-    Font,
-    Input,
-    Level,
+from main.code.engine.components import (
+    AssetHandler,
+    InputHandler,
     ObjectHandler,
+    Debug,
     Settings,
-    TileMap,
-    Window,
 )
-from .constants import colorize
-from .types import vec2d
+from main.code.engine.constants import colorize
+from main.code.engine.types import vec2d
 
 
 class Engine:
@@ -31,9 +25,8 @@ class Engine:
         fulltile: int,
         fps: int,
         size: vec2d,
-        object_creator: Callable,
+        create_object: Callable,
         root: str,
-        object_limit: int = None,
         debug: bool = False,
     ):
         # Define constants
@@ -47,17 +40,19 @@ class Engine:
             msg = f"ROOT: {root} DOES NOT EXIST"
             raise FileNotFoundError(colorize(msg, "red"))
 
+        # Non-Required
+        self.paths["settings"] = path.join(self.paths["root"], "settings")
         self.paths["debug"] = path.join(self.paths["root"], "debug")
+
+        # Assets
         self.paths["assets"] = path.join(self.paths["root"], "assets")
         self.paths["sprites"] = path.join(self.paths["assets"], "sprites")
-        self.paths["devsprites"] = path.join(
-            self.paths["assets"], "devsprites"
-        )
+        self.paths["devsprites"] = path.join(self.paths["sprites"], "dev")
         self.paths["levels"] = path.join(self.paths["assets"], "levels")
         self.paths["tilemaps"] = path.join(self.paths["assets"], "tilemaps")
         self.paths["music"] = path.join(self.paths["assets"], "music")
         self.paths["sfx"] = path.join(self.paths["assets"], "sfx")
-        self.paths["settings"] = path.join(self.paths["root"], "settings")
+
         for dirpath in self.paths:
             if dirpath not in ("root", "debug"):
                 if not path.exists(self.paths[dirpath]):
@@ -78,98 +73,13 @@ class Engine:
         self.parallax = False
 
         # Components
-        # Output
-        self._win = Window(self, size)
-        self._cam = Camera(self, size)
-        self._draw = Draw(self)
-        self._aud = Mixer(self)
-
-        # Input
-        self._inp = Input(self)
-
-        # System interaction
-        self._font = Font(self)
-
-        # Level interaction
-        self._col = Collider(self)
-        self._lvl = Level(self)
-        self._tile = TileMap(self)
-        if object_limit is None:
-            self._obj = ObjectHandler(self, object_creator)
-        else:
-            self._obj = ObjectHandler(self, object_creator, object_limit)
-
-        # Settings
-        self._set = Settings(self)
-
-        # Debug
-        self._debug = Debug(self, debug)
-
-    # All components
-    @property
-    def win(self) -> Window:
-        return self._win
-
-    @property
-    def cam(self) -> Camera:
-        return self._cam
-
-    @cam.setter
-    def cam(self, cam: Camera):
-        if issubclass(type(cam), Camera):
-            self._cam = cam
-
-    @property
-    def draw(self) -> Draw:
-        return self._draw
-
-    @property
-    def aud(self) -> Mixer:
-        return self._aud
-
-    @property
-    def inp(self) -> Input:
-        return self._inp
-
-    @property
-    def font(self) -> Font:
-        return self._font
-
-    @property
-    def col(self) -> Collider:
-        return self._col
-
-    @property
-    def lvl(self) -> Level:
-        return self._lvl
-
-    @property
-    def tile(self) -> TileMap:
-        return self._tile
-
-    @property
-    def obj(self) -> ObjectHandler:
-        return self._obj
-
-    @property
-    def settings(self) -> Settings:
-        return self._set
-
-    @property
-    def debug(self) -> Debug:
-        return self._debug
-
-    def clear_ent(self):
-        """Clears out all objects and colliders."""
-        self.obj.clear()
-        self.col.st.clear()
-        self.col.dy.clear()
-        self.tile.clear_ent()
-
-    def clear_cache(self):
-        """Clears out all objects and colliders."""
-        self.aud.sfx.clear()
-        self.tile.clear_cache()
+        self.input = InputHandler(self)
+        self.output = OutputHandler(self, size)
+        self.assets = AssetHandler(self)
+        self.objects = ObjectHandler(self, create_object)
+        self.debug = Debug(self, debug)
+        self.settings = Settings(self)
+        self.cam = self.output.cam
 
     def pause(self):
         self.paused = not self.paused
