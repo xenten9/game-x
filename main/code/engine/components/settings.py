@@ -4,8 +4,8 @@ from os import path
 import json
 
 
-from ..constants import cprint
-from ..types import Component
+from main.code.engine.constants import cprint
+from main.code.engine.types import Component
 
 
 class Settings(Component):
@@ -32,7 +32,7 @@ class Settings(Component):
     def volume(self, volume: float):
         if 0.0 <= volume <= 1.0:
             self._volume = volume
-            self.engine.aud.volume = volume
+            self.engine.output.audio.volume = volume
 
     def load(self):
         file = open(self.settings_file, "r")

@@ -15,7 +15,7 @@ from ..types import Component
 from ..types.vector import vec2d
 
 
-class Input(Component):
+class InputHandler(Component):
     def __init__(self, engine):
         super().__init__(engine)
         self.kb = Keyboard()
@@ -49,7 +49,7 @@ class Input(Component):
 
         # Music end
         elif event.type == 56709:
-            self.engine.aud.music.end()
+            self.engine.output.audio.music.end()
 
     def reset(self):
         """Resets keyboard and mouse."""

@@ -2,7 +2,18 @@ from __future__ import annotations
 from math import hypot, floor
 
 
-class vec2d:
+class classproperty(property):
+    def __get__(self, obj, objtype=None):
+        return super(classproperty, self).__get__(objtype)
+
+    def __set__(self, obj, value):
+        super(classproperty, self).__set__(type(obj), value)
+
+    def __delete__(self, obj):
+        super(classproperty, self).__delete__(type(obj))
+
+
+class vec2d(object):
     # Magic methods
     def __init__(self, x, y):
         self.x = x
@@ -76,6 +87,11 @@ class vec2d:
         else:
             raise TypeError(f"type: {type(other)} not supported by vec2d")
 
+    # Consants
+    @staticmethod
+    def zero():
+        return vec2d(0, 0)
+
     # Propertiess
     @property
     def x(self):
@@ -93,6 +109,7 @@ class vec2d:
     def y(self, value):
         self._y = value
 
+    # Methods
     def grid(self, cell_size) -> vec2d:
         x = (self.x // cell_size) * cell_size
         y = (self.y // cell_size) * cell_size
@@ -115,3 +132,7 @@ class vec2d:
         if mag is None:
             mag = self.magnitude()
         return self / mag
+
+
+if __name__ == "__main__":
+    print(vec2d.zero())

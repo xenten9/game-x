@@ -26,7 +26,7 @@ if root not in sys.path:
 
 from main.code.application import Application
 from main.code.constants import FPS, FULLTILE, SIZE
-from main.code.engine.components.camera import Camera
+from main.code.engine.components.output_handler import Camera
 from main.code.engine.components.menu import MenuText
 from main.code.engine.constants import clear_terminal, cprint
 from main.code.engine.engine import Engine
@@ -45,10 +45,11 @@ def create_objects(engine: Engine, **kwargs):
     data: dictionary containing kwargs for __init__."""
     name = kwargs["name"]
     key = kwargs["key"]
-    key = engine.obj.instantiate_key(key)
+    key = engine.objects.ent._check_key(key)
     pos = kwargs["pos"]
     data = kwargs["data"]
-    Object(engine, name, key, pos, data)
+    obj = Object(engine, name, key, pos, data)
+    engine.objects.ent.add(obj, key)
 
 
 # Special
@@ -98,16 +99,16 @@ class Game(Application):
         self.cam = View(self, SIZE)
 
         # Add stcol to sobj
-        self.obj.sobj["stcol"] = self.col.st
+        self.objects.ent.sobj["stcol"] = self.objects.col.st
 
         # Load empty level
-        self.lvl.load("default")
-        self.tile.add_all()
+        self.objects.level.load("default")
+        self.assets.tiles.add_all()
 
     def event_handler(self):
         super().event_handler()
 
-        if self.inp.kb.get_key_pressed(41):
+        if self.input.kb.get_key_pressed(41):
             self.end()
             return
 

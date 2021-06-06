@@ -4,10 +4,10 @@ from random import random
 from time import sleep
 
 
-from ..constants import SIZE
-from ..engine.components.draw import Draw
-from ..engine.components.maths import f_limit
-from ..engine.components.menu import (
+from main.code.constants import SIZE
+from main.code.engine.components.output_handler import Draw
+from main.code.engine.components.maths import f_limit
+from main.code.engine.components.menu import (
     Menu,
     MenuButton,
     MenuButtonFull,
@@ -16,10 +16,10 @@ from ..engine.components.menu import (
     MenuSlider,
     MenuText,
 )
-from ..engine.constants import colorize
-from ..engine.engine import Engine
-from ..engine.types.entity import Entity
-from ..engine.types import vec2d
+from main.code.engine.constants import colorize
+from main.code.engine.engine import Engine
+from main.code.engine.types.entity import Entity
+from main.code.engine.types import vec2d
 
 
 class ObjJukeBox(Entity):
@@ -27,10 +27,9 @@ class ObjJukeBox(Entity):
 
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
         super().__init__(engine, key, name, data)
-        engine.obj.instantiate_object(key, self)
 
         # Music vars
-        music = engine.aud.music
+        music = engine.output.audio.music
         current_music = music.get_current()
         self.music = self.data["name"]
         self.loops = self.data["loops"]
@@ -57,22 +56,20 @@ class ObjJukeBox(Entity):
                     music.queue(self.music, self.loops, self.volume)
 
     def update(self, paused: bool):
-        if self.engine.aud.music.get_current() == self.music:
+        music = self.engine.output.audio.music
+        if music.get_current() == self.music:
             if paused:
-                self.engine.aud.music.volume = self.volume / 4
+                music.volume = self.volume / 4
             else:
-                self.engine.aud.music.volume = self.volume
+                music.volume = self.volume
 
 
 class ObjMainMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
-        engine.obj.instantiate_object(key, self)
         super().__init__(engine, key, name, data)
-        self.key = key
-        self.name = name
-        self.data = data
+
         self.engine.cam.pos = vec2d(0, 0)
-        self.engine.aud.sfx.add("beep.ogg")
+        self.engine.output.audio.sfx.add("beep.ogg")
 
         # Title menu
         self.title_menu = Menu(engine)
@@ -182,7 +179,7 @@ class ObjMainMenu(Entity):
         self.option_menu.get("save-button").update()
         self.option_menu.get("return-button").update()
         if self.option_menu.visible:
-            if self.engine.inp.kb.get_key_pressed(41):
+            if self.engine.input.kb.get_key_pressed(41):
                 self.option_menu.visible = False
                 self.title_menu.visible = True
 
@@ -194,7 +191,7 @@ class ObjMainMenu(Entity):
         if element.name == "start-button-button":
             self._beep()
             self._rsleep(0.4)
-            self.engine.lvl.load("level1")
+            self.engine.objects.level.load("level1")
         elif element.name == "option-button-button":
             self._beep()
             self.title_menu.visible = False
@@ -229,7 +226,7 @@ class ObjMainMenu(Entity):
             settings.save()
 
     def _beep(self):
-        self.engine.aud.sfx.play("beep.ogg")
+        self.engine.output.audio.sfx.play("beep.ogg")
 
     def _rsleep(self, time: float, var: float = None):
         if var is None:
@@ -242,12 +239,12 @@ class ObjMainMenu(Entity):
 
 class ObjPauseMenu(Entity):
     def __init__(self, engine: Engine, key: int, name: str, data: dict):
-        engine.obj.instantiate_object(key, self)
+        engine.objects.ent.add(self, key)
         super().__init__(engine, key, name, data)
         self.key = key
         self.name = name
         self.data = data
-        self.engine.aud.sfx.add("beep.ogg")
+        self.engine.output.audio.sfx.add("beep.ogg")
 
         # Title menu
         self.menu = Menu(engine)
@@ -308,9 +305,10 @@ class ObjPauseMenu(Entity):
         quit.button.call = self.pressed
 
     def update(self, paused: bool):
-        self.menu.get("resume").update()
-        self.menu.get("reset").update()
-        self.menu.get("quit").update()
+        if paused:
+            self.menu.get("resume").update()
+            self.menu.get("reset").update()
+            self.menu.get("quit").update()
 
     def draw(self, draw: Draw):
         self.menu.draw(draw)
@@ -322,12 +320,14 @@ class ObjPauseMenu(Entity):
             self.engine.pause()
         elif element.name == "reset-button":
             self._beep()
-            self.engine.lvl.reset()
+            self.engine.objects.level.reset()
+            self.menu.visible = False
             self.engine.pause()
         elif element.name == "quit-button":
             self._beep()
-            self.engine.lvl.load("mainmenu")
+            self.engine.objects.level.load("mainmenu")
+            self.menu.visible = False
             self.engine.pause()
 
     def _beep(self):
-        self.engine.aud.sfx.play("beep.ogg")
+        self.engine.output.audio.sfx.play("beep.ogg")

@@ -29,10 +29,11 @@ class Enemy(GameObject, Damageable):
                 self._die()
 
     def delete(self):
-        self.engine.col.dy.remove(self.key)
+        self.engine.objects.col.dy.remove(self.key)
 
     def _die(self):
-        self.engine.obj.delete(self.key)
+        self.engine.objects.ent.delete(self.key)
+        self.engine.objects.col.dy.remove(self.key)
 
 
 class ObjWalkingEnemy(Enemy):
@@ -43,7 +44,7 @@ class ObjWalkingEnemy(Enemy):
         self.data = data
         self.speed = vec2d(2, 0)
         self.dir: bool = False
-        self.engine.col.dy.add(self.key, self)
+        self.engine.objects.col.dy.add(self.key, self)
 
         # Sprite
         self.set_frames("walking-enemy.png")
@@ -53,7 +54,7 @@ class ObjWalkingEnemy(Enemy):
         self.damage = 1
 
         # Add sound
-        self.engine.aud.sfx.add("beep.ogg")
+        self.engine.output.audio.sfx.add("beep.ogg")
 
         # Check for ground
         if not self.scollide(pos + vec2d(0, 1)):

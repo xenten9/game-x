@@ -6,9 +6,9 @@ from pygame.event import Event
 from pygame.event import get as get_events
 from pygame.time import Clock
 
-from .constants import FPS, PROCESS
-from .engine.engine import Engine
-from .engine.types import vec2d
+from main.code.constants import FPS, PROCESS
+from main.code.engine.engine import Engine
+from main.code.engine.types import vec2d
 
 
 class Application(Engine):
@@ -60,7 +60,7 @@ class Application(Engine):
     def event_handler(self, events: list[Event] = None):
         """Handle events from pyevent."""
         # Reset pressed inputs
-        self.inp.reset()
+        self.input.reset()
         if events is None:
             events = get_events()
         for event in events:
@@ -68,7 +68,7 @@ class Application(Engine):
                 # For getting key id's
                 # print(event.scancode)
                 pass
-            self.inp.handle_events(event)
+            self.input.handle_events(event)
             if event.type == QUIT:
                 self.end()
                 return
@@ -81,7 +81,7 @@ class Application(Engine):
             t = time()
 
         # Draw all objects
-        self.draw.draw()
+        self.objects.draw(self.output.draw)
 
         if self.debug:
             self.debug.time_record["Draw"] += time() - t
@@ -91,15 +91,12 @@ class Application(Engine):
         # Setup
         t = 0
         debug = self.debug
-        obj = self.obj
+        obj = self.objects.ent
 
         if debug:
             t = time()
 
-        # Update objects
-        obj.update_early()
         obj.update()
-        obj.update_late()
 
         if debug:
             # Update debug menu
@@ -126,14 +123,15 @@ class Application(Engine):
             t = time()
 
         # Blank
-        self.win.blank()
+        self.output.window.blank()
         self.cam.blank()
 
         # Render
-        self.draw.render(self.cam)
-        self.win.render(self.cam)
+        self.output.draw.render(self.cam)
+        self.output.window.render(self.cam)
 
         # Update display
-        self.win.update()
+        self.output.window.update()
+
         if self.debug:
             self.debug.time_record["Render"] += time() - t
