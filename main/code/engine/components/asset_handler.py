@@ -84,7 +84,7 @@ class Tiles(Component):
         if tile_info[0] in self.tilemaps:
             # Return tile
             tilemap = self.tilemaps[tile_info[0]]
-            if len(tilemap)-1 >= tile_info[1]:
+            if len(tilemap) - 1 >= tile_info[1]:
                 return tilemap[tile_info[1]]
             else:
                 msg = (
@@ -93,7 +93,7 @@ class Tiles(Component):
                     f"Tilemap length: {len(tilemap)}\n"
                     f"Tilemap position: {tile_info[1]}\n"
                 )
-                raise IndexError(colorize(msg, 'red'))
+                raise IndexError(colorize(msg, "red"))
 
         else:
             # Try to find tile map and return tile

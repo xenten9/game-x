@@ -4,19 +4,17 @@ from ast import literal_eval
 from os import path
 from typing import Optional, Union
 
-
 from numpy import sign
 from pygame import Surface, image
 
-
 from main.code.constants import FULLTILE
-from main.code.engine.components.output_handler import Draw
 from main.code.engine.components.maths import f_loop
 from main.code.engine.components.object_handler import TileLayer
+from main.code.engine.components.output_handler import Draw
 from main.code.engine.constants import colorize, cprint
 from main.code.engine.engine import Engine
-from main.code.engine.types.entity import Entity
 from main.code.engine.types import vec2d
+from main.code.engine.types.entity import Entity
 
 
 class Object(Entity):
@@ -268,6 +266,8 @@ class ObjCursor(Entity):
     # Object
     def object_mode(self):
         """Object mode."""
+        object_handler = self.engine.objects.ent
+
         # Changing selection
         dobj = self.kkey["next"] - self.kkey["prev"]
         if dobj != 0:
@@ -277,9 +277,7 @@ class ObjCursor(Entity):
 
         # Toggling objects
         if self.kkey["f1"]:
-            self.engine.objects.ent.visible = (
-                not self.engine.objects.ent.visible
-            )
+            object_handler.visible = not object_handler.visible
 
         # View/Edit data
         if self.kkey["tab"] and self.selected_object != None:
@@ -422,8 +420,7 @@ class ObjCursor(Entity):
         # Toggling tile maps
         if self.kkey["f1"]:
             layer = self._get_current_layer()
-            # BUG
-            # layer.toggle_visibility()
+            layer.visible = not layer.visible
 
         # View/Edit data
         if self.kkey["tab"]:
@@ -536,9 +533,11 @@ class ObjCursor(Entity):
 
     # Wall
     def wall_mode(self):
+        collider = self.engine.objects.col.st
+
         # Wall mode
         if self.kkey["f1"]:
-            self.engine.objects.col.st.toggle_visibility()
+            collider.visible = not collider.visible
 
         # Place wall
         if self.mkey["Hplace"]:
@@ -546,7 +545,7 @@ class ObjCursor(Entity):
             pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey["place"]:
                 self.pos = pos
-                self.engine.objects.col.st.add(pos)
+                collider.add(pos)
 
         # Remove wall
         elif self.mkey["Hremove"]:
@@ -554,7 +553,7 @@ class ObjCursor(Entity):
             pos = pos.grid(FULLTILE)
             if pos != self.pos or self.mkey["remove"]:
                 self.pos = pos
-                self.engine.objects.col.st.remove(pos)
+                collider.remove(pos)
 
     # Info query
     def _get_data(self, prompt: str, error: str, success: str, datatype: type):

@@ -4,17 +4,21 @@ from os import path
 
 from numpy import sign
 from pygame import image
+from pygame.event import Event, post
 from pygame.surface import Surface
 
-
-from ..constants import FULLTILE
-from .entities import Entity, ObjPauseMenu
-from ..engine.engine import Engine
-from ..engine.constants import cprint
-from ..engine.components.output_handler import Draw
-from ..engine.components.maths import f_loop
-from ..engine.types import vec2d
-from ..engine.constants import colorize
+from main.code.constants import FULLTILE
+from main.code.engine.components.maths import f_loop
+from main.code.engine.components.output_handler import Draw
+from main.code.engine.constants import (
+    LEVEL_LOAD,
+    LEVEL_RESET,
+    colorize,
+    cprint,
+)
+from main.code.engine.engine import Engine
+from main.code.engine.types import vec2d
+from main.code.objects.entities import Entity, ObjPauseMenu
 
 
 def rect_overlap(pos: vec2d, size: vec2d, opos: vec2d, osize: vec2d) -> bool:
@@ -308,17 +312,14 @@ class ObjPlayer(GameObject, Damageable):
             self.iframe -= sign(self.iframe)
             if self.hp <= 0:
                 self._die()
-                return
 
             if self.mode == 0:
                 # Reset room
                 if self.kkey["reset"] == 1:
-                    self.engine.objects.level.reset()
-                    return
+                    post(Event(LEVEL_RESET))
 
                 # Dynamic collision
-                if self._dcol() == "return":
-                    return
+                self._dcol()
 
                 # Move player
                 self._movement()
@@ -366,8 +367,8 @@ class ObjPlayer(GameObject, Damageable):
             self.vspd += self.jump_speed
 
     def _die(self):
+        post(Event(LEVEL_RESET))
         self.engine.output.audio.sfx.play("boop.wav")
-        self.engine.objects.level.reset()
 
     def _get_inputs(self):
         for key in self.kkey:
@@ -478,8 +479,7 @@ class ObjPlayer(GameObject, Damageable):
             hspd = 0
 
         # Dynamic collision
-        if self._dcol(pos) == "return":
-            return
+        self._dcol(pos)
 
         # Vertical collision
         if self.scollide(pos + vec2d(0, vspd)):
@@ -492,9 +492,7 @@ class ObjPlayer(GameObject, Damageable):
             vspd = 0
 
         # Dynamic collision
-        if self._dcol(pos) == "return":
-            return
-
+        self._dcol(pos)
         self.pos = pos
         self.hspd = hspd
         self.vspd = vspd
@@ -569,15 +567,13 @@ class ObjDoor(GameObject):
         # Images
         self.set_frames("door0.png", "door1.png")
 
-    def collide(self, obj: GameObject) -> str:
+    def collide(self, obj: GameObject):
         if isinstance(obj, ObjPlayer):
             if self.frame == 1:
                 try:
-                    self.engine.objects.level.load(self.next_level)
-                    return "return"
+                    post(Event(LEVEL_LOAD, {"level": self.next_level}))
                 except AttributeError:
                     cprint("Unable to load level!", "red")
-        return ""
 
 
 class ObjGravOrb(GameObject):

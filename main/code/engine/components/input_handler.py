@@ -9,10 +9,9 @@ from pygame.constants import (
     MOUSEBUTTONUP,
     MOUSEBUTTONDOWN,
 )
-from pygame.event import Event
+from pygame.event import Event, set_blocked
 
-from ..types import Component
-from ..types.vector import vec2d
+from main.code.engine.types import Component, vec2d
 
 
 class InputHandler(Component):
@@ -47,9 +46,8 @@ class InputHandler(Component):
             self.ms.button_pressed[event.button] = False
             self.ms.button_held[event.button] = False
 
-        # Music end
-        elif event.type == 56709:
-            self.engine.output.audio.music.end()
+        else:
+            set_blocked(event.type)
 
     def reset(self):
         """Resets keyboard and mouse."""

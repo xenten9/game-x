@@ -3,6 +3,8 @@
 from random import random
 from time import sleep
 
+from pygame.event import Event, post
+
 
 from main.code.constants import SIZE
 from main.code.engine.components.output_handler import Draw
@@ -16,7 +18,7 @@ from main.code.engine.components.menu import (
     MenuSlider,
     MenuText,
 )
-from main.code.engine.constants import colorize
+from main.code.engine.constants import LEVEL_LOAD, colorize
 from main.code.engine.engine import Engine
 from main.code.engine.types.entity import Entity
 from main.code.engine.types import vec2d
@@ -191,7 +193,7 @@ class ObjMainMenu(Entity):
         if element.name == "start-button-button":
             self._beep()
             self._rsleep(0.4)
-            self.engine.objects.level.load("level1")
+            post(Event(LEVEL_LOAD, {"level": "level1"}))
         elif element.name == "option-button-button":
             self._beep()
             self.title_menu.visible = False
@@ -325,7 +327,7 @@ class ObjPauseMenu(Entity):
             self.engine.pause()
         elif element.name == "quit-button":
             self._beep()
-            self.engine.objects.level.load("mainmenu")
+            post(Event(LEVEL_LOAD, {"level": "mainmenu"}))
             self.menu.visible = False
             self.engine.pause()
 

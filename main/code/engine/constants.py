@@ -9,6 +9,10 @@ TMAGENTA = "\033[35m"
 TCYAN = "\033[36m"
 TWHITE = "\033[0m"  # RESET COLOR
 
+AUDIO_END = 56709
+LEVEL_RESET = 56710
+LEVEL_LOAD = 56711
+
 # Static methods
 def colorize(text: str, color: str) -> str:
     if color == "green":

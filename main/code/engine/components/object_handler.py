@@ -256,8 +256,8 @@ class EntityHandler(Component):
             for _, obj in self.obj.items():
                 obj.draw(draw)
 
-            for _, obj in self.sobj.items():
-                obj.draw(draw)
+        for _, obj in self.sobj.items():
+            obj.draw(draw)
 
     def clear(self):
         self.obj.clear()
@@ -330,6 +330,7 @@ class TileLayer(Component):
         super().__init__(engine)
         self.name = name
         self.depth = 0
+        self.visible = True
 
         self.array = array2d((16, 16))
         if array is not None:
@@ -356,11 +357,13 @@ class TileLayer(Component):
             self.parallax = vec2d(0, 0)
 
     def draw(self, draw: Draw):
-        if self.engine.parallax and self.parallax != vec2d.zero():
-            pos = (self.engine.cam.pos * self.parallax).floor()
-        else:
-            pos = vec2d.zero()
-        draw.add(self.depth, self.surface, pos)
+        """Draw tilelayer to screen."""
+        if self.visible:
+            if self.engine.parallax and self.parallax != vec2d.zero():
+                pos = (self.engine.cam.pos * self.parallax).floor()
+            else:
+                pos = vec2d.zero()
+            draw.add(self.depth, self.surface, pos)
 
     # External Interactions
     def place(self, pos: vec2d, tilemap_id: int, tile_id: int):
@@ -470,9 +473,6 @@ class StaticCollider(Component, Entity):
     def clear(self):
         """Clear all Static collision points off of grid"""
         self.array = array2d((16, 16))
-
-    def toggle_visibility(self):
-        self.visible = not self.visible
 
     def draw(self, draw: Draw):
         size = (vec2d(*self.array.size) * self.fulltile).ftup()

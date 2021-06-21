@@ -71,6 +71,7 @@ def create_objects(engine: Engine, **kwargs):
             obj = obj_class(engine, **kwargs)
         engine.objects.ent.add(obj, kwargs["key"])
 
+
 # Special
 class View(Camera):
     """Camera like object which is limited to the inside of the level."""

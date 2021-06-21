@@ -1,3 +1,4 @@
+from main.code.engine.constants import AUDIO_END, LEVEL_RESET, LEVEL_LOAD
 from time import time
 from typing import Callable
 
@@ -63,15 +64,28 @@ class Application(Engine):
         self.input.reset()
         if events is None:
             events = get_events()
+
         for event in events:
-            if event.type == KEYDOWN:
-                # For getting key id's
-                # print(event.scancode)
-                pass
-            self.input.handle_events(event)
-            if event.type == QUIT:
+            if event.type == LEVEL_RESET:
+                self.objects.level.reset()
+
+            elif event.type == QUIT:
                 self.end()
                 return
+
+            elif event.type == AUDIO_END:
+                self.output.audio.music.end()
+
+            elif event.type == LEVEL_LOAD:
+                self.objects.level.load(event.level)
+
+            else:
+                if event.type == KEYDOWN:
+                    # For getting key id's
+                    # print(event.scancode)
+                    pass
+
+                self.input.handle_events(event)
 
     def draw_all(self):
         # Setup
