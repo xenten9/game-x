@@ -59,18 +59,14 @@ class View(Camera):
     def __init__(self, engine: Engine, size: vec2d):
         super().__init__(engine, size)
 
-    def _pos_get(self) -> vec2d:
-        return self._pos
-
-    def _pos_set(self, pos: vec2d):
+    @Camera.pos.setter
+    def pos(self, pos: vec2d):
         """Position setter."""
         if pos.x < 0:
             pos = vec2d(0, pos.y)
         if pos.y < 0:
             pos = vec2d(pos.x, 0)
         self._pos = pos.floor()
-
-    pos = property(_pos_get, _pos_set)
 
 
 class Game(Application):

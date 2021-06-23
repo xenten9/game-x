@@ -69,8 +69,12 @@ class Tiles(Component):
 
         # Add tilemap to list of tilemaps
         number = re.search(r"[0-9]+-", fname)
-        index = int(number[0].removesuffix("-"))
-        self.tilemaps[index] = new_tile_map
+        if number is not None:
+            index = int(number[0].removesuffix("-"))
+            self.tilemaps[index] = new_tile_map
+        else:
+            msg = f"Could not find map id index.\nMap name {fname}"
+            raise ValueError(msg)
 
     def add_all(self):
         """Load all of the tilemaps."""
